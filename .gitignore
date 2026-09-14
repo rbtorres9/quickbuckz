@@ -1,0 +1,31 @@
+# Environments
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Django
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+static/          # only if you're using STATIC_ROOT to collect into this folder
+
+# Secrets/config
+.env
+*.env.local
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
