@@ -28,7 +28,7 @@
    pip install -r requirements.txt
    ```
 
-4. **Recreate your .env file**
+4. **Recreate your .env file** -- (for now, skip this)
    `.env` is gitignored and won't exist on the new machine. Manually recreate it with the same variable values (`SECRET_KEY`, database credentials, etc.)
 
 5. **Run migrations and create a superuser**
