@@ -1,3 +1,47 @@
+# Social Media App — Backend
+
+## Setup on a New/Cloned Machine
+
+0. **Check Python is installed**
+   ```
+   python --version
+   ```
+   Install Python first if missing, or if the version differs significantly from your main machine.
+
+1. **Navigate into the project folder**
+   ```
+   cd path\to\cloned-repo
+   ```
+
+2. **Create and activate a new virtual environment**
+   ```
+   python -m venv venv
+   venv\Scripts\Activate.ps1
+   ```
+   If PowerShell blocks the script, run once:
+   ```
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
+3. **Install dependencies from requirements.txt**
+   ```
+   pip install -r requirements.txt
+   ```
+
+4. **Recreate your .env file**
+   `.env` is gitignored and won't exist on the new machine. Manually recreate it with the same variable values (`SECRET_KEY`, database credentials, etc.)
+
+5. **Run migrations and create a superuser**
+   ```
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
+
+### Note on superuser accounts
+Superuser accounts live inside `db.sqlite3`, which is gitignored and never committed. Cloning the repo only brings over code and migration files — not the database itself. Each machine gets its own local SQLite database, so you must run `createsuperuser` again on every new machine; it will be a separate account from the one on your original machine.
+
+---
+
 # Django Topics Covered — Social Media App Backend
 
 A running summary of Django/backend concepts covered in the walkthrough so far.
