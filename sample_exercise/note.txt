@@ -1,0 +1,3 @@
+note: 
+files in this folder are not used in the project
+these are only supplemental example codes refreshing on python concepts that are relevant on django app structure/build
