@@ -47,13 +47,33 @@ A running summary of Django/backend concepts covered in the walkthrough so far.
 - Wired the signal into the app via `AccountsConfig.ready()` in `apps.py`, which imports `accounts.signals` so the `@receiver` registration actually runs
 - Verified: creating a `User` in the admin now auto-creates a matching `Profile` with no manual step
 
-## 8. Other manage.py Commands Covered
-- `python manage.py shell` — interactive Python shell with the project loaded
-- `python manage.py dbshell` — direct SQL shell
-- `python manage.py test` — run test suite
+## 8. Serializers
+- Covered the "object → dict → JSON" conversion pattern in plain Python (`book_to_dict()` + `json.dumps()`) as a conceptual bridge to DRF serializers
+- Wrote `ProfileSerializer` in `accounts/serializers.py` using DRF's `ModelSerializer`:
+  ```python
+  class ProfileSerializer(serializers.ModelSerializer):
+      class Meta:
+          model = Profile
+          fields = ['id', 'user', 'bio', 'profile_picture', 'created_at']
+  ```
+- Covered how `ModelSerializer` auto-generates the object-to-dict conversion based on the model's fields, and how `Meta.fields` controls which fields are included
+
+## 9. Views
+- Covered the "function in, response out" pattern in plain Python (a `handle_request()` function branching on input) as a conceptual bridge to DRF views
+- Wrote `ProfileListView` in `accounts/views.py` using DRF's `generics.ListAPIView`:
+  ```python
+  class ProfileListView(generics.ListAPIView):
+      queryset = Profile.objects.all()
+      serializer_class = ProfileSerializer
+  ```
+- Covered how `queryset` supplies the data and `serializer_class` converts it to JSON, mirroring the warm-up's data + conversion split
+
+## 10. URL Routing
+- Covered URL routing as a path-to-function lookup table in plain Python (a `routes` dict + `handle_path()`) as a conceptual bridge to Django's URL system
+- Created `accounts/urls.py` (app-level routes) and used `include()` in `config/urls.py` to nest app routes under the project's root routes
+- Verified: `http://127.0.0.1:8000/api/profiles/` returns live `Profile` data as JSON via DRF's browsable API
 
 ## Not Yet Covered (Upcoming)
-- Django REST Framework serializers and API views
 - JWT authentication (login/signup endpoints via `djangorestframework-simplejwt`)
 - Switching the database from SQLite to PostgreSQL
 - Core social features (e.g. a `Post` model)
