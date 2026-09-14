@@ -18,6 +18,11 @@ class User:
     def __str__(self):
         return f"{self.username}"
 
+# Your turn:
+# 1. Create a class `User` with attributes: username, email, bio
+# 2. Give it a __str__ method that returns just the username
+# 3. Create two User instances and print them
+
 me = User("whoami", "idontknow@example.com", "imyou")
 you = User("youarenot", "maybeiknow@example.com", "youareme")
 
