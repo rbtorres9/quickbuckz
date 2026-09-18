@@ -53,6 +53,15 @@
 4. **Recreate your .env file**
    `.env` is gitignored and won't exist on the new machine. Manually recreate it with the same variable values (`SECRET_KEY`, database credentials, etc.)
 
+   Here is a template to get going
+   ```
+   DATABASE_NAME="quickbucks_db"
+   DATABASE_USER="postgres"
+   DATABASE_PASS="password"
+   DATABASE_HOST="localhost"
+   DATABASE_PORT="8080"
+   ```
+
 5. **Run migrations and create a superuser**
    ```
    python manage.py migrate
