@@ -1,8 +1,8 @@
 from django.shortcuts import render
 
 from rest_framework import generics
-from .models import Profile
-from .serializers import ProfileSerializer
+from .models import Profile, Post
+from .serializers import ProfileSerializer, PostSerializer
 
 class ProfileListView(generics.ListAPIView):
     queryset = Profile.objects.all()
@@ -15,3 +15,7 @@ class ProfileListView(generics.ListAPIView):
 # serializer_class = ProfileSerializer 
 # — this tells the view to run each Profile object through the book_to_dict-style conversion 
 # before returning it as JSON
+
+class PostListView(generics.ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer

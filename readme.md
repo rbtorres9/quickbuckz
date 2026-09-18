@@ -9,13 +9,25 @@
    Install Python first if missing, or if the version differs significantly from your main machine.
 
 1. **Navigate into the project folder**
+
+   **Windows:**
    ```
    cd path\to\cloned-repo
+   ```
+   **macOS/Linux:**
+   ```
+   cd path/to/cloned-repo
    ```
 
 2. **Create and activate a new virtual environment**
    ```
    python -m venv venv
+   ```
+
+   Then activate it:
+
+   **PowerShell (Windows):**
+   ```
    venv\Scripts\Activate.ps1
    ```
    If PowerShell blocks the script, run once:
@@ -23,12 +35,22 @@
    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
    ```
 
+   **Command Prompt (Windows):**
+   ```
+   venv\Scripts\activate.bat
+   ```
+
+   **macOS/Linux:**
+   ```
+   source venv/bin/activate
+   ```
+
 3. **Install dependencies from requirements.txt**
    ```
    pip install -r requirements.txt
    ```
 
-4. **Recreate your .env file** -- (for now, skip this)
+4. **Recreate your .env file**
    `.env` is gitignored and won't exist on the new machine. Manually recreate it with the same variable values (`SECRET_KEY`, database credentials, etc.)
 
 5. **Run migrations and create a superuser**
@@ -117,7 +139,28 @@ A running summary of Django/backend concepts covered in the walkthrough so far.
 - Created `accounts/urls.py` (app-level routes) and used `include()` in `config/urls.py` to nest app routes under the project's root routes
 - Verified: `http://127.0.0.1:8000/api/profiles/` returns live `Profile` data as JSON via DRF's browsable API
 
+## 11. A Second Model: `Post` (ForeignKey relationships)
+- Covered the "one-to-many" relationship in plain Python (an `Author` with a `posts` list) as a conceptual bridge to `ForeignKey`
+- Wrote the `Post` model in `accounts/models.py`, introducing `ForeignKey` (many `Post`s per `User`) as distinct from the `OneToOneField` used for `Profile`:
+  ```python
+  class Post(models.Model):
+      author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+      content = models.TextField()
+      image = models.ImageField(upload_to='posts/', blank=True, null=True)
+      created_at = models.DateTimeField(auto_now_add=True)
+      updated_at = models.DateTimeField(auto_now=True)
+  ```
+- Covered `related_name` (enables `some_user.posts.all()`) and `auto_now` vs. `auto_now_add`
+- Ran `makemigrations` / `migrate` for `Post`, same cycle as `Profile`
+
+## 12. Applying Serializers, Views, and URLs to `Post`
+- Wrote `PostSerializer` in `accounts/serializers.py`, and used `serializers.ReadOnlyField(source='author.username')` to show the author's username instead of their raw ID
+- Wrote `PostListView` in `accounts/views.py` using `generics.ListAPIView`, same pattern as `ProfileListView`
+- Added a `posts/` route in `accounts/urls.py`
+- Registered `Post` in `accounts/admin.py` (`admin.site.register(Post)`) so test posts can be created via the admin UI
+- Verified: created a test `Post` via the admin, and `http://127.0.0.1:8000/api/posts/` returned it as live JSON with the author's username
+
 ## Not Yet Covered (Upcoming)
+- Write operations via the API (POST/PUT/DELETE — current views only support GET)
 - JWT authentication (login/signup endpoints via `djangorestframework-simplejwt`)
 - Switching the database from SQLite to PostgreSQL
-- Core social features (e.g. a `Post` model)
