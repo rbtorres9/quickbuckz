@@ -53,15 +53,6 @@
 4. **Recreate your .env file**
    `.env` is gitignored and won't exist on the new machine. Manually recreate it with the same variable values (`SECRET_KEY`, database credentials, etc.)
 
-   Here is a template to get going
-   ```
-   DATABASE_NAME="quickbucks_db"
-   DATABASE_USER="postgres"
-   DATABASE_PASS="password"
-   DATABASE_HOST="localhost"
-   DATABASE_PORT="8080"
-   ```
-
 5. **Run migrations and create a superuser**
    ```
    python manage.py migrate
@@ -169,7 +160,28 @@ A running summary of Django/backend concepts covered in the walkthrough so far.
 - Registered `Post` in `accounts/admin.py` (`admin.site.register(Post)`) so test posts can be created via the admin UI
 - Verified: created a test `Post` via the admin, and `http://127.0.0.1:8000/api/posts/` returned it as live JSON with the author's username
 
+## 13. Environment-Based Database Config
+- Introduced `django-environ` to read database settings from a `.env` file instead of hardcoding them in `settings.py`
+- Added fallback logic so the project uses SQLite locally when no Postgres `.env` values are present, and switches to Postgres automatically once real credentials are supplied:
+  ```python
+  if env('DATABASE_HOST', default=None):
+      DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql', ...}}
+  else:
+      DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
+  ```
+- Covered a gotcha: any string value in `.env` (even a placeholder like `"localhost"`) counts as "present" and triggers the Postgres branch — `.env` needs to omit `DATABASE_HOST` entirely (not just leave it blank) to fall through to SQLite
+- Each teammate needs their own local `.env` file (gitignored) after cloning
+
+## 14. Config Fix: Email Backend
+- Caught and fixed an invalid setting: `MAILERS = {...}` isn't a real Django setting and was silently doing nothing
+- Corrected to the actual setting name:
+  ```python
+  EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+  ```
+- Prints emails to the console for now (useful later for signup confirmations, password resets)
+
 ## Not Yet Covered (Upcoming)
+- Switching the database from SQLite to a shared PostgreSQL instance (Supabase project not yet created — still using SQLite locally via the fallback above)
 - Write operations via the API (POST/PUT/DELETE — current views only support GET)
 - JWT authentication (login/signup endpoints via `djangorestframework-simplejwt`)
-- Switching the database from SQLite to PostgreSQL
+- CORS setup for the Framer frontend
