@@ -99,5 +99,5 @@ Authorization: Bearer <access_token>
 - No PATCH/PUT/DELETE for individual posts yet (only create + list)
 - No endpoint to fetch a single post or single profile by ID yet (only list views)
 - No pagination on list endpoints yet — `/api/posts/` and `/api/profiles/` return everything at once
-- Backend is on SQLite locally for now (shared Postgres via Supabase is planned but not yet set up) — this doesn't change the API shape, just means data isn't yet shared across team members' local servers
-- No deployed/hosted URL yet — everything above assumes local development against a teammate's own running server
+- Backend now runs on a shared PostgreSQL database (Neon) — every team member's local server points at the same live data, so a post or user created by one teammate is visible to everyone else immediately
+- No deployed/hosted URL yet — everything above assumes local development against a teammate's own running Django server (still `http://127.0.0.1:8000/api/`), just backed by the shared database now instead of separate local files
