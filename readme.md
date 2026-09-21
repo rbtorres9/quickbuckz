@@ -53,6 +53,8 @@
 4. **Recreate your .env file**
    `.env` is gitignored and won't exist on the new machine. Manually recreate it with the same variable values (`SECRET_KEY`, database credentials, etc.)
 
+   - Sharing the real `.env` values with the rest of the team so everyone points at the same Neon database instead of their own local SQLite. Refer to discord channel for values.
+
 5. **Run migrations and create a superuser**
    ```
    python manage.py migrate
@@ -213,7 +215,13 @@ A running summary of Django/backend concepts covered in the walkthrough so far.
 - Added `CORS_ALLOWED_ORIGINS` with a placeholder for Framer's local preview (`http://localhost:3000`), to be updated with the real published Framer URL once available
 - Verified the server boots cleanly with the new middleware in place; full verification (an actual cross-origin request from Framer) is pending the teammate's Framer setup
 
+## 20. Switching to Shared PostgreSQL (Neon)
+- Compared free Postgres hosts (Neon, Supabase, Aiven, Render) against the project's needs — settled on Neon for its narrower scope (just a database, no unused auth/storage platform features, since JWT auth is already custom-built)
+- Created a Neon project and pulled the connection string apart into the five `.env` values the existing `django-environ` fallback logic already expected (`DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASS`, `DATABASE_HOST`, `DATABASE_PORT`) — no code changes needed to switch providers, since the fallback logic was written generically
+- Used Neon's pooled connection host (`-pooler` in the hostname) rather than the direct one, better suited to a web app's many short-lived connections
+- Added `sslmode` and `channel_binding` to `DATABASES['default']['OPTIONS']`, required by Neon
+- Verified: `migrate` applied all migrations to the fresh Neon database, `createsuperuser` succeeded, and the account is visible in the admin panel — confirming the whole team is now able to point at one shared live database instead of separate local SQLite files
+
 ## Not Yet Covered (Upcoming)
-- Switching the database from SQLite to a shared PostgreSQL instance (Supabase project not yet created — still using SQLite locally via the fallback above)
 - Adding the real Framer published URL to `CORS_ALLOWED_ORIGINS` once available
 - JWT handling on the Framer frontend side (storing tokens, attaching them to fetch calls, refreshing on expiry)

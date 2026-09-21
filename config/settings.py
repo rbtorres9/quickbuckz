@@ -88,6 +88,7 @@ if env('DATABASE_HOST', default=None):
             'PASSWORD': env('DATABASE_PASS'),
             'HOST': env('DATABASE_HOST'),
             'PORT': env('DATABASE_PORT'),
+            'OPTIONS': {'sslmode': 'require', 'channel_binding': 'require'},
         }
     }
 else:
