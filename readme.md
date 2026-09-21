@@ -180,8 +180,40 @@ A running summary of Django/backend concepts covered in the walkthrough so far.
   ```
 - Prints emails to the console for now (useful later for signup confirmations, password resets)
 
+## 15. JWT Authentication: Login
+- Covered the token/signature concept in plain Python (a `hashlib`-based `issue_token`/`verify_token` pair) as a conceptual bridge to JWT
+- Added `TokenObtainPairView` (login) and `TokenRefreshView` (refresh an expired access token) from `djangorestframework-simplejwt` to `accounts/urls.py`
+- Set `DEFAULT_AUTHENTICATION_CLASSES` to `JWTAuthentication` in `config/settings.py`
+- Verified: `POST /api/token/` with a valid username/password returns real `access` and `refresh` JWT tokens
+
+## 16. JWT Authentication: Signup
+- Applied the serializer → view → URL pattern a third time, this time for registration
+- Wrote `RegisterSerializer` in `accounts/serializers.py` using `write_only=True` on the password field (so it's accepted on input but never returned in a response) and `User.objects.create_user(...)` (which hashes the password, unlike a plain `.create()`)
+- Wrote `RegisterView` using `generics.CreateAPIView` (handles POST, not GET, unlike the earlier List views)
+- Added a `signup/` route in `accounts/urls.py`
+- Verified: `POST /api/signup/` with a new username/email/password returns `201 Created` with the new user's data (password omitted), and the `post_save` signal correctly auto-created a `Profile` for the new user
+
+## 17. Write Operations: Creating Posts
+- Covered "trust server-side identity, not client input" in plain Python (`create_post` vs. `create_post_safe`) as a conceptual bridge to `perform_create`
+- Upgraded `PostListView` from `ListAPIView` to `ListCreateAPIView` (handles both GET and POST on the same URL)
+- Added `permission_classes = [IsAuthenticated]` so anonymous requests are rejected
+- Overrode `perform_create` to force `author=self.request.user`, so the author always comes from the JWT, never from the request body
+- Verified with `Invoke-WebRequest`: an authenticated POST creates a post correctly attributed to the logged-in user; an unauthenticated POST is rejected with `401`; and a spoofed `"author"` value in the request body is silently ignored in favor of the real logged-in user
+
+## 18. Write Operations: Updating a Profile
+- Covered "look up my own record, not any record" in plain Python (`update_my_profile(current_user, ...)`) as a conceptual bridge to `get_object`
+- Decided against a generic `POST` for `Profile` (redundant, since every `User` already gets one via the signal, and `OneToOneField` blocks a second one) — built an update-only endpoint instead
+- Wrote `MyProfileView` using `generics.RetrieveUpdateAPIView` (GET + PUT/PATCH, no POST/DELETE), overriding `get_object()` to always return `self.request.user.profile` — no ID in the URL, so there's nothing for a client to fake
+- Added a `profile/me/` route in `accounts/urls.py`
+- Verified: `PATCH /api/profile/me/` with a JWT updates the logged-in user's own bio, scoped correctly with no ID needed
+
+## 19. CORS Setup for the Framer Frontend
+- Installed `django-cors-headers` so browsers allow cross-origin requests from Framer's domain (Framer hosts the frontend separately from where Django runs, and browsers block cross-origin calls by default)
+- Added `corsheaders` to `INSTALLED_APPS` and `CorsMiddleware` to `MIDDLEWARE` in `config/settings.py`, placed near the top (before `CommonMiddleware`), since middleware order matters
+- Added `CORS_ALLOWED_ORIGINS` with a placeholder for Framer's local preview (`http://localhost:3000`), to be updated with the real published Framer URL once available
+- Verified the server boots cleanly with the new middleware in place; full verification (an actual cross-origin request from Framer) is pending the teammate's Framer setup
+
 ## Not Yet Covered (Upcoming)
 - Switching the database from SQLite to a shared PostgreSQL instance (Supabase project not yet created — still using SQLite locally via the fallback above)
-- Write operations via the API (POST/PUT/DELETE — current views only support GET)
-- JWT authentication (login/signup endpoints via `djangorestframework-simplejwt`)
-- CORS setup for the Framer frontend
+- Adding the real Framer published URL to `CORS_ALLOWED_ORIGINS` once available
+- JWT handling on the Framer frontend side (storing tokens, attaching them to fetch calls, refreshing on expiry)
