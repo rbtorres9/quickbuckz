@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from .models import Profile, Post
 from django.contrib.auth.models import User
 from .serializers import ProfileSerializer, PostSerializer, RegisterSerializer
@@ -26,7 +26,7 @@ class ProfileListView(generics.ListCreateAPIView):
 class PostListView(generics.ListCreateAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
