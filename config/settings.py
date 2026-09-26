@@ -162,6 +162,5 @@ REST_FRAMEWORK = {
 # CORS
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # for Framer's local preview, if applicable
-    # "https://your-project.framer.website",  # add once teammate has a published URL
+    "http://localhost:5173",
 ]
