@@ -26,7 +26,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)*0ojj#i!sy^wxp##_x)ss(he$^-=#@+ojjt%tk')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ["quickbuckz.onrender.com"])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=["quickbuckz.onrender.com"])
 
 # Application definition
 
