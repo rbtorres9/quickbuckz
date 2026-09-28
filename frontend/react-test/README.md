@@ -19,3 +19,4 @@ If you are developing a production application, we recommend using TypeScript wi
 ## How to Run
 - Change directory to ../frontend/react-test
 - npm run dev
+- App can be accessed through localhost:5173
