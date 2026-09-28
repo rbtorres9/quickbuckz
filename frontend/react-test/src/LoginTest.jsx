@@ -42,7 +42,7 @@ function LoginForm() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
-      <button type="submit">Log in</button>
+      <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Log in</button>
       {error && <p style={{ color: "red" }}>{error}</p>}
     </form>
   );
