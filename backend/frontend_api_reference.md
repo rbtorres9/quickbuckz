@@ -1,8 +1,8 @@
 # Backend API Reference — For the Frontend Team
 
 ## Base URL
+- **Live (deployed)**: `https://quickbuckz.onrender.com/api/`
 - Local development: `http://127.0.0.1:8000/api/`
-- (Update this once the backend is deployed somewhere reachable outside localhost — not yet done)
 
 ## Authentication
 This API uses JWT (JSON Web Tokens). No session cookies — every authenticated request needs a `Bearer` token in the header.
@@ -99,5 +99,5 @@ Authorization: Bearer <access_token>
 - No PATCH/PUT/DELETE for individual posts yet (only create + list)
 - No endpoint to fetch a single post or single profile by ID yet (only list views)
 - No pagination on list endpoints yet — `/api/posts/` and `/api/profiles/` return everything at once
-- Backend now runs on a shared PostgreSQL database (Neon) — every team member's local server points at the same live data, so a post or user created by one teammate is visible to everyone else immediately
-- No deployed/hosted URL yet — everything above assumes local development against a teammate's own running Django server (still `http://127.0.0.1:8000/api/`), just backed by the shared database now instead of separate local files
+- Backend now runs on a shared PostgreSQL database (Neon) — every team member's requests (whether local or against the live Render URL) hit the same live data, so a post or user created by one teammate is visible to everyone else immediately
+- Backend is deployed and live at `https://quickbuckz.onrender.com` — you can build against this directly instead of needing a teammate's local server running

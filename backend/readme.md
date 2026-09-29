@@ -2,13 +2,13 @@
 
 ## Setup on a New/Cloned Machine
 
-0. **Check Python is installed**
+1. **Check Python is installed**
    ```
    python --version
    ```
    Install Python first if missing, or if the version differs significantly from your main machine.
 
-1. **Navigate into the project folder**
+2. **Navigate into the project folder**
 
    **Windows:**
    ```
@@ -19,7 +19,7 @@
    cd path/to/cloned-repo
    ```
 
-2. **Create and activate a new virtual environment**
+3. **Create and activate a new virtual environment**
    ```
    python -m venv venv
    ```
@@ -45,24 +45,23 @@
    source venv/bin/activate
    ```
 
-3. **Install dependencies from requirements.txt**
+4. **Install dependencies from requirements.txt**
    ```
    pip install -r requirements.txt
    ```
 
-4. **Recreate your .env file**
-   `.env` is gitignored and won't exist on the new machine. Manually recreate it with the same variable values (`SECRET_KEY`, database credentials, etc.)
+5. **Get the shared `.env` file**
+   `.env` is gitignored and won't exist on a fresh clone. Since the team now shares one Neon database and one Render deployment, don't fill this in with placeholder values — get the real, current `.env` contents from a teammate (or wherever the team is sharing it) and drop it into the project root as-is. Using different or made-up values here will point your local server at the wrong database, or nothing at all.
 
-   - Sharing the real `.env` values with the rest of the team so everyone points at the same Neon database instead of their own local SQLite. Refer to discord channel for values.
-
-5. **Run migrations and create a superuser**
+6. **Run migrations and create a superuser**
    ```
    python manage.py migrate
    python manage.py createsuperuser
    ```
+   Since `.env` now points at the shared Neon database, `migrate` won't create a new database — it's confirming your machine is in sync with the existing one. Only run `createsuperuser` if you don't already have an account on the shared database (check with the team first, to avoid creating a duplicate).
 
 ### Note on superuser accounts
-Superuser accounts live inside `db.sqlite3`, which is gitignored and never committed. Cloning the repo only brings over code and migration files — not the database itself. Each machine gets its own local SQLite database, so you must run `createsuperuser` again on every new machine; it will be a separate account from the one on your original machine.
+This note is now outdated for the shared-database setup and kept only for history: it originally described SQLite, where each machine had its own separate local database file, so `createsuperuser` had to be run fresh on every machine. Now that the team shares one Neon database (see step 5), superuser accounts are shared too — an account created by one teammate is visible to everyone. Check with the team before running `createsuperuser` again to avoid creating duplicate accounts.
 
 ---
 
@@ -222,6 +221,30 @@ A running summary of Django/backend concepts covered in the walkthrough so far.
 - Added `sslmode` and `channel_binding` to `DATABASES['default']['OPTIONS']`, required by Neon
 - Verified: `migrate` applied all migrations to the fresh Neon database, `createsuperuser` succeeded, and the account is visible in the admin panel — confirming the whole team is now able to point at one shared live database instead of separate local SQLite files
 
+## 21. Production Settings for Deployment
+- Made `SECRET_KEY`, `DEBUG`, and `ALLOWED_HOSTS` environment-driven via `env(...)` (same `django-environ` pattern as the database config), instead of hardcoded
+- Fixed an ordering bug: `env = environ.Env()` / `read_env(...)` must run before any setting calls `env(...)` — moved that setup to the top of `settings.py`, right after `BASE_DIR`
+- Added `gunicorn` (production web server) and `whitenoise` (serves static files directly from Django) to `requirements.txt`
+- Added `WhiteNoiseMiddleware` to `MIDDLEWARE` and configured `STATIC_ROOT` / `STORAGES` for compressed static file serving
+
+## 22. Deploying to Render
+- Added a `Procfile` (`web: gunicorn config.wsgi --log-file -`) telling Render how to start the app
+- Added `build.sh` to install dependencies, run `collectstatic`, and run `migrate` automatically on each deploy
+- Added a `.gitattributes` entry (`build.sh text eol=lf`) to prevent Windows CRLF line endings from breaking the script on Render's Linux environment
+- Created the Render Web Service, connected to GitHub, with Build Command `./build.sh` and Start Command `gunicorn config.wsgi`
+- Set environment variables on Render's dashboard (Environment tab) — `SECRET_KEY` (freshly generated, not the scaffolded default), `DEBUG=False`, `ALLOWED_HOSTS`, and the same `DATABASE_*` values used locally for Neon
+- Caught and fixed a typo (`DATABASE` instead of `DATABASE_NAME`) that caused the first deploy to fail with `KeyError: 'DATABASE_NAME'`
+- Live at `https://quickbuckz.onrender.com`, connected to the same shared Neon database as local development
+
+## 23. Bug Fix: Public Reads vs. Authenticated Writes
+- Caught a bug surfaced by the live deploy: `PostListView` had `permission_classes = [IsAuthenticated]`, which blocked **both** GET and POST — but the intent (and what the frontend API reference already documented) was public reads, authenticated writes only
+- Fixed by switching to `IsAuthenticatedOrReadOnly`, DRF's built-in permission for that exact split (GET/HEAD/OPTIONS open to anyone, POST/PUT/PATCH/DELETE require a valid JWT)
+- Confirmed `ProfileListView` (never had `permission_classes` set, so already public) and `MyProfileView` (should always require auth) were correctly left unchanged — only `PostListView` needed the fix
+
+## 24. Root Landing Page
+- Added a plain function-based view (`home`) in `config/urls.py`, registered at the root path `''`, returning a simple `HttpResponse` — the API-only backend previously 404'd at `/`, which is otherwise expected/normal but was worth a friendly landing message instead
+
 ## Not Yet Covered (Upcoming)
+- Sharing the real `.env` values with the rest of the team so everyone points at the same Neon database instead of their own local SQLite
 - Adding the real Framer published URL to `CORS_ALLOWED_ORIGINS` once available
 - JWT handling on the Framer frontend side (storing tokens, attaching them to fetch calls, refreshing on expiry)

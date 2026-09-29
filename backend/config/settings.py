@@ -16,18 +16,17 @@ import environ, os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ib#h(slo)$y)*0ojj#i!sy^wxp##_x)ss(he$^-=#@+ojjt%tk'
-
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)*0ojj#i!sy^wxp##_x)ss(he$^-=#@+ojjt%tk')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
-
+DEBUG = env.bool('DEBUG', default=False)
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 # Application definition
 
@@ -45,6 +44,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -76,8 +76,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
 
 if env('DATABASE_HOST', default=None):
     DATABASES = {
@@ -91,6 +90,7 @@ if env('DATABASE_HOST', default=None):
             'OPTIONS': {'sslmode': 'require', 'channel_binding': 'require'},
         }
     }
+
 else:
     DATABASES = {
         'default': {
@@ -134,14 +134,26 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
 
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.EmailOrUsernameBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
 
 
 # REST Framework
@@ -156,6 +168,5 @@ REST_FRAMEWORK = {
 # CORS
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # for Framer's local preview, if applicable
-    # "https://your-project.framer.website",  # add once teammate has a published URL
+    "http://localhost:5173",  
 ]
