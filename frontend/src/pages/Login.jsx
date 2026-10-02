@@ -1,0 +1,76 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Lock, Plane } from 'lucide-react'
+
+function Field({ id, label, ...props }) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className="block text-sm font-medium">
+        {label}
+      </label>
+      <input
+        id={id}
+        className="w-full rounded-lg border border-line bg-field px-4 py-3 text-sm text-white placeholder:text-muted/70 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+        {...props}
+      />
+    </div>
+  )
+}
+
+export default function Login() {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    // TODO: hook up to your auth backend
+    console.log('Sign in', { username })
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-card p-8 shadow-2xl shadow-black/40 sm:p-10">
+        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-page">
+          <Plane size={20} strokeWidth={2.5} />
+        </div>
+
+        <h1 className="text-3xl font-bold tracking-tight">Test Test</h1>
+        <p className="mt-2 text-sm text-muted">Sign in to continue to your workspace.</p>
+
+        <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+          <Field
+            id="username"
+            label="Username"
+            placeholder="Enter your username"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <Field
+            id="password"
+            label="Password"
+            type="password"
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            type="submit"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-3 text-sm font-semibold text-page transition hover:bg-accent-hover active:scale-[0.99]"
+          >
+            Sign in <Lock size={16} strokeWidth={2.5} />
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-muted">
+          New here?{' '}
+          <Link to="/create-account" className="font-semibold text-accent hover:underline">
+            Create an account
+          </Link>
+        </p>
+      </div>
+    </main>
+  )
+}

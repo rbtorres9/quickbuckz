@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page: #0a0d14;
+  --color-card: #111723;
+  --color-field: #0b0f17;
+  --color-line: #222a38;
+  --color-muted: #9aa4b5;
+  --color-accent: #e6ff6b;
+  --color-accent-hover: #d8f55a;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  @apply bg-page text-white font-sans antialiased;
+}
