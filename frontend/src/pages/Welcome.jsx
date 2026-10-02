@@ -24,8 +24,14 @@ export default function Welcome() {
         </p>
 
         <Link
-          to="/login"
+          to="/user-page"
           className="mt-6 inline-block w-full rounded-lg bg-accent py-3 text-sm font-semibold text-page transition hover:bg-accent-hover"
+        >
+          Go to profile
+        </Link>
+        <Link
+          to="/login"
+          className="mt-3 inline-block w-full rounded-lg border border-line py-3 text-sm font-semibold transition hover:bg-white/5"
         >
           Log out
         </Link>
