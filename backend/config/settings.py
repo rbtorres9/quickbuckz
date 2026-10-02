@@ -134,10 +134,22 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
+# AWS / S3 Compatible Storage Settings (Neon Object Storage)
+AWS_STORAGE_BUCKET_NAME = env('AWS_BUCKET_NAME')
+AWS_S3_ENDPOINT_URL = env('AWS_ENDPOINT_URL_S3')
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+
+# Prevent django-storages from trying to use default AWS regions
+AWS_S3_REGION_NAME = env('AWS_REGION') 
+AWS_S3_SIGNATURE_VERSION = 's3v4'
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage"
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },

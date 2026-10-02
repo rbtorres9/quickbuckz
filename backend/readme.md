@@ -244,6 +244,10 @@ A running summary of Django/backend concepts covered in the walkthrough so far.
 ## 24. Root Landing Page
 - Added a plain function-based view (`home`) in `config/urls.py`, registered at the root path `''`, returning a simple `HttpResponse` — the API-only backend previously 404'd at `/`, which is otherwise expected/normal but was worth a friendly landing message instead
 
+## 25. Added Backend Storage
+- Updated backends/config/settings.py so files can be stored in the neon database using S3 API
+- Changed Post model to be uploaded to a slightly different location
+
 ## Not Yet Covered (Upcoming)
 - Sharing the real `.env` values with the rest of the team so everyone points at the same Neon database instead of their own local SQLite
 - Adding the real Framer published URL to `CORS_ALLOWED_ORIGINS` once available
