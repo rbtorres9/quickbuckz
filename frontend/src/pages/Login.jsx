@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Lock, Plane } from 'lucide-react'
 
 function Field({ id, label, ...props }) {
@@ -20,11 +20,13 @@ function Field({ id, label, ...props }) {
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const navigate = useNavigate()
 
   function handleSubmit(e) {
     e.preventDefault()
-    // TODO: hook up to your auth backend
-    console.log('Sign in', { username })
+    // TODO: check the username and password with the backend first.
+    // For now, any input "logs in".
+    navigate('/welcome', { state: { name: username, from: 'login' } })
   }
 
   return (
@@ -34,7 +36,7 @@ export default function Login() {
           <Plane size={20} strokeWidth={2.5} />
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight">Test Test</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
         <p className="mt-2 text-sm text-muted">Sign in to continue to your workspace.</p>
 
         <form onSubmit={handleSubmit} className="mt-7 space-y-5">
@@ -55,6 +57,15 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          <div className="-mt-2 flex justify-between text-xs">
+            <Link to="/forgot?type=username" className="text-muted hover:text-accent">
+              Forgot username?
+            </Link>
+            <Link to="/forgot?type=password" className="text-muted hover:text-accent">
+              Forgot password?
+            </Link>
+          </div>
 
           <button
             type="submit"
