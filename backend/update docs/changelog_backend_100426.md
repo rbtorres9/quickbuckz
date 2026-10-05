@@ -18,6 +18,7 @@ This document records what changed when the backend moved from Django's built-in
 | Username | Django defaults (up to 150 characters) | 4-20 characters, custom rules (section 2), always stored lowercase |
 | Login identifier | Username only | Username **or** email, case-insensitive |
 | Profile | `bio`, `profile_picture`, `created_at` | Same, plus a `visibility` field (public/private). Private profiles are hidden from other users' lists (section 3) |
+| Public profile list (`GET /api/profiles/`) | `id`, `user`, `bio`, `profile_picture`, `created_at` | Also `username`, `first_name`, `last_name` (read-only, taken from the linked user) |
 | Private account data | None | New `AccountSecurity` model (empty stub, never exposed by the API) |
 | Database | Had real test data | Schema wiped and rebuilt. All previous users, profiles and posts are gone |
 
@@ -70,14 +71,15 @@ Duplicate email error (returned under the `email` key): `user with this email al
    Either the username or the email can go in that field, in any capitalization. **Verified** over HTTP against `/api/token/`, including an email typed in capitals.
 4. **Old tokens are no longer valid.** The database was wiped and rebuilt. Anyone holding an access or refresh token from before the reset should be logged out. Clear stored tokens in the frontend and log in again. Do this even if a token has not expired, because user IDs were reassigned and an old token could point at the wrong account.
 5. **All old accounts are gone.** Test users, profiles and posts created before the reset no longer exist. Sign up again.
-6. **`GET /api/profiles/` hides private profiles.** Other users' profiles set to `private` are left out of the list. A user always sees their own profile in the list, even when it is private. The endpoint requires a valid JWT. **Verified** over HTTP: with one private profile, a second user's list had one fewer entry than the owner's.
+6. **`GET /api/profiles/` is public and hides private profiles.** No login is needed, which matches the original `frontend_api_reference.md`. Profiles set to `private` are left out of the list for everyone except their owner, who sees their own profile when the request carries a valid token. **Verified** over HTTP: a request with no token returns `200` and leaves out the private profile, and with one private profile a second logged-in user's list had one fewer entry than the owner's. **Watch out:** a request that carries an expired or invalid `Authorization` header returns `401` even though the endpoint is public (verified), so the frontend should send the header only when it holds a valid token.
 7. **`POST /api/profiles/` is no longer allowed** and returns `405`. Profiles are created automatically at signup, and edited through `PATCH /api/profile/me/`. **Verified.**
 8. **`/api/profile/me/` now includes `visibility`** (`"public"` or `"private"`) and lets the owner change it. Any other value returns `400` with `{"visibility": ["\"bogus\" is not a valid choice."]}`. The `user` field is read-only: sending it has no effect. **Verified.**
+9. **Each item in `GET /api/profiles/` now includes `username`, `first_name` and `last_name`.** All three are read-only and come from the linked user account, so the frontend can show a name without a second request. `first_name` and `last_name` are empty strings until they are set, and for now they can only be set in the Django admin, because no API endpoint accepts them yet. They appear only for profiles that are visible in the list (public ones, plus the requester's own). **Verified.**
 
 ### What did *not* change
 - All URLs are the same (the only difference is that `POST /api/profiles/` is now rejected).
 - The Post JSON shape is unchanged.
-- The Profile JSON in `GET /api/profiles/` has the same fields as before. `visibility` appears only in `/api/profile/me/` responses.
+- The Profile JSON in `GET /api/profiles/` keeps every previous field and adds `username`, `first_name` and `last_name` (item 9 above). `visibility` appears only in `/api/profile/me/` responses.
 - `Authorization: Bearer <access_token>` works as before.
 
 ---
@@ -100,7 +102,7 @@ Extends `AbstractUser`. Keeps all standard auth fields and adds:
 | `visibility` | **New.** `"public"` or `"private"`, default `"public"` |
 | `created_at` | Set automatically |
 
-Profiles use two serializers. `PublicProfileSerializer` (used by `GET /api/profiles/`) is fully read-only and omits `visibility`. `OwnerProfileSerializer` (used by `/api/profile/me/`) adds `visibility` and keeps `user` read-only. Which profiles appear in the list is decided in `ProfileListView.get_queryset()`: public profiles, plus the requester's own. **Verified** over HTTP.
+Profiles use two serializers. `PublicProfileSerializer` (used by `GET /api/profiles/`) is fully read-only, omits `visibility`, and adds `username`, `first_name` and `last_name` read from the linked user. `OwnerProfileSerializer` (used by `/api/profile/me/`) adds `visibility` and keeps `user` read-only. Which profiles appear in the list is decided in `ProfileListView.get_queryset()`: public profiles, plus the requester's own. **Verified** over HTTP.
 
 ### `AccountSecurity` (private)
 - One-to-one with `User`, `related_name="security"`.
@@ -124,8 +126,8 @@ A `post_save` signal on `User` now creates **both** a `Profile` and an `AccountS
 | `accounts/validators.py` | **New.** `validate_username_rules` |
 | `accounts/backends.py` | **New.** `EmailOrUsernameBackend` (case-insensitive lookup by username or email, safe handling of duplicates, timing-safe on misses) |
 | `accounts/signals.py` | Creates `Profile` and `AccountSecurity` on user creation |
-| `accounts/serializers.py` | `RegisterSerializer` lowercases and strips `username` and `email` before validation, so duplicates are caught as clean `400` errors instead of database errors. `ProfileSerializer` was replaced by `PublicProfileSerializer` and `OwnerProfileSerializer` (`user` is read-only in both) |
-| `accounts/views.py` | `ProfileListView` is now list-only (`ListAPIView`) and hides other users' private profiles. `MyProfileView` uses `OwnerProfileSerializer` |
+| `accounts/serializers.py` | `RegisterSerializer` lowercases and strips `username` and `email` before validation, so duplicates are caught as clean `400` errors instead of database errors. `ProfileSerializer` was replaced by `PublicProfileSerializer` and `OwnerProfileSerializer` (`user` is read-only in both); the public one also returns `username`, `first_name` and `last_name` |
+| `accounts/views.py` | `ProfileListView` is now list-only (`ListAPIView`), open to anonymous visitors (`AllowAny`), hides other users' private profiles, and loads each profile's user in the same query (`select_related`) to avoid an extra query per profile. `MyProfileView` uses `OwnerProfileSerializer` |
 | `accounts/apps.py` | Unchanged in behavior; `ready()` still imports the signals |
 | `accounts/admin.py` | New `CustomUserAdmin` with Profile and AccountSecurity inlines (inlines hidden on the "add user" page so the signal does not conflict), email field on the add page; `Post` still registered |
 | `accounts/migrations/` | Old migrations deleted. Fresh `0001_initial` generated for the new models |
@@ -155,8 +157,8 @@ Any code that needs the user model should use `settings.AUTH_USER_MODEL` (in mod
 | `README.md` | Section 11, Post model | Shows `ForeignKey(User, ...)`; now `settings.AUTH_USER_MODEL`. It also shows `upload_to='posts/'`, but the code uses `'posts/images/'` (this mismatch predates the User changes) |
 | `frontend_api_reference.md` | Login | Add: email also accepted; usernames are lowercase |
 | `frontend_api_reference.md` | Signup | Add: username/email rules and the new `400` error messages |
-| `frontend_api_reference.md` | Profile data shape | `/api/profile/me/` now also returns `visibility` |
-| `frontend_api_reference.md` | Endpoints table | Lists `GET /api/profiles/` as not requiring auth, but the code requires a JWT. It also does not mention that private profiles are hidden, or that `visibility` can be updated via `PATCH /api/profile/me/` |
+| `frontend_api_reference.md` | Profile data shape | `/api/profiles/` items now include `username`, `first_name` and `last_name`, and `/api/profile/me/` now also returns `visibility` |
+| `frontend_api_reference.md` | Endpoints table | Does not mention that private profiles are hidden from `GET /api/profiles/`, or that `visibility` can be updated via `PATCH /api/profile/me/` |
 
 Suggested replacement text for `frontend_api_reference.md` is in section 8.
 
@@ -175,6 +177,7 @@ Suggested replacement text for `frontend_api_reference.md` is in section 8.
 9. **No pagination.** `GET /api/profiles/` and `GET /api/posts/` return everything at once, as before.
 10. **Default visibility is `public`.** Decide whether new profiles should instead start as `private`. Changing the default affects only profiles created afterward.
 11. **`frontend_api_reference.md` has not been updated yet.** Section 8 has the replacement text.
+12. **`first_name` and `last_name` can only be set in the Django admin.** Neither signup nor `PATCH /api/profile/me/` accepts them, so they are empty for most users. Decide whether users should set them at signup, through their profile, or both.
 
 ---
 
@@ -194,11 +197,11 @@ Replace or add the following in the existing file.
 
 | Method | Endpoint | Auth required? | Purpose |
 |---|---|---|---|
-| GET | `/api/profiles/` | **Yes** | List profiles. Profiles set to private are hidden from everyone except their owner |
+| GET | `/api/profiles/` | No | List profiles. Profiles set to private are hidden from everyone except their owner (who is recognized only when a valid token is sent) |
 | GET | `/api/profile/me/` | **Yes** | View your own profile (includes `visibility`) |
 | PATCH / PUT | `/api/profile/me/` | **Yes** | Update your own `bio`, `profile_picture` and `visibility` |
 
-> If the frontend needs `GET /api/profiles/` to work without logging in, change `permission_classes` on `ProfileListView` and update this row to match.
+> This endpoint is public, so requests without a token work. But a request that includes an **expired or invalid** `Authorization` header is rejected with `401` before the endpoint runs, so attach the header only when you hold a valid token (refresh it first if needed).
 
 ### Profile data shapes (replace the Profile section)
 
@@ -207,6 +210,9 @@ Public (items in `GET /api/profiles/`):
 {
   "id": 1,
   "user": 1,
+  "username": "ada_l",
+  "first_name": "Ada",
+  "last_name": "Lovelace",
   "bio": "text",
   "profile_picture": null,
   "created_at": "2026-09-20T21:37:22.376608Z"
@@ -227,7 +233,9 @@ Owner (`GET` and `PATCH /api/profile/me/`):
 - `visibility` is `"public"` or `"private"`. Any other value returns `400`.
 - `user` is the numeric ID of the linked user and cannot be changed.
 - Only `bio`, `profile_picture` and `visibility` can be updated.
+- `username`, `first_name` and `last_name` appear only in the public list. They come from the user's account and are read-only. `username` is always present and lowercase, while `first_name` and `last_name` are empty strings when not set.
 
 ### Known gaps (add)
 - Private profiles are hidden from the profile list only. Their authors' posts still appear in `GET /api/posts/`.
 - Tokens issued before the database reset are invalid. Clear stored tokens and log in again.
+- A stale token on a public endpoint (such as `GET /api/profiles/` or `GET /api/posts/`) returns `401` instead of the public data.
