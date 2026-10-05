@@ -1,15 +1,21 @@
 from rest_framework import serializers
 from .models import Profile, Post
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
-class ProfileSerializer(serializers.ModelSerializer):
+
+class PublicProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['id', 'user', 'bio', 'profile_picture', 'created_at']
+        read_only_fields = fields
 
-# ModelSerializer is DRF's shortcut — instead of manually listing dict keys like book_to_dict did, it looks at the Profile model's fields and auto-generates the "object → dict" logic
-# class Meta is just a config block telling the serializer which model to use and which fields to include (you could list only ['bio'] if you wanted a partial view, for example)
-# id isn't a field you defined — Django auto-adds a primary key called id to every model, so it's available here too
+
+class OwnerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['id', 'user', 'bio', 'profile_picture', 'visibility', 'created_at']
+        read_only_fields = ['user']
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -25,10 +31,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'password']
 
+    def to_internal_value(self, data):
+        data = data.copy()  # request data can be an immutable QueryDict
+        for key in ('username', 'email'):
+            if isinstance(data.get(key), str):
+                data[key] = data[key].strip().lower()
+        return super().to_internal_value(data)
+
     def create(self, validated_data):
-        user = User.objects.create_user(
+        return User.objects.create_user(
             username=validated_data['username'],
-            email=validated_data.get('email', ''),
-            password=validated_data['password']
+            email=validated_data['email'],
+            password=validated_data['password'],
         )
-        return user
