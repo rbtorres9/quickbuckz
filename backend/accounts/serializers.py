@@ -5,9 +5,13 @@ User = get_user_model()
 
 
 class PublicProfileSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='user.username')
+    first_name = serializers.ReadOnlyField(source='user.first_name')
+    last_name = serializers.ReadOnlyField(source='user.last_name')
+
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'bio', 'profile_picture', 'created_at']
+        fields = ['id', 'user', 'username', 'first_name', 'last_name', 'bio', 'profile_picture', 'created_at']
         read_only_fields = fields
 
 
