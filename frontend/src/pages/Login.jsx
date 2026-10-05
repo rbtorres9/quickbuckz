@@ -20,13 +20,32 @@ function Field({ id, label, ...props }) {
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  function handleSubmit(e) {
-    e.preventDefault()
-    // TODO: check the username and password with the backend first.
-    // For now, any input "logs in".
-    navigate('/welcome', { state: { name: username, from: 'login' } })
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+
+    try {
+      const response = await fetch("https://quickbuckz.onrender.com/api/token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      const data = await response.json();
+
+      if (Object.hasOwn(data, "access") && Object.hasOwn(data, "refresh")) {
+        navigate("/welcome")
+      }
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -66,6 +85,8 @@ export default function Login() {
               Forgot password?
             </Link>
           </div>
+
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
           <button
             type="submit"

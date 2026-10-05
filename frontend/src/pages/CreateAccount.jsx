@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 const fields = [
+  { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
+  { name: 'firstName', label: 'First name', autoComplete: 'given-name' },
+  { name: 'lastName', label: 'Last name', autoComplete: 'family-name' },
   { name: 'username', label: 'Username', autoComplete: 'username' },
   { name: 'password', label: 'Password', type: 'password', autoComplete: 'new-password' },
   { name: 'confirmPassword', label: 'Confirm password', type: 'password', autoComplete: 'new-password' },
-  { name: 'firstName', label: 'First name', autoComplete: 'given-name' },
-  { name: 'lastName', label: 'Last name', autoComplete: 'family-name' },
-  { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
 ]
 
 export default function CreateAccount() {
@@ -22,15 +22,48 @@ export default function CreateAccount() {
     setError('')
   }
 
-  function handleSubmit(e) {
-    e.preventDefault()
-    if (form.password !== form.confirmPassword) {
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+
+    if (form.password != form.confirmPassword) {
       setError('Passwords do not match.')
       return
     }
-    // TODO: send to the backend once it's set up.
-    // For now, it just goes to the welcome page.
-    navigate('/welcome', { state: { name: form.firstName, from: 'create-account' } })
+
+    try {
+      // USE THE OTHER COMMENTED SECTION ONCE THE USER MODEL HAS UPDATED
+      const {username, email, password} = form
+      const response = await fetch("https://quickbuckz.onrender.com/api/signup/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          email,
+          password
+        }),
+      });
+
+      /*
+      const {email, firstName, lastName, username, password} = form
+      const response = await fetch("https://quickbuckz.onrender.com/api/signup/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      */
+      
+      // ERR: This runs when certain fields are invalid such as the username which is unhelpful
+      if (!response.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      // const data = await response.json();
+
+      navigate("/login")
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
