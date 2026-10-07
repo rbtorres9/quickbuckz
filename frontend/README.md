@@ -19,3 +19,6 @@ TODO:
 - Test errors when creating and logging into an account e.g. username already exists, password fits criteria, credentials don't match...
 - Ensure the appropriate messages appear when there is an error.
 - Store access and refresh tokens securely and effectively.
+
+UPDATES:
+- Updated the /create-account page to display errors appropriately such as non-unique emails, non-unique usernames, invalid usernames, etc..

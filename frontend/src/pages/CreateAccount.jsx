@@ -55,7 +55,29 @@ export default function CreateAccount() {
       
       // ERR: This runs when certain fields are invalid such as the username which is unhelpful
       if (!response.ok) {
-        throw new Error("Invalid credentials");
+        let errorDetails = `${response.status} Error`
+
+        try {
+          let errors = []
+          const errorJson = await response.json()
+          
+          /* REMOVE THIS LATER */
+          console.log(errorJson)
+
+          for (const [key, value] of Object.entries(errorJson)) {
+            if (Array.isArray(value)) {
+              for (const err of value)
+                errors.push(err)
+            }
+          }
+
+          errorDetails = errors.join("\n")
+        }
+        catch {
+          /* Leave empty for now */
+        }
+
+        throw new Error(errorDetails);
       }
 
       // const data = await response.json();
@@ -91,7 +113,7 @@ export default function CreateAccount() {
             </div>
           ))}
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-400 whitespace-pre-line">{error}</p>}
 
           <button
             type="submit"
