@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import Profile, Post
 from django.contrib.auth import get_user_model
 User = get_user_model()
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 
 class PublicProfileSerializer(serializers.ModelSerializer):
@@ -48,3 +50,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             password=validated_data['password'],
         )
+
+    def validate(self, attrs):
+        candidate = User(username=attrs.get('username'), email=attrs.get('email'))
+        try:
+            validate_password(attrs['password'], user=candidate)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({'password': list(e.messages)})
+        return attrs
