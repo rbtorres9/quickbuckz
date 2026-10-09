@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useStore, sampleUser } from '../data/store.jsx'
-import TopBar from '../components/TopBar.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 
@@ -25,7 +24,6 @@ export default function PostPage() {
 
   return (
     <>
-      <TopBar />
       <main className="mx-auto max-w-2xl px-4 pb-24">
         <Link to="/user-page" className="mt-4 flex w-fit items-center gap-1 text-sm text-muted hover:text-white">
           <ArrowLeft size={16} /> Back to profile

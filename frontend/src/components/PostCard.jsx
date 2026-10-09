@@ -24,9 +24,16 @@ export default function PostCard({ post, full = false, onDeleted }) {
     onDeleted?.()
   }
 
-  const image = post.image && (
+  // Real photos use imageUrl; the sample posts use gradient placeholders.
+  const image = post.imageUrl ? (
+    <img
+      src={post.imageUrl}
+      alt=""
+      className={`mx-5 mt-3 w-[calc(100%-2.5rem)] rounded-xl object-cover ${full ? 'max-h-[32rem]' : 'h-56'}`}
+    />
+  ) : post.image ? (
     <div className={`${post.image} mx-5 mt-3 rounded-xl ${full ? 'h-72' : 'h-56'}`} />
-  )
+  ) : null
 
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-card">
