@@ -60,9 +60,23 @@ export function StoreProvider({ children }) {
 
   const deletePost = (id) => setPosts((all) => all.filter((p) => p.id !== id))
 
+  // Adds a new post to the top of the feed and returns its id.
+  // TODO: save new posts to the backend database instead of this sample list
+  function addPost({ text, imageUrl }) {
+    const id = Date.now()
+    setPosts((all) => [
+      {
+        id, author: sampleUser.name, handle: sampleUser.handle, date: 'now',
+        likes: 0, liked: false, image: null, imageUrl, text, comments: [],
+      },
+      ...all,
+    ])
+    return id
+  }
+
   return (
     <StoreContext.Provider
-      value={{ posts, viewer, setViewer, me, isFollowing, setIsFollowing, toggleLike, addComment, deleteComment, deletePost }}
+      value={{ posts, viewer, setViewer, me, isFollowing, setIsFollowing, toggleLike, addComment, deleteComment, deletePost, addPost }}
     >
       {children}
     </StoreContext.Provider>

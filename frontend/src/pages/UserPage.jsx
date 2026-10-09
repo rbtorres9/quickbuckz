@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
 import { useStore, sampleUser } from '../data/store.jsx'
-import TopBar from '../components/TopBar.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 
@@ -51,7 +49,6 @@ export default function UserPage() {
 
   return (
     <>
-      <TopBar />
       <main className="mx-auto max-w-2xl px-4 pb-24">
         <div className="banner mt-4 h-32 rounded-2xl border border-line sm:h-40" />
 
@@ -93,16 +90,6 @@ export default function UserPage() {
         </div>
       </main>
 
-      {isOwner && (
-        <button
-          title="New post"
-          aria-label="New post"
-          className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-page shadow-xl shadow-black/50 hover:bg-accent-hover"
-        >
-          {/* TODO: link to /post-creation once that page is built */}
-          <Plus size={24} strokeWidth={2.5} />
-        </button>
-      )}
     </>
   )
 }

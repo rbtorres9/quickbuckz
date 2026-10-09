@@ -1,21 +1,10 @@
-import { useContext } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
-import { AuthContext } from '../AuthContext'
-
 
 // Dummy "you're in" page. Login and Create Account send people here.
 // Replace with the real /user-page once the backend exists.
 export default function Welcome() {
   const { state } = useLocation()
-  const { logout } = useContext(AuthContext)
-  const navigate = useNavigate()
-
-  function handleLogout() {
-    logout()
-    navigate('/login', { replace: true })
-  }
-
   const name = state?.name
   const isNew = state?.from === 'create-account'
 
@@ -40,13 +29,12 @@ export default function Welcome() {
         >
           Go to profile
         </Link>
-        <button
-          type="button"
-          onClick={handleLogout}
+        <Link
+          to="/login"
           className="mt-3 inline-block w-full rounded-lg border border-line py-3 text-sm font-semibold transition hover:bg-white/5"
         >
           Log out
-        </button>
+        </Link>
       </div>
     </main>
   )
