@@ -6,6 +6,7 @@ import ForgotAccount from './pages/ForgotAccount.jsx'
 import UserPage from './pages/UserPage.jsx'
 import PostPage from './pages/PostPage.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import PublicRoute from './components/PublicRoute.jsx'
 import { Printer } from 'lucide-react'
 
 import { useContext } from 'react'
@@ -20,8 +21,22 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/create-account" element={<CreateAccount />} />
+
+      {/* Logged Out / New User */}
+      <Route path="/login" element={
+          <PublicRoute>
+              <Login />
+          </PublicRoute>
+        }
+      />
+      <Route path="/create-account" element={
+            <PublicRoute>
+                <CreateAccount />
+            </PublicRoute>
+          }
+      />
+
+      {/* Logged In */}
       <Route path="/welcome" element={
         <ProtectedRoute>
           <Welcome />
