@@ -20,7 +20,17 @@ class PublicProfileSerializer(serializers.ModelSerializer):
 class OwnerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'bio', 'profile_picture', 'visibility', 'created_at']
+        fields = [
+            'id', 
+            'user', 
+            'username', 
+            'first_name',
+            'last_name',
+            'bio', 
+            'profile_picture', 
+            'visibility', 
+            'created_at'
+            ]
         read_only_fields = ['user']
 
 
