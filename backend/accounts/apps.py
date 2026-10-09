@@ -7,3 +7,7 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         import accounts.signals
+
+
+from django.apps import AppConfig
+

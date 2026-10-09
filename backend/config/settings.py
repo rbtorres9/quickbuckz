@@ -99,6 +99,9 @@ else:
         }
     }
 
+# Modified User Model ('user'-defined instead of django import)
+AUTH_USER_MODEL = "accounts.User"
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -163,9 +166,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 AUTHENTICATION_BACKENDS = [
-    "accounts.backends.EmailOrUsernameBackend",
-    "django.contrib.auth.backends.ModelBackend",
-]
+    "accounts.backends.EmailOrUsernameBackend"
+    ]
 
 
 # REST Framework
@@ -182,3 +184,6 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  
 ]
+
+if env('DEBUG', default=False) == True:
+    CORS_ALLOW_ALL_ORIGINS=True
