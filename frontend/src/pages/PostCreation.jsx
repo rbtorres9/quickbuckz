@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ImagePlus, X } from 'lucide-react'
-import { useStore, sampleUser } from '../data/store.jsx'
+import { useStore } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 
 const MAX_CHARS = 500
@@ -9,7 +9,7 @@ const MAX_IMAGE_MB = 5
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export default function PostCreation() {
-  const { addPost } = useStore()
+  const { addPost, profile } = useStore()
   const navigate = useNavigate()
   const fileInput = useRef(null)
 
@@ -65,7 +65,7 @@ export default function PostCreation() {
 
       <form onSubmit={handleSubmit} className="mt-5 rounded-2xl border border-line bg-card p-5">
         <div className="flex gap-3">
-          <Avatar name={sampleUser.name} />
+          <Avatar name={profile.name} src={profile.avatarUrl} />
           <textarea
             value={text}
             onChange={(e) => { setText(e.target.value); setError('') }}

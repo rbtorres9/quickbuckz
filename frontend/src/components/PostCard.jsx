@@ -5,10 +5,14 @@ import { useStore } from '../data/store.jsx'
 import Avatar from './Avatar.jsx'
 
 export default function PostCard({ post, full = false, onDeleted }) {
-  const { viewer, toggleLike, deletePost } = useStore()
+  const { viewer, toggleLike, deletePost, profile } = useStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
-  const isMine = viewer === 'owner' && post.handle === 'jordanr'
+  const byOwner = post.handle === profile.handle
+  const isMine = viewer === 'owner' && byOwner
+  // Posts by the profile owner always show their latest name and photo
+  const authorName = byOwner ? profile.name : post.author
+  const profileLink = byOwner ? '/user-page' : `/user/${post.handle}`
 
   // Close the ⋯ menu when clicking anywhere else
   useEffect(() => {
@@ -38,9 +42,12 @@ export default function PostCard({ post, full = false, onDeleted }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-card">
       <div className="flex items-center gap-3 px-5 pt-4">
-        <Avatar name={post.author} />
+        <Link to={profileLink} className="shrink-0">
+          <Avatar name={authorName} src={byOwner ? profile.avatarUrl : null} />
+        </Link>
         <div className="flex-1 text-sm">
-          <b>{post.author}</b> <span className="text-muted">@{post.handle} · {post.date}</span>
+          <Link to={profileLink} className="font-bold hover:underline">{authorName}</Link>{' '}
+          <span className="text-muted">@{post.handle} · {post.date}</span>
         </div>
         <div className="relative" ref={menuRef}>
           <button
