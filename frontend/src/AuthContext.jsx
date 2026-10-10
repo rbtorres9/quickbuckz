@@ -11,7 +11,39 @@ export const AuthProvider = ({children}) => {
     const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token'))
     const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token'))
 
-    const refresh = async (refresh) => {}
+    const refresh = async () => {
+        try {
+            const response = await fetch('https://quickbuckz.onrender.com/api/token/refresh/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    'refresh': `${refreshToken}`
+                })
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw errorData
+            }
+
+            const data = await response.json()
+
+            if (Object.hasOwn(data, 'access')) {
+                console.log("Set Access Token: ", data.access)
+                localStorage.setItem('access_token', data.access)
+                setAccessToken(data.access)
+
+                return data.access
+            }
+        }
+        catch (err) {
+            console.log(`Refresh Failed: `, err)
+        }
+        
+        return null
+    }
     const login = (access, refresh) => {
         localStorage.setItem('access_token', access)
         localStorage.setItem('refresh_token', refresh)

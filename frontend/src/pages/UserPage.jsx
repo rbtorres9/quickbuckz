@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore, sampleUsers } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
+import { AuthContext } from '../AuthContext.jsx'
 
 // /user-page shows your own profile; /user/:handle shows anyone's.
 export default function UserPage() {
@@ -75,6 +76,47 @@ export default function UserPage() {
       </button>
     )
   }
+
+  const { accessToken, refresh } = useContext(AuthContext)
+  const [ error, setError ] = useState(null)
+  const [ userProfile, setUserProfile ] = useState(null)
+
+  useEffect(() => {
+    const fetchUserData = async (access) => {
+      try {
+        const response = await fetch('https://quickbuckz.onrender.com/api/profile/me/', {
+          method: "GET",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${access}`
+          },
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw errorData
+        }
+        
+        const data = await response.json()
+
+        console.log("Success: ", data)
+        setUserProfile(data)
+
+        return false
+      }
+      catch (err) {
+        console.log("Fetch Error: ", err)
+        setError(err)
+        return err?.code === 'token_not_valid'
+      }
+    }
+
+    fetchUserData(accessToken).then((shouldRefresh) => {
+      if (shouldRefresh) {
+        refresh().then((access) => fetchUserData(access))
+      }
+    })
+  }, [])
 
   return (
     <>
