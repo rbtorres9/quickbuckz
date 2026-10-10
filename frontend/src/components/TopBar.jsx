@@ -22,7 +22,7 @@ export default function TopBar() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-page">
             <Plane size={16} strokeWidth={2.5} />
           </span>
-          <span className="hidden sm:inline">Adored Vacation</span>
+          <span className="hidden sm:inline">QuickBuckz</span>
         </Link>
         {/* Demo toggle. Delete once real logins exist. */}
         <div className="flex items-center gap-2 text-sm">

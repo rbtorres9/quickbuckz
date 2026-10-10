@@ -56,7 +56,7 @@ export default function Login() {
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-        <p className="mt-2 text-sm text-muted">Sign in to continue to your workspace.</p>
+        <p className="mt-2 text-sm text-muted">Sign in to see what UAA students are saying.</p>
 
         <form onSubmit={handleSubmit} className="mt-7 space-y-5">
           <Field
