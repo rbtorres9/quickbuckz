@@ -6,3 +6,5 @@ This is a list of items that we should implement into our project that anyone ca
 
 - Add password validators such as length requirement, character restrictions, at least one number, etc.. Currently passwords can be one character long which is weird. - Done RT 10/08
 - Some sort of dashboard or frontpage where all posts can be displayed.
+- Create a website logo for Quickbuckz
+- /api/signup still only accepts username, email, and password. First name and last name should be included.
