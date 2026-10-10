@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Lock, Plane } from 'lucide-react'
+import { AuthContext } from '../AuthContext'
 
 function Field({ id, label, ...props }) {
   return (
@@ -22,6 +23,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { login } = useContext(AuthContext)
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -41,6 +43,7 @@ export default function Login() {
       const data = await response.json();
 
       if (Object.hasOwn(data, "access") && Object.hasOwn(data, "refresh")) {
+        login(data.access, data.refresh)
         navigate("/welcome")
       }
     } catch (err) {
@@ -56,7 +59,7 @@ export default function Login() {
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-        <p className="mt-2 text-sm text-muted">Sign in to see what UAA students are saying.</p>
+        <p className="mt-2 text-sm text-muted">Sign in to continue to your workspace.</p>
 
         <form onSubmit={handleSubmit} className="mt-7 space-y-5">
           <Field
