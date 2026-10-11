@@ -1,10 +1,11 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useContext, useRef } from 'react'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
+import { AuthContext } from '../AuthContext'
 
 const fields = [
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
-  { name: 'firstName', label: 'First name', autoComplete: 'given-name' },
-  { name: 'lastName', label: 'Last name', autoComplete: 'family-name' },
+  { name: 'first_name', label: 'First name', autoComplete: 'given-name' },
+  { name: 'last_name', label: 'Last name', autoComplete: 'family-name' },
   { name: 'username', label: 'Username', autoComplete: 'username' },
   { name: 'password', label: 'Password', type: 'password', autoComplete: 'new-password' },
   { name: 'confirmPassword', label: 'Confirm password', type: 'password', autoComplete: 'new-password' },
@@ -14,8 +15,16 @@ export default function CreateAccount() {
   const [form, setForm] = useState(
     Object.fromEntries(fields.map((f) => [f.name, '']))
   )
+
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { accessToken, login } = useContext(AuthContext) 
+  const justSignedUp = useRef(false)    
+
+  // shows welcome page saying "You logged in!" if justSignedUp is flagged false
+  if (accessToken && !justSignedUp.current) {
+  return <Navigate to="/welcome" replace />
+  }
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -32,26 +41,13 @@ export default function CreateAccount() {
     }
 
     try {
-      // USE THE OTHER COMMENTED SECTION ONCE THE USER MODEL HAS UPDATED
-      const {username, email, password} = form
-      const response = await fetch("https://quickbuckz.onrender.com/api/signup/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          email,
-          password
-        }),
-      });
-
-      /*
-      const {email, firstName, lastName, username, password} = form
+      const {email, username, password, first_name, last_name } = form
       const response = await fetch("https://quickbuckz.onrender.com/api/signup/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      */
+
       
       // ERR: This runs when certain fields are invalid such as the username which is unhelpful
       if (!response.ok) {
@@ -80,9 +76,25 @@ export default function CreateAccount() {
         throw new Error(errorDetails);
       }
 
-      // const data = await response.json();
+      // signup succeeded, so sign the new user in
+      const tokenResponse = await fetch("https://quickbuckz.onrender.com/api/token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
 
-      navigate("/login")
+      if (!tokenResponse.ok) {
+        // account exists but auto-login failed, so fall back to the login page
+        navigate("/login", { replace: true })
+        return
+      }
+
+      const tokens = await tokenResponse.json()
+
+      // when navigate("/welcome", ...) is triggered, shows "Account Created!" because justSignedUp flag is ticked
+      justSignedUp.current = true
+      login(tokens.access)
+      navigate("/welcome", { state: { from: 'create-account', name: first_name } })
     } catch (err) {
       setError(err.message);
     }

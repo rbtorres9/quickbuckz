@@ -21,8 +21,8 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={publicize(<Login />)}/>
       <Route path="/forgot" element={publicize(<ForgotAccount />)}/>
-      <Route path="/create-account" element={publicize(<CreateAccount />)}/>
-
+      <Route path="/create-account" element={<CreateAccount />} /> 
+      
       <Route path="/welcome" element={protect(<Welcome />)}/>
       
       {/* Logged-in pages: these all get the nav bar.

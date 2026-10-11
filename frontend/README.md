@@ -22,3 +22,6 @@ TODO:
 
 UPDATES:
 - Updated the /create-account page to display errors appropriately such as non-unique emails, non-unique usernames, invalid usernames, etc..
+- Updated /create-account to include 'first-name' and 'last-name' in its POST JSON.stringify (modified firstName and lastName to match django User model variable names)
+- Updated /create-account so that when a user register, they are automatically logged in with message "Account Created!". - RT 10/11
+- Modified App.jsx by removing PublicRoute for /create-account, but also fixed the redirect logic where /create-account is still accessible with a login session (due to implementing above note). - RT 10/11
