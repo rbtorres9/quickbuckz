@@ -1,5 +1,3 @@
-from django.shortcuts import render
-
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from .models import Profile, Post
@@ -20,8 +18,8 @@ class PostListView(generics.ListCreateAPIView):
         serializer.save(author=self.request.user)
 
 class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
     serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
 
 class ProfileListView(generics.ListAPIView):
     serializer_class = PublicProfileSerializer

@@ -49,7 +49,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'email', 'password', 'first_name', 'last_name']
 
     def to_internal_value(self, data):
         data = data.copy()  # request data can be an immutable QueryDict
@@ -59,11 +59,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def create(self, validated_data):
-        return User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-        )
+        return User.objects.create_user(**validated_data)
 
     def validate(self, attrs):
         candidate = User(username=attrs.get('username'), email=attrs.get('email'))
