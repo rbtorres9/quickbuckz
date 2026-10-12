@@ -8,3 +8,4 @@ This is a list of items that we should implement into our project that anyone ca
 - Some sort of dashboard or frontpage where all posts can be displayed.
 - Create a website logo for Quickbuckz
 - /api/signup still only accepts username, email, and password. First name and last name should be included. - Done RT 10/11
+- Work on preserving login session by using cookies (adding more on token refresh mechanism)
