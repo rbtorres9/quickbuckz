@@ -83,8 +83,11 @@ export default function UserPage() {
   const { accessToken, refresh } = useContext(AuthContext)
   const [ error, setError ] = useState(null)
   const [ userProfile, setUserProfile ] = useState(null)
+  const [ userPosts, setUserPosts ] = useState([])
 
   useEffect(() => {
+    let currentUser = null
+
     const fetchUserData = async (access) => {
       try {
         const response = await fetch('https://quickbuckz.onrender.com/api/profile/me/', {
@@ -102,8 +105,8 @@ export default function UserPage() {
         
         const data = await response.json()
 
-        console.log("Success: ", data)
         setUserProfile(data)
+        currentUser = data
 
         return false
       }
@@ -114,9 +117,40 @@ export default function UserPage() {
       }
     }
 
+    const fetchUserPosts = async () => {
+      try {
+        const response = await fetch('https://quickbuckz.onrender.com/api/posts/', {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw errorData
+        }
+
+        let data = await response.json()
+
+        data = data.filter((post) => {
+          return post.author == currentUser.username
+        })
+        setUserPosts(data)
+      }
+      catch (err) {
+        console.log("Fetch Posts Error: ", err)
+        setError(err)
+      }
+    }
+
     fetchUserData(accessToken).then((shouldRefresh) => {
       if (shouldRefresh) {
-        refresh().then((access) => fetchUserData(access))
+        return refresh().then((access) => fetchUserData(access))
+      }
+    }).then(() => {
+      if (currentUser) {
+        fetchUserPosts()
       }
     })
   }, [])
@@ -186,8 +220,8 @@ export default function UserPage() {
         </nav>
 
         <div className="mt-4 space-y-4">
-          {shown.length ? (
-            shown.map((p) => <PostCard key={p.id} post={p} />)
+          {userPosts.length > 0 ? (
+            userPosts.map((p) => <PostCard key={p.id} post={p} user={userProfile} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
               {isSelf ? 'Nothing here yet.' : `${getFullName()} hasn't posted yet.`}
