@@ -25,3 +25,8 @@ UPDATES:
 - Updated /create-account to include 'first-name' and 'last-name' in its POST JSON.stringify (modified firstName and lastName to match django User model variable names)
 - Updated /create-account so that when a user register, they are automatically logged in with message "Account Created!". - RT 10/11
 - Modified App.jsx by removing PublicRoute for /create-account, but also fixed the redirect logic where /create-account is still accessible with a login session (due to implementing above note). - RT 10/11
+
+
+## Site Functionality
+- /user-page now shows the logged in user's full name, bio, and username
+- for now, certain features of /user-page will be hidden such as likes, followers, and following as it is not implemented on the backend

@@ -36,8 +36,11 @@ export default function UserPage() {
 
   const tabs = [
     { id: 'posts', label: 'Posts' },
-    { id: 'top', label: 'Top' },
-    ...(isSelf ? [{ id: 'likes', label: 'Likes' }] : []), // likes are private to you
+
+    // IMPORTANT: THIS SECTION OF CODE WILL BE COMMENTED TO REMOVE SOME COMPLEXITIES FOR NOW
+
+    // { id: 'top', label: 'Top' }, 
+    // ...(isSelf ? [{ id: 'likes', label: 'Likes' }] : []), // likes are private to you
   ]
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'posts'
 
@@ -118,6 +121,22 @@ export default function UserPage() {
     })
   }, [])
 
+  const getFullName = () => {
+    if (userProfile) {
+      return userProfile.first_name + " " + userProfile.last_name
+    }
+    
+    return ""
+  }
+
+  const getUserProperty = (property, def=null) => {
+    if (userProfile && Object.hasOwn(userProfile, property)) {
+      return userProfile[property]
+    }
+
+    return def
+  }
+
   return (
     <>
       <main className="mx-auto max-w-2xl px-4 pb-24">
@@ -129,12 +148,15 @@ export default function UserPage() {
 
         <div className="-mt-10 px-2 sm:px-4">
           <div className="flex items-end justify-between">
-            <Avatar name={person.name} src={person.avatarUrl} size="lg" />
+            <Avatar name={getFullName()} src={person.avatarUrl} size="lg" />
             {button}
           </div>
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">{person.name}</h1>
-          <p className="text-sm text-muted">@{person.handle}</p>
-          {person.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{person.bio}</p>}
+          <h1 className="mt-3 text-2xl font-bold tracking-tight">{getFullName()}</h1>
+          <p className="text-sm text-muted">@{getUserProperty("username", "")}</p>
+          {userProfile && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{getUserProperty("bio", "")}</p>}
+
+          {/* THIS IS HIDDEN SINCE WE ARE NOT ABLE TO TRACK THIS DATA CURRENTLY*/}
+          {/*
           <div className="mt-4 flex gap-5 text-sm">
             <span><b>{theirPosts.length}</b> <span className="text-muted">Posts</span></span>
             <span><b>{person.followers + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
@@ -146,6 +168,7 @@ export default function UserPage() {
               <span><b>{person.following}</b> <span className="text-muted">Following</span></span>
             )}
           </div>
+          */}
         </div>
 
         <nav className="mt-6 flex border-b border-line text-sm font-medium">
@@ -167,7 +190,7 @@ export default function UserPage() {
             shown.map((p) => <PostCard key={p.id} post={p} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
-              {isSelf ? 'Nothing here yet.' : `${person.name} hasn't posted yet.`}
+              {isSelf ? 'Nothing here yet.' : `${getFullName()} hasn't posted yet.`}
             </p>
           )}
         </div>
