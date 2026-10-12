@@ -29,4 +29,5 @@ UPDATES:
 
 ## Site Functionality
 - /user-page now shows the logged in user's full name, bio, and username
+- /user-page also shows the current user's posts
 - for now, certain features of /user-page will be hidden such as likes, followers, and following as it is not implemented on the backend
