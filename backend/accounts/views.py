@@ -1,21 +1,15 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from .models import Profile, Post
+from .models import Profile
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.db.models import Q
 from .serializers import (
-    PublicProfileSerializer, OwnerProfileSerializer, PostSerializer, RegisterSerializer,
+    PublicProfileSerializer, OwnerProfileSerializer, RegisterSerializer,
 )
 
 
-class PostListView(generics.ListCreateAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer

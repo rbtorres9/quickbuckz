@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile, Post
+from .models import Profile
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.contrib.auth.password_validation import validate_password
@@ -38,11 +38,7 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
 
-class PostSerializer(serializers.ModelSerializer):
-    author = serializers.ReadOnlyField(source='author.username')
-    class Meta:
-        model = Post
-        fields = ['id', 'author', 'content', 'image', 'created_at', 'updated_at']
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
