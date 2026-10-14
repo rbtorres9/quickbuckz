@@ -19,7 +19,7 @@ export default function UserPage() {
   const person = isSelf ? profile : sampleUsers[handle]
 
   const { accessToken, refresh } = useContext(AuthContext)
-  const { username, firstName, lastName, profilePicture, bio, refreshUserCache } = useUserCache()
+  const { user } = useUserCache()
   const [ error, setError ] = useState(null)
   const [ userPosts, setUserPosts ] = useState([])
 
@@ -27,7 +27,7 @@ export default function UserPage() {
     return (
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">User not found</h1>
-        <p className="mt-2 text-sm text-muted">There's no one here with the username @{username}.</p>
+        <p className="mt-2 text-sm text-muted">There's no one here with the username @{user?.username}.</p>
         <Link to="/subscriptions" className="mt-5 inline-block text-sm font-semibold text-accent hover:underline">
           Back to Following
         </Link>
@@ -105,7 +105,7 @@ export default function UserPage() {
         let data = await response.json()
 
         data = data.filter((post) => {
-          return post.author == username
+          return user && post.author === user.username
         })
         setUserPosts(data)
       }
@@ -120,8 +120,8 @@ export default function UserPage() {
   }, [])
 
   const getFullName = () => {
-    if (firstName || lastName) {
-      return firstName + " " + lastName
+    if (user) {
+      return user.first_name + " " + user.last_name
     }
     
     return ""
@@ -142,8 +142,8 @@ export default function UserPage() {
             {button}
           </div>
           <h1 className="mt-3 text-2xl font-bold tracking-tight">{getFullName()}</h1>
-          <p className="text-sm text-muted">@{username}</p>
-          {bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{bio}</p>}
+          <p className="text-sm text-muted">@{user?.username}</p>
+          {user?.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{user.bio}</p>}
 
           {/* THIS IS HIDDEN SINCE WE ARE NOT ABLE TO TRACK THIS DATA CURRENTLY*/}
           {/*
@@ -177,7 +177,7 @@ export default function UserPage() {
 
         <div className="mt-4 space-y-4">
           {userPosts.length > 0 ? (
-            userPosts.map((p) => <PostCard key={p.id} post={p} user={{ username, firstName, lastName, profilePicture }} />)
+            userPosts.map((p) => <PostCard key={p.id} post={p} user={user} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
               {isSelf ? 'Nothing here yet.' : `${getFullName()} hasn't posted yet.`}

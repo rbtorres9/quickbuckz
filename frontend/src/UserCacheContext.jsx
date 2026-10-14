@@ -3,11 +3,7 @@ import React, {useContext, createContext, useState} from 'react'
 export const UserCacheContext = createContext(null)
 
 export const UserCacheProvider = ({children}) => {
-    const [firstName, setFirstName] = useState("")
-    const [lastName, setLastName] = useState("")
-    const [username, setUsername] = useState("")
-    const [bio, setBio] = useState("")
-    const [profilePicture, setProfilePicture] = useState("")
+    const [ user, setUser ] = useState(() => localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null)
     
     const refreshUserCache = async (accessToken) => {
         try {
@@ -25,11 +21,9 @@ export const UserCacheProvider = ({children}) => {
 
             const data = await response.json()
 
-            setFirstName((_) => data.first_name)
-            setLastName((_) => data.last_name)
-            setUsername((_) => data.username)
-            setProfilePicture((_) => data.profile_picture)
-            setBio((_) => data.bio)
+            localStorage.setItem('user', JSON.stringify(data))
+
+            console.log("User cache refreshed:", data)
         }
         catch (err) {
             console.log(`Failed to refresh user cache:`, err)
@@ -37,7 +31,7 @@ export const UserCacheProvider = ({children}) => {
     }
 
     return (
-        <UserCacheContext.Provider value={{ firstName, setFirstName, lastName, setLastName, username, setUsername, profilePicture, setProfilePicture, bio, setBio, refreshUserCache }}>
+        <UserCacheContext.Provider value={{ user, refreshUserCache }}>
             { children }
         </UserCacheContext.Provider>
     )
