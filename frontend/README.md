@@ -31,3 +31,8 @@ UPDATES:
 - /user-page now shows the logged in user's full name, bio, and username
 - /user-page also shows the current user's posts
 - for now, certain features of /user-page will be hidden such as likes, followers, and following as it is not implemented on the backend
+
+## UserCacheContext
+- UserCacheContext provides a cache of the user's first name, last name, username, bio, and profile picture in order to reduce api calls to the backend.
+- UserCacheContext is updated when the user first logs in.
+- /user-page is updated to use this cache, so the only api being called is to get the user's posts
