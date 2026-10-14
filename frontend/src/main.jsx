@@ -5,15 +5,18 @@ import App from './App.jsx'
 import { StoreProvider } from './data/store.jsx'
 import './index.css'
 import { AuthProvider } from './AuthContext.jsx'
+import { UserCacheProvider } from './UserCacheContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <StoreProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </StoreProvider>
+      <UserCacheProvider>
+        <StoreProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </StoreProvider>
+      </UserCacheProvider>
     </BrowserRouter>
   </StrictMode>
 )

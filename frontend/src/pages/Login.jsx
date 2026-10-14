@@ -2,6 +2,7 @@ import { useState, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Lock, Plane } from 'lucide-react'
 import { AuthContext } from '../AuthContext'
+import { useUserCache } from '../UserCacheContext.jsx'
 
 function Field({ id, label, ...props }) {
   return (
@@ -24,7 +25,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const { login } = useContext(AuthContext)
-
+  const { refreshUserCache } = useUserCache()
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
@@ -43,7 +44,9 @@ export default function Login() {
       const data = await response.json();
 
       if (Object.hasOwn(data, "access") && Object.hasOwn(data, "refresh")) {
+        refreshUserCache(data.access)
         login(data.access, data.refresh)
+        
         navigate("/welcome")
       }
     } catch (err) {

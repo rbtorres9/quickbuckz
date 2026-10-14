@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
 import { AuthContext } from '../AuthContext.jsx'
+import { useUserCache } from '../UserCacheContext.jsx'
 
 // /user-page shows your own profile; /user/:handle shows anyone's.
 export default function UserPage() {
@@ -17,11 +18,16 @@ export default function UserPage() {
   // TODO: load other users' profiles from the backend database
   const person = isSelf ? profile : sampleUsers[handle]
 
+  const { accessToken, refresh } = useContext(AuthContext)
+  const { username, firstName, lastName, profilePicture, bio, refreshUserCache } = useUserCache()
+  const [ error, setError ] = useState(null)
+  const [ userPosts, setUserPosts ] = useState([])
+
   if (!person) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">User not found</h1>
-        <p className="mt-2 text-sm text-muted">There's no one here with the username @{handle}.</p>
+        <p className="mt-2 text-sm text-muted">There's no one here with the username @{username}.</p>
         <Link to="/subscriptions" className="mt-5 inline-block text-sm font-semibold text-accent hover:underline">
           Back to Following
         </Link>
@@ -80,43 +86,8 @@ export default function UserPage() {
     )
   }
 
-  const { accessToken, refresh } = useContext(AuthContext)
-  const [ error, setError ] = useState(null)
-  const [ userProfile, setUserProfile ] = useState(null)
-  const [ userPosts, setUserPosts ] = useState([])
 
   useEffect(() => {
-    let currentUser = null
-
-    const fetchUserData = async (access) => {
-      try {
-        const response = await fetch('https://quickbuckz.onrender.com/api/profile/me/', {
-          method: "GET",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${access}`
-          },
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw errorData
-        }
-        
-        const data = await response.json()
-
-        setUserProfile(data)
-        currentUser = data
-
-        return false
-      }
-      catch (err) {
-        console.log("Fetch Error: ", err)
-        setError(err)
-        return err?.code === 'token_not_valid'
-      }
-    }
-
     const fetchUserPosts = async () => {
       try {
         const response = await fetch('https://quickbuckz.onrender.com/api/posts/', {
@@ -134,7 +105,7 @@ export default function UserPage() {
         let data = await response.json()
 
         data = data.filter((post) => {
-          return post.author == currentUser.username
+          return post.author == username
         })
         setUserPosts(data)
       }
@@ -144,31 +115,16 @@ export default function UserPage() {
       }
     }
 
-    fetchUserData(accessToken).then((shouldRefresh) => {
-      if (shouldRefresh) {
-        return refresh().then((access) => fetchUserData(access))
-      }
-    }).then(() => {
-      if (currentUser) {
-        fetchUserPosts()
-      }
-    })
+    fetchUserPosts()
+
   }, [])
 
   const getFullName = () => {
-    if (userProfile) {
-      return userProfile.first_name + " " + userProfile.last_name
+    if (firstName || lastName) {
+      return firstName + " " + lastName
     }
     
     return ""
-  }
-
-  const getUserProperty = (property, def=null) => {
-    if (userProfile && Object.hasOwn(userProfile, property)) {
-      return userProfile[property]
-    }
-
-    return def
   }
 
   return (
@@ -186,8 +142,8 @@ export default function UserPage() {
             {button}
           </div>
           <h1 className="mt-3 text-2xl font-bold tracking-tight">{getFullName()}</h1>
-          <p className="text-sm text-muted">@{getUserProperty("username", "")}</p>
-          {userProfile && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{getUserProperty("bio", "")}</p>}
+          <p className="text-sm text-muted">@{username}</p>
+          {bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{bio}</p>}
 
           {/* THIS IS HIDDEN SINCE WE ARE NOT ABLE TO TRACK THIS DATA CURRENTLY*/}
           {/*
@@ -221,7 +177,7 @@ export default function UserPage() {
 
         <div className="mt-4 space-y-4">
           {userPosts.length > 0 ? (
-            userPosts.map((p) => <PostCard key={p.id} post={p} user={userProfile} />)
+            userPosts.map((p) => <PostCard key={p.id} post={p} user={{ username, firstName, lastName, profilePicture }} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
               {isSelf ? 'Nothing here yet.' : `${getFullName()} hasn't posted yet.`}

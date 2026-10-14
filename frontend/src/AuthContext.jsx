@@ -33,7 +33,7 @@ export const AuthProvider = ({children}) => {
             if (Object.hasOwn(data, 'access')) {
                 console.log("Set Access Token: ", data.access)
                 localStorage.setItem('access_token', data.access)
-                setAccessToken(data.access)
+                setAccessToken((_) => data.access)
 
                 return data.access
             }
@@ -47,14 +47,14 @@ export const AuthProvider = ({children}) => {
     const login = (access, refresh) => {
         localStorage.setItem('access_token', access)
         localStorage.setItem('refresh_token', refresh)
-        setAccessToken(access)
-        setRefreshToken(refresh)
+        setAccessToken((_) => access)
+        setRefreshToken((_) => refresh)
     }
     const logout = () => {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
-        setAccessToken(null)
-        setRefreshToken(null)
+        setAccessToken((_) => null)
+        setRefreshToken((_) => null)
     }
 
     return (
