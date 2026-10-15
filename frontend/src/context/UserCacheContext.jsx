@@ -1,37 +1,32 @@
 import React, {useContext, createContext, useState} from 'react'
+import { useAuthContext } from './AuthContext.jsx'
 
 export const UserCacheContext = createContext(null)
 
 export const UserCacheProvider = ({children}) => {
     const [ user, setUser ] = useState(() => localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null)
+
+    const { fetchWithToken, accessToken } = useAuthContext()
     
-    const refreshUserCache = async (accessToken) => {
-        try {
-            const response = await fetch('https://quickbuckz.onrender.com/api/profile/me', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            })
+    const refreshUserCache = async (access=null) => {
+        if (!access) {
+            access = accessToken
+        }
 
-            if (!response.ok) {
-                throw await response.json()
+        const data = await fetchWithToken('/api/profile/me', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
             }
+        }, access)
 
-            const data = await response.json()
+        setUser(data)
 
-            localStorage.setItem('user', JSON.stringify(data))
-
-            console.log("User cache refreshed:", data)
-        }
-        catch (err) {
-            console.log(`Failed to refresh user cache:`, err)
-        }
+        console.log("User cache refreshed:", data)
     }
 
     return (
-        <UserCacheContext.Provider value={{ user, refreshUserCache }}>
+        <UserCacheContext.Provider value={{ user, setUser, refreshUserCache }}>
             { children }
         </UserCacheContext.Provider>
     )

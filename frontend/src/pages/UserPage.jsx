@@ -138,7 +138,7 @@ export default function UserPage() {
 
         <div className="-mt-10 px-2 sm:px-4">
           <div className="flex items-end justify-between">
-            <Avatar name={getFullName()} src={person.avatarUrl} size="lg" />
+            <Avatar name={getFullName()} src={user?.profile_picture} size="lg" />
             {button}
           </div>
           <h1 className="mt-3 text-2xl font-bold tracking-tight">{getFullName()}</h1>

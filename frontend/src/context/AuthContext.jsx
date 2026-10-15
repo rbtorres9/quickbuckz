@@ -57,13 +57,13 @@ export const AuthProvider = ({children}) => {
         setRefreshToken((_) => null)
     }
 
-    const fetchWithToken = async (url, options = {}) => {
+    const fetchWithToken = async (url, options = {}, access=null) => {
         try {
             let response = await fetch(`https://quickbuckz.onrender.com${url}`, {
                 ...options,
                 headers: {
                     ...options.headers,
-                    'Authorization': `Bearer ${accessToken}`
+                    'Authorization': `Bearer ${access ?? accessToken}`
                 }
             })
 

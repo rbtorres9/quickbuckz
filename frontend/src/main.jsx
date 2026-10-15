@@ -10,13 +10,13 @@ import { UserCacheProvider } from './context/UserCacheContext.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <UserCacheProvider>
-        <StoreProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </StoreProvider>
-      </UserCacheProvider>
+      <AuthProvider>
+        <UserCacheProvider>
+            <StoreProvider>
+              <App />
+          </StoreProvider>
+        </UserCacheProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 )
