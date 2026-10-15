@@ -13,3 +13,4 @@ This is a list of items that we should implement into our project that anyone ca
 - Show all posts in the /home page
 - Add API that can get user details with their username
 - Add API that can get all of a user's posts with their username
+- Add functionality to /post-creation page

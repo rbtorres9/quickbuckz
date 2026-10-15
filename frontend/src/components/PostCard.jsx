@@ -3,16 +3,19 @@ import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, MoreHorizontal } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
 import Avatar from './Avatar.jsx'
+import {getTimeAgoString, getDateTimeString} from '../utils/DateTimeUtils.js'
 
 export default function PostCard({ post, user, full = false, onDeleted }) {
-  const { viewer, toggleLike, deletePost, profile } = useStore()
+  const { viewer, toggleLike, deletePost } = useStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const byOwner = true // post.handle === profile.handle
   const isMine = viewer === 'owner' && byOwner
-  // Posts by the profile owner always show their latest name and photo
-  const authorName = post.author
+  const authorUsername = user?.username
+  const authorFullName = user?.first_name + " " + user?.last_name
   const profileLink = byOwner ? '/user-page' : `/user/${post.author}`
+  const postTimeAgo = getTimeAgoString(post.created_at)
+  const postDateTime = getDateTimeString(post.created_at)
 
   // Close the ⋯ menu when clicking anywhere else
   useEffect(() => {
@@ -43,11 +46,11 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     <article className="overflow-hidden rounded-2xl border border-line bg-card">
       <div className="flex items-center gap-3 px-5 pt-4">
         <Link to={profileLink} className="shrink-0">
-          <Avatar name={authorName} src={byOwner ? profile.avatarUrl : null} />
+          <Avatar name={authorFullName} src={user?.profile_picture} />
         </Link>
         <div className="flex-1 text-sm">
-          <Link to={profileLink} className="font-bold hover:underline">{/* INSERT PROFILE NAME */}</Link>{' '}
-          <span className="text-muted">@{authorName}{/* TODO: INSERT DATE */}</span>
+          <Link to={profileLink} className="font-bold hover:underline">{authorFullName}</Link>{' '}
+          <span className="text-muted">@{authorUsername} • {postTimeAgo} • {postDateTime} </span>
         </div>
         <div className="relative" ref={menuRef}>
           <button

@@ -1,8 +1,8 @@
 import { useState, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Lock, Plane } from 'lucide-react'
-import { AuthContext } from '../AuthContext'
-import { useUserCache } from '../UserCacheContext.jsx'
+import { AuthContext } from '../context/AuthContext.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
 
 function Field({ id, label, ...props }) {
   return (

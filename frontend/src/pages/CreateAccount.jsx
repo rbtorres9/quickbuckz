@@ -1,6 +1,6 @@
 import { useState, useContext, useRef } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
-import { AuthContext } from '../AuthContext'
+import { AuthContext } from '../context/AuthContext'
 
 const fields = [
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },

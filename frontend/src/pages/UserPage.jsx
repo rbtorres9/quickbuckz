@@ -4,8 +4,8 @@ import { useStore, sampleUsers } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
-import { AuthContext } from '../AuthContext.jsx'
-import { useUserCache } from '../UserCacheContext.jsx'
+import { AuthContext } from '../context/AuthContext.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
 
 // /user-page shows your own profile; /user/:handle shows anyone's.
 export default function UserPage() {
