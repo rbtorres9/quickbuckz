@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ImagePlus, X } from 'lucide-react'
-import { useStore } from '../data/store.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from '../components/Avatar.jsx'
 
 const MAX_CHARS = 500
@@ -9,9 +10,11 @@ const MAX_IMAGE_MB = 5
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export default function PostCreation() {
-  const { addPost, profile } = useStore()
   const navigate = useNavigate()
   const fileInput = useRef(null)
+  const { user } = useUserCache()
+  const { fetchWithToken } = useAuthContext()
+  const userFullName = user?.first_name + " " + user?.last_name
 
   const [text, setText] = useState('')
   const [image, setImage] = useState(null) // { file, url }
@@ -43,17 +46,33 @@ export default function PostCreation() {
     setImage({ file, url: URL.createObjectURL(file) })
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const trimmed = text.trim()
     if (!trimmed && !image) {
       setError('Write something or add a photo.')
       return
     }
+
+    if (trimmed.length > MAX_CHARS) {
+      setError(`Posts must be under ${MAX_CHARS} characters.`)
+      return
+    }
+
+    console.log("Getting ready to submit")
+
+    const data = await fetchWithToken('/api/posts/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: trimmed, image: image?.url ?? null })
+    })
+
+    console.log("Post creation response:", data)
+
     // TODO: link to the backend database so posts and photos are saved
-    const id = addPost({ text: trimmed, imageUrl: image?.url ?? null })
+    // const id = addPost({ text: trimmed, imageUrl: image?.url ?? null })
     posted.current = true
-    navigate(`/post/${id}`)
+    // navigate(`/post/${id}`)
   }
 
   const remaining = MAX_CHARS - text.length
@@ -65,7 +84,7 @@ export default function PostCreation() {
 
       <form onSubmit={handleSubmit} className="mt-5 rounded-2xl border border-line bg-card p-5">
         <div className="flex gap-3">
-          <Avatar name={profile.name} src={profile.avatarUrl} />
+          <Avatar name={userFullName} src={user?.profile_picture} />
           <textarea
             value={text}
             onChange={(e) => { setText(e.target.value); setError('') }}

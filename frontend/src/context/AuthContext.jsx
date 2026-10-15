@@ -57,9 +57,60 @@ export const AuthProvider = ({children}) => {
         setRefreshToken((_) => null)
     }
 
+    const fetchWithToken = async (url, options = {}) => {
+        try {
+            let response = await fetch(`https://quickbuckz.onrender.com${url}`, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            })
+
+            // If the token is invalid, refresh it and try again
+            if (response.status === 401) {
+                const newToken = await refresh()
+                if (newToken) {
+                    response = await fetch(`https://quickbuckz.onrender.com${url}`, {
+                        ...options,
+                        headers: {
+                            ...options.headers,
+                            'Authorization': `Bearer ${newToken}`
+                        }
+                    })
+                }
+            }
+
+            if (!response.ok) {
+                throw await response.json()
+            }
+
+            const data = await response.json()
+
+            return data
+        }
+        catch (err) {
+            let errorJson = {
+                "error": err
+            }
+
+            console.error(`Error in fetchWithToken:`, err)
+
+            return  errorJson
+        }
+    }
+
     return (
-    <AuthContext.Provider value={{ accessToken, login, logout, refresh }}>
+    <AuthContext.Provider value={{ accessToken, login, logout, refresh, fetchWithToken }}>
         { children }
     </AuthContext.Provider>
     )
+}
+
+export const useAuthContext = () => {
+    const context = useContext(AuthContext)
+    if (!context) {
+        throw new Error("useAuthContext must be used within a AuthProvider")
+    }
+    return context
 }
