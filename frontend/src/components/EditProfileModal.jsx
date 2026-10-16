@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Camera, X } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
 import Avatar from './Avatar.jsx'
+import ThemePicker from './ThemePicker.jsx'
+import { getTheme, themeVars } from '../data/themes.js'
 
 const MAX_NAME = 50
 const MAX_BIO = 160
@@ -15,6 +17,7 @@ export default function EditProfileModal({ onClose }) {
   const [bio, setBio] = useState(profile.bio)
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl)
   const [bannerUrl, setBannerUrl] = useState(profile.bannerUrl)
+  const [theme, setTheme] = useState(profile.theme)
   const [error, setError] = useState('')
 
   const avatarInput = useRef(null)
@@ -60,7 +63,7 @@ export default function EditProfileModal({ onClose }) {
     const trimmedName = name.trim()
     if (!trimmedName) return setError('Display name can’t be empty.')
 
-    updateProfile({ name: trimmedName, bio: bio.trim(), avatarUrl, bannerUrl })
+    updateProfile({ name: trimmedName, bio: bio.trim(), avatarUrl, bannerUrl, theme })
     freeUnused([avatarUrl, bannerUrl])
     onClose()
   }
@@ -75,6 +78,7 @@ export default function EditProfileModal({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Edit profile"
+        style={themeVars(theme)}
         className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-card shadow-2xl shadow-black/60"
       >
         {/* Header */}
@@ -101,7 +105,7 @@ export default function EditProfileModal({ onClose }) {
             {bannerUrl ? (
               <img src={bannerUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div className="banner h-full w-full" />
+              <div className="h-full w-full" style={{ background: getTheme(theme).banner }} />
             )}
             <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-80 transition group-hover:bg-black/50 group-hover:opacity-100">
               <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium">
@@ -180,6 +184,9 @@ export default function EditProfileModal({ onClose }) {
                 className="w-full resize-none rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm leading-relaxed text-white placeholder:text-muted/70 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
               />
             </div>
+
+            <ThemePicker label="Profile theme" value={theme} onChange={setTheme} />
+            <p className="text-xs text-muted">Everyone who visits your profile sees this theme.</p>
 
             <p className="text-xs text-muted">Your username stays <span className="text-white">@{profile.handle}</span>.</p>
           </div>

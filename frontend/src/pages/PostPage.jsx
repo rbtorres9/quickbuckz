@@ -1,18 +1,18 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { useStore, sampleUser } from '../data/store.jsx'
+import { useStore } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 
 export default function PostPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { posts, viewer, addComment, deleteComment } = useStore()
+  const { posts, profile, addComment, deleteComment } = useStore()
   const [text, setText] = useState('')
 
   const post = posts.find((p) => p.id === Number(id))
-  const ownsPost = viewer === 'owner' && post?.handle === sampleUser.handle
+  const ownsPost = post?.handle === profile.handle
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -25,9 +25,12 @@ export default function PostPage() {
   return (
     <>
       <main className="mx-auto max-w-2xl px-4 pb-24">
-        <Link to="/user-page" className="mt-4 flex w-fit items-center gap-1 text-sm text-muted hover:text-white">
-          <ArrowLeft size={16} /> Back to profile
-        </Link>
+        <button
+          onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/home'))}
+          className="mt-4 flex w-fit items-center gap-1 text-sm text-muted hover:text-white"
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
 
         {!post ? (
           <p className="py-16 text-center text-sm text-muted">This post doesn't exist or was deleted.</p>
