@@ -23,6 +23,7 @@ const mobileLink = ({ isActive }) =>
 function DemoToggle() {
   // Demo only: preview pages as a visitor or as the profile owner.
   // Delete this (and its use below) once real logins decide who the owner is.
+  /*
   const { viewer, setViewer } = useStore()
   return (
     <div className="flex items-center rounded-full border border-line p-0.5 text-xs" title="Demo: view as">
@@ -37,6 +38,7 @@ function DemoToggle() {
       ))}
     </div>
   )
+    */
 }
 
 export default function NavBar() {
@@ -61,7 +63,7 @@ export default function NavBar() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <DemoToggle />
+            {/* <DemoToggle /> */}
             <Link
               to="/post-creation"
               className="hidden items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-page transition hover:bg-accent-hover md:flex"
