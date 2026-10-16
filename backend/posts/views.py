@@ -3,6 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
+from django.shortcuts import get_object_or_404
+from rest_framework import generics
+from rest_framework.permissions import AllowAny
+from accounts.views import visible_profiles
+
 from .models import Post, Like, Comment
 from .serializers import PostSerializer, CommentSerializer, PostDetailSerializer
 
@@ -47,3 +52,17 @@ class PostViewSet(viewsets.ModelViewSet):
 
             
 
+class UserPostsView(generics.ListAPIView):
+    serializer_class = PostSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        username = self.kwargs["username"].strip().lower()
+        profile = get_object_or_404(
+            visible_profiles(self.request.user), user__username=username
+        )
+        return (
+            Post.objects.filter(author=profile.user)
+            .select_related("author")
+            .order_by("-created_at")
+        )

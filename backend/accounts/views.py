@@ -7,6 +7,7 @@ from django.db.models import Q
 from .serializers import (
     PublicProfileSerializer, OwnerProfileSerializer, RegisterSerializer,
 )
+from django.shortcuts import get_object_or_404
 
 
 class RegisterView(generics.CreateAPIView):
@@ -27,10 +28,28 @@ class ProfileListView(generics.ListAPIView):
         return profiles.filter(visibility=Profile.Visibility.PUBLIC)
 
 
+def visible_profiles(user):
+    profiles = Profile.objects.select_related("user")
+    if user.is_authenticated:
+        return profiles.filter(Q(visibility=Profile.Visibility.PUBLIC) | Q(user=user))
+     
+    return profiles.filter(visibility=Profile.Visibility.PUBLIC)
+
 class MyProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = OwnerProfileSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return self.request.user.profile
+
+
+
+class ProfileByUsernameView(generics.RetrieveUpdateAPIView):
+    serializer_class = PublicProfileSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+            username = self.kwargs["username"].strip().lower()
+            return get_object_or_404(visible_profiles(self.request.user), user__username=username)
+    
 
