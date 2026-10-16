@@ -39,8 +39,14 @@ export function StoreProvider({ children }) {
   // Once logins are real, "owner" = the logged-in user is viewing their own profile.
   const [viewer, setViewer] = useState('visitor')
 
+  // The profile owner's editable info (name, bio, photos).
+  const [profile, setProfile] = useState({ ...sampleUser, avatarUrl: null, bannerUrl: null })
+
+  // TODO: save profile changes to the backend database
+  const updateProfile = (changes) => setProfile((current) => ({ ...current, ...changes }))
+
   const me = viewer === 'owner'
-    ? { name: sampleUser.name, handle: sampleUser.handle }
+    ? { name: profile.name, handle: profile.handle }
     : { name: 'You', handle: 'you' }
 
   function updatePost(id, change) {
@@ -60,9 +66,23 @@ export function StoreProvider({ children }) {
 
   const deletePost = (id) => setPosts((all) => all.filter((p) => p.id !== id))
 
+  // Adds a new post to the top of the feed and returns its id.
+  // TODO: save new posts to the backend database instead of this sample list
+  function addPost({ text, imageUrl }) {
+    const id = Date.now()
+    setPosts((all) => [
+      {
+        id, author: profile.name, handle: profile.handle, date: 'now',
+        likes: 0, liked: false, image: null, imageUrl, text, comments: [],
+      },
+      ...all,
+    ])
+    return id
+  }
+
   return (
     <StoreContext.Provider
-      value={{ posts, viewer, setViewer, me, isFollowing, setIsFollowing, toggleLike, addComment, deleteComment, deletePost }}
+      value={{ posts, viewer, setViewer, me, isFollowing, setIsFollowing, toggleLike, addComment, deleteComment, deletePost, addPost, profile, updateProfile }}
     >
       {children}
     </StoreContext.Provider>

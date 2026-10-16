@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
-import { useStore, sampleUser } from '../data/store.jsx'
-import TopBar from '../components/TopBar.jsx'
+import { useStore } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
+import EditProfileModal from '../components/EditProfileModal.jsx'
 
 const tabs = [
   { id: 'posts', label: 'Posts' },
@@ -12,11 +11,12 @@ const tabs = [
 ]
 
 export default function UserPage() {
-  const { posts, viewer, isFollowing, setIsFollowing } = useStore()
+  const { posts, viewer, isFollowing, setIsFollowing, profile } = useStore()
   const [tab, setTab] = useState('posts')
+  const [editing, setEditing] = useState(false)
   const isOwner = viewer === 'owner'
 
-  const myPosts = posts.filter((p) => p.handle === sampleUser.handle)
+  const myPosts = posts.filter((p) => p.handle === profile.handle)
   const shown =
     tab === 'posts' ? myPosts
     : tab === 'top' ? [...myPosts].sort((a, b) => b.likes - a.likes)
@@ -25,7 +25,10 @@ export default function UserPage() {
   let button
   if (isOwner) {
     button = (
-      <button className="mb-1 rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5">
+      <button
+        onClick={() => setEditing(true)}
+        className="mb-1 rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5"
+      >
         Edit profile
       </button>
     )
@@ -51,22 +54,25 @@ export default function UserPage() {
 
   return (
     <>
-      <TopBar />
       <main className="mx-auto max-w-2xl px-4 pb-24">
-        <div className="banner mt-4 h-32 rounded-2xl border border-line sm:h-40" />
+        {profile.bannerUrl ? (
+          <img src={profile.bannerUrl} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
+        ) : (
+          <div className="banner mt-4 h-32 rounded-2xl border border-line sm:h-40" />
+        )}
 
         <div className="-mt-10 px-2 sm:px-4">
           <div className="flex items-end justify-between">
-            <Avatar name={sampleUser.name} size="lg" />
+            <Avatar name={profile.name} src={profile.avatarUrl} size="lg" />
             {button}
           </div>
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">{sampleUser.name}</h1>
-          <p className="text-sm text-muted">@{sampleUser.handle}</p>
-          <p className="mt-3 text-sm leading-relaxed">{sampleUser.bio}</p>
+          <h1 className="mt-3 text-2xl font-bold tracking-tight">{profile.name}</h1>
+          <p className="text-sm text-muted">@{profile.handle}</p>
+          {profile.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{profile.bio}</p>}
           <div className="mt-4 flex gap-5 text-sm">
             <span><b>{myPosts.length}</b> <span className="text-muted">Posts</span></span>
-            <span><b>{sampleUser.followers + (isFollowing ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
-            <span><b>{sampleUser.following}</b> <span className="text-muted">Following</span></span>
+            <span><b>{profile.followers + (isFollowing ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
+            <span><b>{profile.following}</b> <span className="text-muted">Following</span></span>
           </div>
         </div>
 
@@ -93,16 +99,7 @@ export default function UserPage() {
         </div>
       </main>
 
-      {isOwner && (
-        <button
-          title="New post"
-          aria-label="New post"
-          className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-page shadow-xl shadow-black/50 hover:bg-accent-hover"
-        >
-          {/* TODO: link to /post-creation once that page is built */}
-          <Plus size={24} strokeWidth={2.5} />
-        </button>
-      )}
+      {editing && <EditProfileModal onClose={() => setEditing(false)} />}
     </>
   )
 }
