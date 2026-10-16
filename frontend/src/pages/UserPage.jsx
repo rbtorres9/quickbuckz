@@ -14,16 +14,14 @@ export default function UserPage() {
   const [tab, setTab] = useState('posts')
   const [editing, setEditing] = useState(false)
 
-  const isSelf = !handle || handle === profile.handle
-  // TODO: load other users' profiles from the backend database
-  const person = isSelf ? profile : sampleUsers[handle]
+  const isSelf = true
 
   const { accessToken, refresh } = useContext(AuthContext)
   const { user } = useUserCache()
   const [ error, setError ] = useState(null)
   const [ userPosts, setUserPosts ] = useState([])
 
-  if (!person) {
+  if (!user) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">User not found</h1>
@@ -35,10 +33,12 @@ export default function UserPage() {
     )
   }
 
-  const canEdit = isSelf && viewer === 'owner'
+  const canEdit = true
+  
   // Your own profile: "visitor" view uses the demo follow. Anyone else: your real following list.
-  const followed = isSelf ? isFollowing : following.includes(person.handle)
-  const toggleFollow = () => (isSelf ? setIsFollowing(!isFollowing) : toggleFollowUser(person.handle))
+  const followed = false // isSelf ? isFollowing : following.includes(person.handle)
+  const toggleFollow = () => {}// () => (isSelf ? setIsFollowing(!isFollowing) : toggleFollowUser(person.handle))
+  
 
   const tabs = [
     { id: 'posts', label: 'Posts' },
@@ -50,10 +50,9 @@ export default function UserPage() {
   ]
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'posts'
 
-  const theirPosts = posts.filter((p) => p.handle === person.handle)
   const shown =
-    activeTab === 'posts' ? theirPosts
-    : activeTab === 'top' ? [...theirPosts].sort((a, b) => b.likes - a.likes)
+    activeTab === 'posts' ? userPosts
+    : activeTab === 'top' ? [...userPosts].sort((a, b) => b.likes - a.likes)
     : posts.filter((p) => p.liked)
 
   let button
@@ -130,11 +129,12 @@ export default function UserPage() {
   return (
     <>
       <main className="mx-auto max-w-2xl px-4 pb-24">
-        {person.bannerUrl ? (
+        
+        {/* {person.bannerUrl ? (
           <img src={person.bannerUrl} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
-        ) : (
+        ) : ( */}
           <div className="banner mt-4 h-32 rounded-2xl border border-line sm:h-40" />
-        )}
+        {/* )} */}
 
         <div className="-mt-10 px-2 sm:px-4">
           <div className="flex items-end justify-between">

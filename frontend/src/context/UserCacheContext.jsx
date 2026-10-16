@@ -20,6 +20,7 @@ export const UserCacheProvider = ({children}) => {
             }
         }, access)
 
+        localStorage.setItem("user", JSON.stringify(data))
         setUser(data)
 
         console.log("User cache refreshed:", data)
