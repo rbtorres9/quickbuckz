@@ -3,6 +3,10 @@ import { Camera, X } from 'lucide-react'
 import { useUserCache } from '../context/UserCacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from './Avatar.jsx'
+import ThemePicker from './ThemePicker.jsx'
+import { useStore } from '../data/store.jsx'
+import { getTheme, themeVars } from '../data/themes.js'
+import { errorMessage } from '../utils/errorMessage.js'
 
 const MAX_NAME = 50
 const MAX_BIO = 160
@@ -12,12 +16,17 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 export default function EditProfileModal({ onClose }) {
   const { user, setUser } = useUserCache()
   const { fetchWithToken } = useAuthContext()
-  const userFullName = user?.first_name + " " + user?.last_name
+  const { profile, updateProfile } = useStore()
+  const userFullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.username || '?'
   const [bio, setBio] = useState(user?.bio ?? '')
   const [profilePicture, setProfilePicture] = useState(user?.profile_picture)
   const [selectedProfilePicture, setSelectedProfilePicture] = useState(null)
-  const [bannerUrl, setBannerUrl] = useState(user?.banner_url)
+  const [bannerUrl, setBannerUrl] = useState(user?.banner)
+  const [selectedBanner, setSelectedBanner] = useState(null)
+  // Profile theme. Saved on this device for now: the backend has no theme field yet.
+  const [theme, setTheme] = useState(profile.theme)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
   
 
   const avatarInput = useRef(null)
@@ -62,8 +71,6 @@ export default function EditProfileModal({ onClose }) {
   async function save(e) {
     e.preventDefault()
 
-    freeUnused([profilePicture, bannerUrl])
-
     const trimmed = bio.trim()
     const formData = new FormData()
     formData.append('bio', trimmed)
@@ -74,24 +81,28 @@ export default function EditProfileModal({ onClose }) {
       formData.append('profile_picture', '')
     }
 
-    const data = await fetchWithToken('/api/profile/me', {
+    if (selectedBanner) {
+      formData.append('banner', selectedBanner)
+    } else if (bannerUrl === null) {
+      formData.append('banner', '')
+    }
+
+    setSaving(true)
+    const data = await fetchWithToken('/api/profile/me/', {
       method: 'PUT',
       body: formData
     })
+    setSaving(false)
 
     if (!Object.hasOwn(data, 'error')) {
-      setUser({
-        ...user,
-        bio: trimmed,
-        profile_picture: profilePicture,
-      })
-
-      console.log("Profile updated:", data)
-
+      // Use what the server sent back, so photos point at their saved addresses
+      setUser({ ...user, ...data })
+      updateProfile({ theme }) // TODO: send the theme too, once the backend has a theme field
+      freeUnused([])
       onClose()
     }
     else {
-      setError(data.error)
+      setError(errorMessage(data.error))
     }
   }
 
@@ -105,6 +116,7 @@ export default function EditProfileModal({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Edit profile"
+        style={themeVars(theme)}
         className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-card shadow-2xl shadow-black/60"
       >
         {/* Header */}
@@ -115,8 +127,8 @@ export default function EditProfileModal({ onClose }) {
             </button>
             <h2 className="font-semibold">Edit profile</h2>
           </div>
-          <button type="submit" className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-page hover:bg-accent-hover">
-            Save
+          <button type="submit" disabled={saving} className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-page hover:bg-accent-hover disabled:cursor-wait disabled:opacity-70">
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
 
@@ -131,7 +143,7 @@ export default function EditProfileModal({ onClose }) {
             {bannerUrl ? (
               <img src={bannerUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div className="banner h-full w-full" />
+              <div className="h-full w-full" style={{ background: getTheme(theme).banner }} />
             )}
             <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-80 transition group-hover:bg-black/50 group-hover:opacity-100">
               <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium">
@@ -142,7 +154,7 @@ export default function EditProfileModal({ onClose }) {
           {bannerUrl && (
             <button
               type="button"
-              onClick={() => setBannerUrl(null)}
+              onClick={() => { setBannerUrl(null); setSelectedBanner(null) }}
               className="absolute right-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-xs hover:bg-black"
             >
               Remove
@@ -180,7 +192,7 @@ export default function EditProfileModal({ onClose }) {
           </div>
 
           <input ref={avatarInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setProfilePicture, setSelectedProfilePicture)} />
-          <input ref={bannerInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setBannerUrl)} />
+          <input ref={bannerInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setBannerUrl, setSelectedBanner)} />
 
           {/* Fields */}
           <div className="mt-5 space-y-4">
@@ -214,6 +226,9 @@ export default function EditProfileModal({ onClose }) {
                 className="w-full resize-none rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm leading-relaxed text-white placeholder:text-muted/70 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
               />
             </div>
+
+            <ThemePicker label="Profile theme" value={theme} onChange={setTheme} />
+            <p className="text-xs text-muted">Everyone who visits your profile sees this theme.</p>
 
             <p className="text-xs text-muted">Your username stays <span className="text-white">@{user?.username ?? ""}</span>.</p>
           </div>

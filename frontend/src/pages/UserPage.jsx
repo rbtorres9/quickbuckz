@@ -1,31 +1,54 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore, sampleUsers } from '../data/store.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
-import { AuthContext } from '../context/AuthContext.jsx'
-import { useUserCache } from '../context/UserCacheContext.jsx'
+import { getTheme, themeVars } from '../data/themes.js'
 
-// /user-page shows your own profile; /user/:handle shows anyone's.
+// /user-page shows your own profile (real, from the database).
+// /user/:handle shows someone else's (sample for now).
 export default function UserPage() {
   const { handle } = useParams()
-  const { posts, viewer, isFollowing, setIsFollowing, profile, following, toggleFollowUser } = useStore()
+  const { posts, profile, following, toggleFollowUser } = useStore()
+  const { user } = useUserCache()
   const [tab, setTab] = useState('posts')
   const [editing, setEditing] = useState(false)
+  const [myPosts, setMyPosts] = useState([])
 
-  const isSelf = true
+  const isSelf = !handle || handle === user?.username
 
-  const { accessToken, refresh } = useContext(AuthContext)
-  const { user } = useUserCache()
-  const [ error, setError ] = useState(null)
-  const [ userPosts, setUserPosts ] = useState([])
+  // Load your own posts from the database, newest first
+  useEffect(() => {
+    if (!isSelf || !user) return
+    fetch('https://quickbuckz.onrender.com/api/posts/')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setMyPosts(data.filter((p) => p.author === user.username)))
+      .catch((err) => console.log('Fetch Posts Error: ', err))
+  }, [isSelf, user?.username])
 
-  if (!user) {
+  if (isSelf && !user) {
+    return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…</main>
+  }
+
+  // TODO: load other users' profiles and posts from the backend database
+  const person = isSelf
+    ? {
+        name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username,
+        handle: user.username,
+        bio: user.bio,
+        avatarUrl: user.profile_picture,
+        bannerUrl: user.banner,
+        theme: profile.theme, // TODO: save theme in the database
+      }
+    : sampleUsers[handle]
+
+  if (!person) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">User not found</h1>
-        <p className="mt-2 text-sm text-muted">There's no one here with the username @{user?.username}.</p>
+        <p className="mt-2 text-sm text-muted">There's no one here with the username @{handle}.</p>
         <Link to="/subscriptions" className="mt-5 inline-block text-sm font-semibold text-accent hover:underline">
           Back to Following
         </Link>
@@ -33,30 +56,18 @@ export default function UserPage() {
     )
   }
 
-  const canEdit = true
-  
-  // Your own profile: "visitor" view uses the demo follow. Anyone else: your real following list.
-  const followed = false // isSelf ? isFollowing : following.includes(person.handle)
-  const toggleFollow = () => {}// () => (isSelf ? setIsFollowing(!isFollowing) : toggleFollowUser(person.handle))
-  
+  const followed = following.includes(person.handle)
+  const toggleFollow = () => toggleFollowUser(person.handle)
 
-  const tabs = [
-    { id: 'posts', label: 'Posts' },
-
-    // IMPORTANT: THIS SECTION OF CODE WILL BE COMMENTED TO REMOVE SOME COMPLEXITIES FOR NOW
-
-    // { id: 'top', label: 'Top' }, 
-    // ...(isSelf ? [{ id: 'likes', label: 'Likes' }] : []), // likes are private to you
-  ]
+  // Your own profile only has Posts for now (Top and Likes need backend support)
+  const tabs = isSelf ? [{ id: 'posts', label: 'Posts' }] : [{ id: 'posts', label: 'Posts' }, { id: 'top', label: 'Top' }]
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'posts'
 
-  const shown =
-    activeTab === 'posts' ? userPosts
-    : activeTab === 'top' ? [...userPosts].sort((a, b) => b.likes - a.likes)
-    : posts.filter((p) => p.liked)
+  const theirPosts = isSelf ? myPosts : posts.filter((p) => p.handle === person.handle)
+  const shown = activeTab === 'top' ? [...theirPosts].sort((a, b) => b.likes - a.likes) : theirPosts
 
   let button
-  if (canEdit) {
+  if (isSelf) {
     button = (
       <button
         onClick={() => setEditing(true)}
@@ -85,80 +96,34 @@ export default function UserPage() {
     )
   }
 
-
-  useEffect(() => {
-    const fetchUserPosts = async () => {
-      try {
-        const response = await fetch('https://quickbuckz.onrender.com/api/posts/', {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json"
-          }
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw errorData
-        }
-
-        let data = await response.json()
-
-        data = data.filter((post) => {
-          return user && post.author === user.username
-        })
-        setUserPosts(data)
-      }
-      catch (err) {
-        console.log("Fetch Posts Error: ", err)
-        setError(err)
-      }
-    }
-
-    fetchUserPosts()
-
-  }, [])
-
-  const getFullName = () => {
-    if (user) {
-      return user.first_name + " " + user.last_name
-    }
-    
-    return ""
-  }
-
   return (
     <>
-      <main className="mx-auto max-w-2xl px-4 pb-24">
-        
-        {/* {person.bannerUrl ? (
+      {/* The profile shows in its owner's theme, whatever your own site color is */}
+      <main className="mx-auto max-w-2xl px-4 pb-24" style={themeVars(person.theme)}>
+        {person.bannerUrl ? (
           <img src={person.bannerUrl} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
-        ) : ( */}
-          <div className="banner mt-4 h-32 rounded-2xl border border-line sm:h-40" />
-        {/* )} */}
+        ) : (
+          <div className="mt-4 h-32 rounded-2xl border border-line sm:h-40" style={{ background: getTheme(person.theme).banner }} />
+        )}
 
         <div className="-mt-10 px-2 sm:px-4">
           <div className="flex items-end justify-between">
-            <Avatar name={getFullName()} src={user?.profile_picture} size="lg" />
+            <Avatar name={person.name} src={person.avatarUrl} size="lg" />
             {button}
           </div>
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">{getFullName()}</h1>
-          <p className="text-sm text-muted">@{user?.username}</p>
-          {user?.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{user.bio}</p>}
-
-          {/* THIS IS HIDDEN SINCE WE ARE NOT ABLE TO TRACK THIS DATA CURRENTLY*/}
-          {/*
+          <h1 className="mt-3 text-2xl font-bold tracking-tight">{person.name}</h1>
+          <p className="text-sm text-muted">@{person.handle}</p>
+          {person.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{person.bio}</p>}
           <div className="mt-4 flex gap-5 text-sm">
             <span><b>{theirPosts.length}</b> <span className="text-muted">Posts</span></span>
-            <span><b>{person.followers + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
-            {isSelf ? (
-              <Link to="/subscriptions" className="hover:underline">
-                <b>{following.length}</b> <span className="text-muted">Following</span>
-              </Link>
-            ) : (
-              <span><b>{person.following}</b> <span className="text-muted">Following</span></span>
+            {/* TODO: show your own follower counts once the backend tracks follows */}
+            {!isSelf && (
+              <>
+                <span><b>{person.followers + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
+                <span><b>{person.following}</b> <span className="text-muted">Following</span></span>
+              </>
             )}
           </div>
-          */}
         </div>
 
         <nav className="mt-6 flex border-b border-line text-sm font-medium">
@@ -176,11 +141,11 @@ export default function UserPage() {
         </nav>
 
         <div className="mt-4 space-y-4">
-          {userPosts.length > 0 ? (
-            userPosts.map((p) => <PostCard key={p.id} post={p} user={user} />)
+          {shown.length ? (
+            shown.map((p) => <PostCard key={p.id} post={p} user={isSelf ? user : null} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
-              {isSelf ? 'Nothing here yet.' : `${getFullName()} hasn't posted yet.`}
+              {isSelf ? 'Nothing here yet.' : `${person.name} hasn't posted yet.`}
             </p>
           )}
         </div>

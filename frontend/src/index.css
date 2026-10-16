@@ -25,3 +25,25 @@ body {
     radial-gradient(circle at 80% 70%, #5a4a2a 0%, transparent 50%),
     #111723;
 }
+
+/* Heart that pops when you double-click a photo */
+@keyframes heart-burst {
+  0% { transform: scale(0.3); opacity: 0; }
+  30% { transform: scale(1.15); opacity: 1; }
+  60% { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
+.heart-burst { animation: heart-burst 0.7s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .heart-burst { animation: none; }
+}
+
+/* The pup running across the login card while signing in */
+@keyframes dog-run {
+  from { left: calc(100% - 56px); }
+  to { left: 0; }
+}
+.dog-run { position: absolute; animation: dog-run 1.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .dog-run { animation: none; left: 0; }
+}

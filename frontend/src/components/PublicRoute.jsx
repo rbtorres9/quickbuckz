@@ -6,7 +6,7 @@ const PublicRoute = ({ children }) => {
     const { accessToken } = useContext(AuthContext)
 
     if (accessToken) {
-        return <Navigate to="/welcome" replace />
+        return <Navigate to="/user-page" replace />
     }
 
     return children

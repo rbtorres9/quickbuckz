@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Home, Flame, Users, Plus, User, Plane } from 'lucide-react'
+import { Home, Flame, Users, Plus, User, Settings, Bell } from 'lucide-react'
+import Logo from './Logo.jsx'
 import { useStore } from '../data/store.jsx'
 
 // Edit this list to add, remove, or rename nav links.
@@ -20,25 +21,25 @@ const mobileLink = ({ isActive }) =>
     isActive ? 'text-accent' : 'text-muted'
   }`
 
-function DemoToggle() {
-  // Demo only: preview pages as a visitor or as the profile owner.
-  // Delete this (and its use below) once real logins decide who the owner is.
-  /*
-  const { viewer, setViewer } = useStore()
+function NotificationBell() {
+  const { notifications } = useStore()
+  const unread = notifications.filter((n) => !n.read).length
   return (
-    <div className="flex items-center rounded-full border border-line p-0.5 text-xs" title="Demo: view as">
-      {['visitor', 'owner'].map((v) => (
-        <button
-          key={v}
-          onClick={() => setViewer(v)}
-          className={`rounded-full px-2.5 py-1 capitalize ${viewer === v ? 'bg-accent text-page' : 'text-muted hover:text-white'}`}
-        >
-          {v}
-        </button>
-      ))}
-    </div>
+    <NavLink
+      to="/notifications"
+      className={desktopLink}
+      aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}
+    >
+      <span className="relative">
+        <Bell size={17} />
+        {unread > 0 && (
+          <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-page">
+            {unread}
+          </span>
+        )}
+      </span>
+    </NavLink>
   )
-    */
 }
 
 export default function NavBar() {
@@ -48,9 +49,7 @@ export default function NavBar() {
       <header className="sticky top-0 z-30 border-b border-line bg-page/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link to="/home" className="flex items-center gap-2 font-semibold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-page">
-              <Plane size={16} strokeWidth={2.5} />
-            </span>
+            <Logo size={34} className="text-accent" />
             <span className="hidden sm:inline">QuickBuckz</span>
           </Link>
 
@@ -63,16 +62,16 @@ export default function NavBar() {
           </nav>
 
           <div className="flex items-center gap-2">
-            {/* <DemoToggle /> */}
             <Link
               to="/post-creation"
               className="hidden items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-page transition hover:bg-accent-hover md:flex"
             >
               <Plus size={16} strokeWidth={2.5} /> New post
             </Link>
-            <Link to="/login" className="rounded-lg px-3 py-2 text-sm text-muted hover:text-white">
-              Log out
-            </Link>
+            <NotificationBell />
+            <NavLink to="/user-account" className={desktopLink} aria-label="Account settings">
+              <Settings size={17} /> <span className="hidden lg:inline">Settings</span>
+            </NavLink>
           </div>
         </div>
       </header>

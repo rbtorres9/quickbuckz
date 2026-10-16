@@ -4,6 +4,7 @@ import { ImagePlus, X } from 'lucide-react'
 import { useUserCache } from '../context/UserCacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from '../components/Avatar.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
 
 const MAX_CHARS = 500
 const MAX_IMAGE_MB = 5
@@ -14,17 +15,16 @@ export default function PostCreation() {
   const fileInput = useRef(null)
   const { user } = useUserCache()
   const { fetchWithToken } = useAuthContext()
-  const userFullName = user?.first_name + " " + user?.last_name
+  const userFullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.username || '?'
 
   const [text, setText] = useState('')
   const [image, setImage] = useState(null) // { file, url }
   const [error, setError] = useState('')
-  const posted = useRef(false)
+  const [posting, setPosting] = useState(false)
 
-  // Free the preview's memory when the photo is removed or the page closes,
-  // but not after posting, because the new post is still showing it.
+  // Free the preview's memory when the photo is removed or the page closes
   useEffect(() => () => {
-    if (image && !posted.current) URL.revokeObjectURL(image.url)
+    if (image) URL.revokeObjectURL(image.url)
   }, [image])
 
   function handleFile(e) {
@@ -59,24 +59,24 @@ export default function PostCreation() {
       return
     }
 
-    console.log("Getting ready to submit")
+    // Photos have to be sent as a real file upload, so use FormData (not JSON)
+    const formData = new FormData()
+    formData.append('content', trimmed)
+    if (image) formData.append('image', image.file)
 
-    const data = await fetchWithToken('/api/posts/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: trimmed, image: image?.url ?? null })
-    })
+    setPosting(true)
+    const data = await fetchWithToken('/api/posts/', { method: 'POST', body: formData })
+    setPosting(false)
 
-    console.log("Post creation response:", data)
-
-    // TODO: link to the backend database so posts and photos are saved
-    // const id = addPost({ text: trimmed, imageUrl: image?.url ?? null })
-    posted.current = true
-    // navigate(`/post/${id}`)
+    if (Object.hasOwn(data, 'error')) {
+      setError(errorMessage(data.error))
+      return
+    }
+    navigate('/user-page') // see the new post on your profile
   }
 
   const remaining = MAX_CHARS - text.length
-  const canPost = text.trim() || image
+  const canPost = (text.trim() || image) && !posting
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
@@ -144,7 +144,7 @@ export default function PostCreation() {
               disabled={!canPost}
               className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-page transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Post
+              {posting ? 'Posting…' : 'Post'}
             </button>
           </div>
         </div>

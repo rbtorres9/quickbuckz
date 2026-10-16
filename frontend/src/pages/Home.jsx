@@ -1,0 +1,48 @@
+import { Link } from 'react-router-dom'
+import { ImagePlus } from 'lucide-react'
+import { useStore } from '../data/store.jsx'
+import Avatar from '../components/Avatar.jsx'
+import PostCard from '../components/PostCard.jsx'
+
+export default function Home() {
+  const { posts, profile, following } = useStore()
+
+  // Posts from people you follow, newest first
+  const feed = posts
+    .filter((p) => following.includes(p.handle))
+    .sort((a, b) => b.createdAt - a.createdAt)
+
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-6">
+      <h1 className="sr-only">Home</h1>
+
+      {/* Quick start: opens the New post page */}
+      <Link
+        to="/post-creation"
+        className="flex items-center gap-3 rounded-2xl border border-line bg-card px-5 py-4 transition hover:border-accent/40"
+      >
+        <Avatar name={profile.name} src={profile.avatarUrl} />
+        <span className="flex-1 text-sm text-muted">Share a trip, a tip, or a photo…</span>
+        <ImagePlus size={18} className="text-muted" />
+      </Link>
+
+      <div className="mt-6 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold">Latest from people you follow</h2>
+        <Link to="/subscriptions" className="text-xs text-muted hover:text-accent">
+          Following {following.length}
+        </Link>
+      </div>
+
+      <div className="mt-3 space-y-4">
+        {feed.length ? (
+          feed.map((p) => <PostCard key={p.id} post={p} />)
+        ) : (
+          <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+            <p className="font-medium">Your feed is empty</p>
+            <p className="mt-1 text-sm text-muted">Follow people to see their latest posts here.</p>
+          </div>
+        )}
+      </div>
+    </main>
+  )
+}
