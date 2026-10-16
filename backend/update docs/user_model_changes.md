@@ -18,6 +18,7 @@ This document records what changed when the backend moved from Django's built-in
 | Username | Django defaults (up to 150 characters) | 4-20 characters, custom rules (section 2), always stored lowercase |
 | Login identifier | Username only | Username **or** email, case-insensitive |
 | Signup password | Any password accepted | Validated: at least 8 characters, not too common, not entirely numeric, not too similar to the username or email (section 2) |
+| Signup fields | `username`, `email`, `password` | Also accepts optional `first_name` and `last_name`, and returns them in the `201` response |
 | Profile | `bio`, `profile_picture`, `created_at` | Same, plus a `visibility` field (public/private). Private profiles are hidden from other users' lists (section 3) |
 | Public profile list (`GET /api/profiles/`) | `id`, `user`, `bio`, `profile_picture`, `created_at` | Also `username`, `first_name`, `last_name` (read-only, taken from the linked user) |
 | Private account data | None | New `AccountSecurity` model (empty stub, never exposed by the API) |
@@ -86,8 +87,9 @@ Example response when several rules fail: `{"password": ["This password is too c
 6. **`GET /api/profiles/` is public and hides private profiles.** No login is needed, which matches the original `frontend_api_reference.md`. Profiles set to `private` are left out of the list for everyone except their owner, who sees their own profile when the request carries a valid token. **Verified** over HTTP: a request with no token returns `200` and leaves out the private profile, and with one private profile a second logged-in user's list had one fewer entry than the owner's. **Watch out:** a request that carries an expired or invalid `Authorization` header returns `401` even though the endpoint is public (verified), so the frontend should send the header only when it holds a valid token.
 7. **`POST /api/profiles/` is no longer allowed** and returns `405`. Profiles are created automatically at signup, and edited through `PATCH /api/profile/me/`. **Verified.**
 8. **`/api/profile/me/` now includes `visibility`** (`"public"` or `"private"`) and lets the owner change it. Any other value returns `400` with `{"visibility": ["\"bogus\" is not a valid choice."]}`. The `user` field is read-only: sending it has no effect. **Verified.**
-9. **Each item in `GET /api/profiles/` now includes `username`, `first_name` and `last_name`.** All three are read-only and come from the linked user account, so the frontend can show a name without a second request. `first_name` and `last_name` are empty strings until they are set, and for now they can only be set in the Django admin, because no API endpoint accepts them yet. They appear only for profiles that are visible in the list (public ones, plus the requester's own). **Verified.**
+9. **Each item in `GET /api/profiles/` now includes `username`, `first_name` and `last_name`.** All three are read-only and come from the linked user account, so the frontend can show a name without a second request. `first_name` and `last_name` are empty strings until they are set, and can be set at signup (item 11) or in the Django admin. They appear only for profiles that are visible in the list (public ones, plus the requester's own). **Verified.**
 10. **Signup now validates the password.** A weak password returns `400` with a `password` key holding one or more readable messages (see section 2). Test accounts with passwords such as `test123` will be rejected. **Verified.**
+11. **Signup accepts two optional fields, `first_name` and `last_name`** (up to 150 characters each). The `201` response includes them, as empty strings when they were not sent, so existing signup requests that omit them keep working. Capitalization is preserved (only `username` and `email` are lowercased). Names then appear in `GET /api/profiles/` (item 9). **Verified** over HTTP: a signup with names returns `201` with both names, a signup without them returns `201` with empty strings, and a name longer than 150 characters returns `400` with `Ensure this field has no more than 150 characters.` under the field's key.
 
 ### What did *not* change
 - All URLs are the same (the only difference is that `POST /api/profiles/` is now rejected).
@@ -139,7 +141,7 @@ A `post_save` signal on `User` now creates **both** a `Profile` and an `AccountS
 | `accounts/validators.py` | **New.** `validate_username_rules` |
 | `accounts/backends.py` | **New.** `EmailOrUsernameBackend` (case-insensitive lookup by username or email, safe handling of duplicates, timing-safe on misses) |
 | `accounts/signals.py` | Creates `Profile` and `AccountSecurity` on user creation |
-| `accounts/serializers.py` | `RegisterSerializer` lowercases and strips `username` and `email` before validation, so duplicates are caught as clean `400` errors instead of database errors. `ProfileSerializer` was replaced by `PublicProfileSerializer` and `OwnerProfileSerializer` (`user` is read-only in both); the public one also returns `username`, `first_name` and `last_name`. `RegisterSerializer.validate()` also runs Django's password validators against the new user's username and email |
+| `accounts/serializers.py` | `RegisterSerializer` lowercases and strips `username` and `email` before validation, so duplicates are caught as clean `400` errors instead of database errors. `ProfileSerializer` was replaced by `PublicProfileSerializer` and `OwnerProfileSerializer` (`user` is read-only in both); the public one also returns `username`, `first_name` and `last_name`. `RegisterSerializer.validate()` also runs Django's password validators against the new user's username and email. `RegisterSerializer` also accepts optional `first_name` and `last_name`, and its `create()` now passes all validated fields straight to `create_user` |
 | `accounts/views.py` | `ProfileListView` is now list-only (`ListAPIView`), open to anonymous visitors (`AllowAny`), hides other users' private profiles, and loads each profile's user in the same query (`select_related`) to avoid an extra query per profile. `MyProfileView` uses `OwnerProfileSerializer` |
 | `accounts/apps.py` | Unchanged in behavior; `ready()` still imports the signals |
 | `accounts/admin.py` | New `CustomUserAdmin` with Profile and AccountSecurity inlines (inlines hidden on the "add user" page so the signal does not conflict), email field on the add page; `Post` still registered |
@@ -169,7 +171,7 @@ Any code that needs the user model should use `settings.AUTH_USER_MODEL` (in mod
 | `README.md` | Section 7, Signals | Shows a signal that creates only a `Profile`. It now also creates `AccountSecurity`, and `User` is the custom model |
 | `README.md` | Section 11, Post model | Shows `ForeignKey(User, ...)`; now `settings.AUTH_USER_MODEL`. It also shows `upload_to='posts/'`, but the code uses `'posts/images/'` (this mismatch predates the User changes) |
 | `frontend_api_reference.md` | Login | Add: email also accepted; usernames are lowercase |
-| `frontend_api_reference.md` | Signup | Add: username/email/password rules and the new `400` error messages |
+| `frontend_api_reference.md` | Signup | Add: username/email/password rules, the optional `first_name`/`last_name` fields, and the new `400` error messages |
 | `frontend_api_reference.md` | Profile data shape | `/api/profiles/` items now include `username`, `first_name` and `last_name`, and `/api/profile/me/` now also returns `visibility` |
 | `frontend_api_reference.md` | Endpoints table | Does not mention that private profiles are hidden from `GET /api/profiles/`, or that `visibility` can be updated via `PATCH /api/profile/me/` |
 
@@ -190,7 +192,7 @@ Suggested replacement text for `frontend_api_reference.md` is in section 8.
 9. **No pagination.** `GET /api/profiles/` and `GET /api/posts/` return everything at once, as before.
 10. **Default visibility is `public`.** Decide whether new profiles should instead start as `private`. Changing the default affects only profiles created afterward.
 11. **`frontend_api_reference.md` has not been updated yet.** Section 8 has the replacement text.
-12. **`first_name` and `last_name` can only be set in the Django admin.** Neither signup nor `PATCH /api/profile/me/` accepts them, so they are empty for most users. Decide whether users should set them at signup, through their profile, or both.
+12. **Names can be set at signup but not edited afterward.** `PATCH /api/profile/me/` does not accept `first_name` or `last_name`, so a user cannot change them after signup (only an admin can). Allowing it needs a small custom `update()` in `OwnerProfileSerializer`, because the names live on `User` rather than `Profile`.
 13. **Password rules apply at signup only.** There is no change-password or reset endpoint yet. When one is added it must call `validate_password` too, because DRF does not run Django's validators on its own.
 
 ---
@@ -205,6 +207,7 @@ Replace or add the following in the existing file.
 ### Signup (add under the request example)
 > - Usernames are 4-20 characters: letters, numbers, underscores and dots only. They cannot start or end with a dot, cannot contain `..` or `___`, need at least two letters or numbers, and need at least one letter.
 > - Usernames and emails are case-insensitive and are returned in lowercase.
+> - The request body may also include optional `first_name` and `last_name` (up to 150 characters each, capitalization preserved). The `201` response returns them, as empty strings if they were not sent.
 > - Passwords must be at least 8 characters, not commonly used, not entirely numeric, and not too similar to the username or email. A rejected password returns `400` with every problem listed under `password`, e.g. `{"password": ["This password is too common.", "This password is entirely numeric."]}`.
 > - Invalid or duplicate values return `400` with errors keyed by field, e.g. `{"username": ["A user with that username already exists."], "email": ["user with this email already exists."]}`.
 

@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, X } from 'lucide-react'
-import { useStore } from '../data/store.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from './Avatar.jsx'
 import ThemePicker from './ThemePicker.jsx'
+import { useStore } from '../data/store.jsx'
 import { getTheme, themeVars } from '../data/themes.js'
+import { errorMessage } from '../utils/errorMessage.js'
 
 const MAX_NAME = 50
 const MAX_BIO = 160
@@ -11,14 +14,20 @@ const MAX_IMAGE_MB = 5
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export default function EditProfileModal({ onClose }) {
+  const { user, setUser } = useUserCache()
+  const { fetchWithToken } = useAuthContext()
   const { profile, updateProfile } = useStore()
-
-  const [name, setName] = useState(profile.name)
-  const [bio, setBio] = useState(profile.bio)
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl)
-  const [bannerUrl, setBannerUrl] = useState(profile.bannerUrl)
+  const userFullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.username || '?'
+  const [bio, setBio] = useState(user?.bio ?? '')
+  const [profilePicture, setProfilePicture] = useState(user?.profile_picture)
+  const [selectedProfilePicture, setSelectedProfilePicture] = useState(null)
+  const [bannerUrl, setBannerUrl] = useState(user?.banner)
+  const [selectedBanner, setSelectedBanner] = useState(null)
+  // Profile theme. Saved on this device for now: the backend has no theme field yet.
   const [theme, setTheme] = useState(profile.theme)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  
 
   const avatarInput = useRef(null)
   const bannerInput = useRef(null)
@@ -36,7 +45,7 @@ export default function EditProfileModal({ onClose }) {
     }
   })
 
-  function pickImage(e, setUrl) {
+  function pickImage(e, setUrl, setFile) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
@@ -47,6 +56,7 @@ export default function EditProfileModal({ onClose }) {
     const url = URL.createObjectURL(file)
     created.current.push(url)
     setUrl(url)
+    if (setFile) setFile(file)
   }
 
   // Free memory for previews that won't be used
@@ -58,14 +68,42 @@ export default function EditProfileModal({ onClose }) {
     onClose()
   }
 
-  function save(e) {
+  async function save(e) {
     e.preventDefault()
-    const trimmedName = name.trim()
-    if (!trimmedName) return setError('Display name can’t be empty.')
 
-    updateProfile({ name: trimmedName, bio: bio.trim(), avatarUrl, bannerUrl, theme })
-    freeUnused([avatarUrl, bannerUrl])
-    onClose()
+    const trimmed = bio.trim()
+    const formData = new FormData()
+    formData.append('bio', trimmed)
+
+    if (selectedProfilePicture) {
+      formData.append('profile_picture', selectedProfilePicture)
+    } else if (profilePicture === null) {
+      formData.append('profile_picture', '')
+    }
+
+    if (selectedBanner) {
+      formData.append('banner', selectedBanner)
+    } else if (bannerUrl === null) {
+      formData.append('banner', '')
+    }
+
+    setSaving(true)
+    const data = await fetchWithToken('/api/profile/me/', {
+      method: 'PUT',
+      body: formData
+    })
+    setSaving(false)
+
+    if (!Object.hasOwn(data, 'error')) {
+      // Use what the server sent back, so photos point at their saved addresses
+      setUser({ ...user, ...data })
+      updateProfile({ theme }) // TODO: send the theme too, once the backend has a theme field
+      freeUnused([])
+      onClose()
+    }
+    else {
+      setError(errorMessage(data.error))
+    }
   }
 
   return (
@@ -89,8 +127,8 @@ export default function EditProfileModal({ onClose }) {
             </button>
             <h2 className="font-semibold">Edit profile</h2>
           </div>
-          <button type="submit" className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-page hover:bg-accent-hover">
-            Save
+          <button type="submit" disabled={saving} className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-page hover:bg-accent-hover disabled:cursor-wait disabled:opacity-70">
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
 
@@ -116,7 +154,7 @@ export default function EditProfileModal({ onClose }) {
           {bannerUrl && (
             <button
               type="button"
-              onClick={() => setBannerUrl(null)}
+              onClick={() => { setBannerUrl(null); setSelectedBanner(null) }}
               className="absolute right-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-xs hover:bg-black"
             >
               Remove
@@ -130,7 +168,7 @@ export default function EditProfileModal({ onClose }) {
               className="group relative block rounded-full"
               aria-label="Change profile photo"
             >
-              <Avatar name={name.trim() || '?'} src={avatarUrl} size="lg" />
+              <Avatar name={userFullName} src={profilePicture} size="lg" />
               <span className="absolute inset-1 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition group-hover:opacity-100">
                 <Camera size={18} />
               </span>
@@ -143,19 +181,23 @@ export default function EditProfileModal({ onClose }) {
             <button type="button" onClick={() => avatarInput.current?.click()} className="font-medium text-accent hover:underline">
               Change photo
             </button>
-            {avatarUrl && (
-              <button type="button" onClick={() => setAvatarUrl(null)} className="text-muted hover:text-red-400">
+            {profilePicture && (
+              <button type="button" onClick={() => {
+                setProfilePicture(null)
+                setSelectedProfilePicture(null)
+              }} className="text-muted hover:text-red-400">
                 Remove photo
               </button>
             )}
           </div>
 
-          <input ref={avatarInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setAvatarUrl)} />
-          <input ref={bannerInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setBannerUrl)} />
+          <input ref={avatarInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setProfilePicture, setSelectedProfilePicture)} />
+          <input ref={bannerInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setBannerUrl, setSelectedBanner)} />
 
           {/* Fields */}
           <div className="mt-5 space-y-4">
-            <div className="space-y-1.5">
+            
+            {/* <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
                 <label htmlFor="displayName" className="font-medium">Display name</label>
                 <span className="text-xs text-muted">{name.length}/{MAX_NAME}</span>
@@ -167,7 +209,7 @@ export default function EditProfileModal({ onClose }) {
                 maxLength={MAX_NAME}
                 className="w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
               />
-            </div>
+            </div> */}
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
@@ -188,7 +230,7 @@ export default function EditProfileModal({ onClose }) {
             <ThemePicker label="Profile theme" value={theme} onChange={setTheme} />
             <p className="text-xs text-muted">Everyone who visits your profile sees this theme.</p>
 
-            <p className="text-xs text-muted">Your username stays <span className="text-white">@{profile.handle}</span>.</p>
+            <p className="text-xs text-muted">Your username stays <span className="text-white">@{user?.username ?? ""}</span>.</p>
           </div>
 
           {error && <p className="mt-3 text-sm text-red-400">{error}</p>}

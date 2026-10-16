@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile, Post
+from .models import Profile
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.contrib.auth.password_validation import validate_password
@@ -13,29 +13,63 @@ class PublicProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'username', 'first_name', 'last_name', 'bio', 'profile_picture', 'created_at']
+        fields = [
+                'id', 
+                'user', 
+                'username', 
+                'first_name', 
+                'last_name',
+                'bio', 
+                'profile_picture', 
+                'banner', 
+                'created_at'
+                ]
         read_only_fields = fields
 
 
 class OwnerProfileSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='user.username')
+    first_name = serializers.ReadOnlyField(source='user.first_name')
+    last_name = serializers.ReadOnlyField(source='user.last_name')
+
+    MAX_IMAGE_MB = 5
+
+    def _validate_image(self, image):
+        if image and image.size > self.MAX_IMAGE_MB * 1024 * 1024:
+            raise serializers.ValidationError(f"Image must be under {self.MAX_IMAGE_MB} MB.")
+        return image
+
+    def validate_profile_picture(self, value):
+        return self._validate_image(value)
+
+    def validate_banner(self, value):
+        return self._validate_image(value)
+    
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'bio', 'profile_picture', 'visibility', 'created_at']
+        fields = [
+            'id', 
+            'user', 
+            'username', 
+            'first_name',
+            'last_name',
+            'bio', 
+            'profile_picture', 
+            'banner',
+            'visibility', 
+            'created_at'
+            ]
         read_only_fields = ['user']
 
 
-class PostSerializer(serializers.ModelSerializer):
-    author = serializers.ReadOnlyField(source='author.username')
-    class Meta:
-        model = Post
-        fields = ['id', 'author', 'content', 'image', 'created_at', 'updated_at']
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'email', 'password', 'first_name', 'last_name']
 
     def to_internal_value(self, data):
         data = data.copy()  # request data can be an immutable QueryDict
@@ -45,11 +79,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def create(self, validated_data):
-        return User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-        )
+        return User.objects.create_user(**validated_data)
 
     def validate(self, attrs):
         candidate = User(username=attrs.get('username'), email=attrs.get('email'))

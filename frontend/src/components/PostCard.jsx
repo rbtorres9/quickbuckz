@@ -2,22 +2,40 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, MoreHorizontal, Share2 } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
+import { getTimeAgoString, getDateTimeString } from '../utils/DateTimeUtils.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
 
-export default function PostCard({ post, full = false, onDeleted }) {
+// Shows two kinds of post:
+//  - real posts from the database (they have created_at, content, author = username)
+//  - sample posts from store.jsx (they have date, text, handle)
+// `user` is the author's profile, passed in for real posts.
+export default function PostCard({ post, user, full = false, onDeleted }) {
   const { toggleLike, deletePost, profile } = useStore()
+  const me = useUserCache().user
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const [viewing, setViewing] = useState(false) // full-screen photo open?
   const [burst, setBurst] = useState(false) // heart animation showing?
   const [copied, setCopied] = useState(false) // "Link copied" showing?
   const clickTimer = useRef(null)
-  const byOwner = post.handle === profile.handle
-  const isMine = byOwner // your own post: Edit/Delete instead of Report
-  // Posts by the profile owner always show their latest name and photo
-  const authorName = byOwner ? profile.name : post.author
-  const profileLink = byOwner ? '/user-page' : `/user/${post.handle}`
+
+  const isReal = 'created_at' in post
+  const handle = isReal ? post.author : post.handle
+  const isMine = handle === (me?.username ?? profile.handle)
+  const profileLink = isMine ? '/user-page' : `/user/${handle}`
+
+  let authorName = post.author
+  if (isReal) authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || handle
+  else if (isMine) authorName = profile.name
+  const avatar = isReal ? user?.profile_picture : isMine ? profile.avatarUrl : null
+
+  const text = isReal ? post.content : post.text
+  const photoUrl = isReal ? post.image : post.imageUrl // real photo address, if any
+  const gradient = isReal ? null : post.image // sample posts use a color placeholder
+  const likes = isReal ? post.likes_count : post.likes
+  const comments = isReal ? post.comments_count : post.comments.length
 
   // Close the ⋯ menu when clicking anywhere else
   useEffect(() => {
@@ -41,6 +59,7 @@ export default function PostCard({ post, full = false, onDeleted }) {
   }
   function handlePhotoDoubleClick() {
     clearTimeout(clickTimer.current)
+    if (isReal) return setViewing(true) // TODO: like real posts with POST /api/posts/{id}/like/
     if (!post.liked) toggleLike(post.id)
     setBurst(true)
     setTimeout(() => setBurst(false), 700)
@@ -62,61 +81,65 @@ export default function PostCard({ post, full = false, onDeleted }) {
     }
   }
 
-  // Real photos use imageUrl; the sample posts use gradient placeholders.
-  const hasPhoto = post.imageUrl || post.image
-  const photo = post.imageUrl ? (
-    <img src={post.imageUrl} alt="" className={`w-full rounded-xl object-cover ${full ? 'max-h-[32rem]' : 'h-56'}`} />
+  const photo = photoUrl ? (
+    <img src={photoUrl} alt="" className={`w-full rounded-xl object-cover ${full ? 'max-h-[32rem]' : 'h-56'}`} />
   ) : (
-    <div className={`${post.image} rounded-xl ${full ? 'h-72' : 'h-56'}`} />
+    <div className={`${gradient} rounded-xl ${full ? 'h-72' : 'h-56'}`} />
   )
 
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-card">
       <div className="flex items-center gap-3 px-5 pt-4">
         <Link to={profileLink} className="shrink-0">
-          <Avatar name={authorName} src={byOwner ? profile.avatarUrl : null} />
+          <Avatar name={authorName} src={avatar} />
         </Link>
         <div className="flex-1 text-sm">
           <Link to={profileLink} className="font-bold hover:underline">{authorName}</Link>{' '}
-          <span className="text-muted">@{post.handle} · {post.date}</span>
+          <span className="text-muted">
+            @{handle} ·{' '}
+            {isReal ? <span title={getDateTimeString(post.created_at)}>{getTimeAgoString(post.created_at)}</span> : post.date}
+          </span>
         </div>
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="rounded-md px-2 py-1 text-muted hover:bg-white/5"
-            aria-label="Post options"
-          >
-            <MoreHorizontal size={18} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
-              {isMine ? (
-                <>
-                  <button className="block w-full px-3 py-2 text-left hover:bg-white/5">Edit</button>
-                  <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
-                    Delete
+        {/* TODO: Edit/Delete/Report for real posts (backend must only let owners delete) */}
+        {!isReal && (
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="rounded-md px-2 py-1 text-muted hover:bg-white/5"
+              aria-label="Post options"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
+                {isMine ? (
+                  <>
+                    <button className="block w-full px-3 py-2 text-left hover:bg-white/5">Edit</button>
+                    <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                      Delete
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => { setMenuOpen(false); alert('Thanks, this post was reported.') }}
+                    className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
+                  >
+                    Report
                   </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => { setMenuOpen(false); alert('Thanks, this post was reported.') }}
-                  className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
-                >
-                  Report
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {post.text && <p className="px-5 pt-3 text-sm leading-relaxed">{post.text}</p>}
-      {hasPhoto && (
+      {text && <p className="whitespace-pre-line break-words px-5 pt-3 text-sm leading-relaxed">{text}</p>}
+      {(photoUrl || gradient) && (
         <button
           type="button"
           onClick={handlePhotoClick}
           onDoubleClick={handlePhotoDoubleClick}
-          aria-label="Open photo (double-click to like)"
+          aria-label="Open photo"
           className="relative mx-5 mt-3 block w-[calc(100%-2.5rem)] cursor-zoom-in select-none"
         >
           {photo}
@@ -129,21 +152,31 @@ export default function PostCard({ post, full = false, onDeleted }) {
       )}
 
       <div className="flex items-center gap-5 px-5 py-4 text-sm text-muted">
-        <button
-          onClick={() => toggleLike(post.id)}
-          className={`flex items-center gap-1.5 hover:text-white ${post.liked ? 'text-accent' : ''}`}
-        >
-          <Heart size={18} fill={post.liked ? 'currentColor' : 'none'} /> {post.likes}
-        </button>
-        <Link to={`/post/${post.id}`} className="flex items-center gap-1.5 hover:text-white">
-          <MessageCircle size={18} /> {post.comments.length}
-        </Link>
-        <button onClick={handleShare} aria-label="Share post" className="ml-auto flex items-center gap-1.5 hover:text-white">
-          {copied ? <span className="text-xs text-accent">Link copied</span> : <Share2 size={18} />}
-        </button>
+        {isReal ? (
+          // TODO: make these clickable with /api/posts/{id}/like/ and /api/posts/{id}/comment/
+          <>
+            <span className="flex items-center gap-1.5"><Heart size={18} /> {likes}</span>
+            <span className="flex items-center gap-1.5"><MessageCircle size={18} /> {comments}</span>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => toggleLike(post.id)}
+              className={`flex items-center gap-1.5 hover:text-white ${post.liked ? 'text-accent' : ''}`}
+            >
+              <Heart size={18} fill={post.liked ? 'currentColor' : 'none'} /> {likes}
+            </button>
+            <Link to={`/post/${post.id}`} className="flex items-center gap-1.5 hover:text-white">
+              <MessageCircle size={18} /> {comments}
+            </Link>
+            <button onClick={handleShare} aria-label="Share post" className="ml-auto flex items-center gap-1.5 hover:text-white">
+              {copied ? <span className="text-xs text-accent">Link copied</span> : <Share2 size={18} />}
+            </button>
+          </>
+        )}
       </div>
 
-      {viewing && <PhotoViewer post={post} onClose={() => setViewing(false)} />}
+      {viewing && <PhotoViewer post={{ ...post, imageUrl: photoUrl, image: gradient }} onClose={() => setViewing(false)} />}
     </article>
   )
 }

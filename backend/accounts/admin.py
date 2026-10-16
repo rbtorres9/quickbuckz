@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import AccountSecurity, Post, Profile, User
+from .models import AccountSecurity, Profile, User
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -27,5 +27,4 @@ class CustomUserAdmin(UserAdmin):
             return []
         return super().get_inline_instances(request, obj)
 
-admin.site.register(Post)
 

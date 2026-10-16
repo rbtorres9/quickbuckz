@@ -22,7 +22,12 @@ from django.http import HttpResponse
 def home(request):
     return HttpResponse("""
         <h1>QuickBuckz API</h1>
-        <p>Backend is running. See <a href="/api/posts/">/api/posts/</a> or <a href="/admin/">/admin/</a>.</p>
+        <p>Backend is running. </p> 
+        <ul>
+        <li><a href="/api/posts/">/api/posts/</a></li>
+        <li><a href="/admin/">/admin/</a></li>
+        <li><a href="/api/profiles/">/api/profiles/</a></li>
+        </ul>
     """)
 
 
@@ -30,4 +35,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('accounts.urls')),
     path('', home),
+    path("api/", include('posts.urls')),
 ]

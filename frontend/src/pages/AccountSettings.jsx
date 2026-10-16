@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useAuthContext } from '../context/AuthContext.jsx'
 import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 
@@ -9,6 +10,8 @@ const saveClass = 'rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-pag
 
 export default function AccountSettings() {
   const { profile, updateProfile, siteTheme, setSiteTheme } = useStore()
+  const { logout } = useAuthContext()
+  const navigate = useNavigate()
 
   // Email
   const [email, setEmail] = useState(profile.email)
@@ -142,9 +145,12 @@ export default function AccountSettings() {
           <h2 className="font-semibold">Log out</h2>
           <p className="text-sm text-muted">Sign out of QuickBuckz on this device.</p>
         </div>
-        <Link to="/login" className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300">
+        <button
+          onClick={() => { logout(); navigate('/login') }}
+          className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300"
+        >
           Log out
-        </Link>
+        </button>
       </section>
     </main>
   )

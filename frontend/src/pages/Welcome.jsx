@@ -1,12 +1,26 @@
-import { Link, useLocation } from 'react-router-dom'
+import { useContext } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
+import { AuthContext } from '../context/AuthContext'
+import { useUserCache } from '../context/UserCacheContext'
 
 // Dummy "you're in" page. Login and Create Account send people here.
 // Replace with the real /user-page once the backend exists.
 export default function Welcome() {
   const { state } = useLocation()
+  const { logout } = useContext(AuthContext)
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   const name = state?.name
   const isNew = state?.from === 'create-account'
+
+  const { user } = useUserCache()
+  console.log("User from cache:", user)
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
@@ -29,12 +43,13 @@ export default function Welcome() {
         >
           Go to profile
         </Link>
-        <Link
-          to="/login"
+        <button
+          type="button"
+          onClick={handleLogout}
           className="mt-3 inline-block w-full rounded-lg border border-line py-3 text-sm font-semibold transition hover:bg-white/5"
         >
           Log out
-        </Link>
+        </button>
       </div>
     </main>
   )

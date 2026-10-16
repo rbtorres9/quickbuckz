@@ -1,27 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ImagePlus, X } from 'lucide-react'
-import { useStore } from '../data/store.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from '../components/Avatar.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
 
 const MAX_CHARS = 500
 const MAX_IMAGE_MB = 5
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export default function PostCreation() {
-  const { addPost, profile } = useStore()
   const navigate = useNavigate()
   const fileInput = useRef(null)
+  const { user } = useUserCache()
+  const { fetchWithToken } = useAuthContext()
+  const userFullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.username || '?'
 
   const [text, setText] = useState('')
   const [image, setImage] = useState(null) // { file, url }
   const [error, setError] = useState('')
-  const posted = useRef(false)
+  const [posting, setPosting] = useState(false)
 
-  // Free the preview's memory when the photo is removed or the page closes,
-  // but not after posting, because the new post is still showing it.
+  // Free the preview's memory when the photo is removed or the page closes
   useEffect(() => () => {
-    if (image && !posted.current) URL.revokeObjectURL(image.url)
+    if (image) URL.revokeObjectURL(image.url)
   }, [image])
 
   function handleFile(e) {
@@ -43,21 +46,37 @@ export default function PostCreation() {
     setImage({ file, url: URL.createObjectURL(file) })
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const trimmed = text.trim()
     if (!trimmed && !image) {
       setError('Write something or add a photo.')
       return
     }
-    // TODO: link to the backend database so posts and photos are saved
-    const id = addPost({ text: trimmed, imageUrl: image?.url ?? null })
-    posted.current = true
-    navigate(`/post/${id}`)
+
+    if (trimmed.length > MAX_CHARS) {
+      setError(`Posts must be under ${MAX_CHARS} characters.`)
+      return
+    }
+
+    // Photos have to be sent as a real file upload, so use FormData (not JSON)
+    const formData = new FormData()
+    formData.append('content', trimmed)
+    if (image) formData.append('image', image.file)
+
+    setPosting(true)
+    const data = await fetchWithToken('/api/posts/', { method: 'POST', body: formData })
+    setPosting(false)
+
+    if (Object.hasOwn(data, 'error')) {
+      setError(errorMessage(data.error))
+      return
+    }
+    navigate('/user-page') // see the new post on your profile
   }
 
   const remaining = MAX_CHARS - text.length
-  const canPost = text.trim() || image
+  const canPost = (text.trim() || image) && !posting
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
@@ -65,7 +84,7 @@ export default function PostCreation() {
 
       <form onSubmit={handleSubmit} className="mt-5 rounded-2xl border border-line bg-card p-5">
         <div className="flex gap-3">
-          <Avatar name={profile.name} src={profile.avatarUrl} />
+          <Avatar name={userFullName} src={user?.profile_picture} />
           <textarea
             value={text}
             onChange={(e) => { setText(e.target.value); setError('') }}
@@ -125,7 +144,7 @@ export default function PostCreation() {
               disabled={!canPost}
               className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-page transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Post
+              {posting ? 'Posting…' : 'Post'}
             </button>
           </div>
         </div>

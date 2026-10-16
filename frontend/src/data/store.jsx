@@ -50,6 +50,7 @@ const samplePosts = [
 
 // Other people on the site (sample). The backend will provide these from the users table.
 export const sampleUsers = {
+  jordanr: { name: 'Jordan Reyes', handle: 'jordanr', bio: 'Chasing northern lights and cheap flights. Anchorage-based, always planning the next trip.', followers: 248, following: 131, theme: 'classic' },
   avak: { name: 'Ava Kim', handle: 'avak', bio: 'Photographer. Coastal towns and golden hour.', followers: 1204, following: 310, theme: 'sunset' },
   samp: { name: 'Sam Patel', handle: 'samp', bio: 'Weekend road trips around Southcentral Alaska.', followers: 87, following: 142, theme: 'aurora' },
   leog: { name: 'Leo Grant', handle: 'leog', bio: 'One backpack, ten countries and counting.', followers: 432, following: 95, theme: 'glacier' },

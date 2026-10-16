@@ -22,3 +22,23 @@ TODO:
 
 UPDATES:
 - Updated the /create-account page to display errors appropriately such as non-unique emails, non-unique usernames, invalid usernames, etc..
+- Updated /create-account to include 'first-name' and 'last-name' in its POST JSON.stringify (modified firstName and lastName to match django User model variable names)
+- Updated /create-account so that when a user register, they are automatically logged in with message "Account Created!". - RT 10/11
+- Modified App.jsx by removing PublicRoute for /create-account, but also fixed the redirect logic where /create-account is still accessible with a login session (due to implementing above note). - RT 10/11
+- Moved UserCacheContext and AuthContext to their own folder named 'context'
+- Added a utils folder with DateTileUtils.js
+
+## Site Functionality
+- /user-page now shows the logged in user's full name, bio, and username
+- /user-page also shows the current user's posts
+- for now, certain features of /user-page will be hidden such as likes, followers, and following as it is not implemented on the backend
+- Users can edit their bio and profile picture in /user-page (although more testing should be done)
+
+## UserCacheContext
+- UserCacheContext provides a cache of the user's first name, last name, username, bio, and profile picture in order to reduce api calls to the backend.
+- UserCacheContext is updated when the user first logs in.
+- /user-page is updated to use this cache, so the only api being called is to get the user's posts
+
+## DateTimeUtils
+- This is a file that has basic functions to format dates into readable strings
+- Current used in PostCard.jsx to show a post's date

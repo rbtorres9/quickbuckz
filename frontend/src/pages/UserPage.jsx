@@ -1,21 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore, sampleUsers } from '../data/store.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
 import { getTheme, themeVars } from '../data/themes.js'
 
-// /user-page shows your own profile; /user/:handle shows anyone's.
+// /user-page shows your own profile (real, from the database).
+// /user/:handle shows someone else's (sample for now).
 export default function UserPage() {
   const { handle } = useParams()
-  const { posts, profile, following, toggleFollowUser, followers } = useStore()
+  const { posts, profile, following, toggleFollowUser } = useStore()
+  const { user } = useUserCache()
   const [tab, setTab] = useState('posts')
   const [editing, setEditing] = useState(false)
+  const [myPosts, setMyPosts] = useState([])
 
-  const isSelf = !handle || handle === profile.handle
-  // TODO: load other users' profiles from the backend database
-  const person = isSelf ? profile : sampleUsers[handle]
+  const isSelf = !handle || handle === user?.username
+
+  // Load your own posts from the database, newest first
+  useEffect(() => {
+    if (!isSelf || !user) return
+    fetch('https://quickbuckz.onrender.com/api/posts/')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setMyPosts(data.filter((p) => p.author === user.username)))
+      .catch((err) => console.log('Fetch Posts Error: ', err))
+  }, [isSelf, user?.username])
+
+  if (isSelf && !user) {
+    return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…</main>
+  }
+
+  // TODO: load other users' profiles and posts from the backend database
+  const person = isSelf
+    ? {
+        name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username,
+        handle: user.username,
+        bio: user.bio,
+        avatarUrl: user.profile_picture,
+        bannerUrl: user.banner,
+        theme: profile.theme, // TODO: save theme in the database
+      }
+    : sampleUsers[handle]
 
   if (!person) {
     return (
@@ -29,22 +56,15 @@ export default function UserPage() {
     )
   }
 
-  // Your own profile shows Edit profile; anyone else's shows Follow / Following
   const followed = following.includes(person.handle)
   const toggleFollow = () => toggleFollowUser(person.handle)
 
-  const tabs = [
-    { id: 'posts', label: 'Posts' },
-    { id: 'top', label: 'Top' },
-    ...(isSelf ? [{ id: 'likes', label: 'Likes' }] : []), // likes are private to you
-  ]
+  // Your own profile only has Posts for now (Top and Likes need backend support)
+  const tabs = isSelf ? [{ id: 'posts', label: 'Posts' }] : [{ id: 'posts', label: 'Posts' }, { id: 'top', label: 'Top' }]
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'posts'
 
-  const theirPosts = posts.filter((p) => p.handle === person.handle)
-  const shown =
-    activeTab === 'posts' ? theirPosts
-    : activeTab === 'top' ? [...theirPosts].sort((a, b) => b.likes - a.likes)
-    : posts.filter((p) => p.liked)
+  const theirPosts = isSelf ? myPosts : posts.filter((p) => p.handle === person.handle)
+  const shown = activeTab === 'top' ? [...theirPosts].sort((a, b) => b.likes - a.likes) : theirPosts
 
   let button
   if (isSelf) {
@@ -96,19 +116,12 @@ export default function UserPage() {
           {person.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{person.bio}</p>}
           <div className="mt-4 flex gap-5 text-sm">
             <span><b>{theirPosts.length}</b> <span className="text-muted">Posts</span></span>
-            {isSelf ? (
-              <Link to="/followers" className="hover:underline">
-                <b>{followers.length}</b> <span className="text-muted">Followers</span>
-              </Link>
-            ) : (
-              <span><b>{person.followers + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
-            )}
-            {isSelf ? (
-              <Link to="/subscriptions" className="hover:underline">
-                <b>{following.length}</b> <span className="text-muted">Following</span>
-              </Link>
-            ) : (
-              <span><b>{person.following}</b> <span className="text-muted">Following</span></span>
+            {/* TODO: show your own follower counts once the backend tracks follows */}
+            {!isSelf && (
+              <>
+                <span><b>{person.followers + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
+                <span><b>{person.following}</b> <span className="text-muted">Following</span></span>
+              </>
             )}
           </div>
         </div>
@@ -129,7 +142,7 @@ export default function UserPage() {
 
         <div className="mt-4 space-y-4">
           {shown.length ? (
-            shown.map((p) => <PostCard key={p.id} post={p} />)
+            shown.map((p) => <PostCard key={p.id} post={p} user={isSelf ? user : null} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
               {isSelf ? 'Nothing here yet.' : `${person.name} hasn't posted yet.`}

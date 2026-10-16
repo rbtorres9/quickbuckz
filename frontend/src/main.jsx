@@ -4,13 +4,19 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { StoreProvider } from './data/store.jsx'
 import './index.css'
+import { AuthProvider } from './context/AuthContext.jsx'
+import { UserCacheProvider } from './context/UserCacheContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <StoreProvider>
-        <App />
-      </StoreProvider>
+      <AuthProvider>
+        <UserCacheProvider>
+            <StoreProvider>
+              <App />
+          </StoreProvider>
+        </UserCacheProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 )

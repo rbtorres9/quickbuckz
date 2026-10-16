@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import Logo from '../components/Logo.jsx'
+import { AuthContext } from '../context/AuthContext.jsx'
+import { useUserCache } from '../context/UserCacheContext.jsx'
 
 function Field({ id, label, ...props }) {
   return (
@@ -25,7 +27,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [slow, setSlow] = useState(false) // taking a while? (the server may be waking up)
   const navigate = useNavigate()
-
+  const { login } = useContext(AuthContext)
+  const { refreshUserCache } = useUserCache()
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
@@ -46,6 +49,8 @@ export default function Login() {
       const data = await response.json();
 
       if (Object.hasOwn(data, "access") && Object.hasOwn(data, "refresh")) {
+        login(data.access, data.refresh)
+        await refreshUserCache(data.access) // load your profile before showing it
         navigate("/user-page")
       }
     } catch (err) {

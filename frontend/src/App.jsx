@@ -13,27 +13,34 @@ import NotFound from './pages/NotFound.jsx'
 import Home from './pages/Home.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Top from './pages/Top.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
+import PublicRoute from './components/PublicRoute.jsx'
+
+// protect: only for signed-in people (others go to /login)
+// publicize: only for signed-out people (others go to their profile)
+let protect = (element) => (<ProtectedRoute>{element}</ProtectedRoute>)
+let publicize = (element) => (<PublicRoute>{element}</PublicRoute>)
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={publicize(<Login />)} />
+      <Route path="/forgot" element={publicize(<ForgotAccount />)} />
       <Route path="/create-account" element={<CreateAccount />} />
-      <Route path="/forgot" element={<ForgotAccount />} />
 
       {/* Logged-in pages: these all get the nav bar */}
       <Route element={<Layout />}>
-        <Route path="/home" element={<Home />} />
-        <Route path="/top-content" element={<Top />} />
-        <Route path="/subscriptions" element={<Following />} />
-        <Route path="/followers" element={<Followers />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/post-creation" element={<PostCreation />} />
-        <Route path="/user-account" element={<AccountSettings />} />
-        <Route path="/user-page" element={<UserPage />} />
-        <Route path="/user/:handle" element={<UserPage />} />
-        <Route path="/post/:id" element={<PostPage />} />
+        <Route path="/home" element={protect(<Home />)} />
+        <Route path="/top-content" element={protect(<Top />)} />
+        <Route path="/subscriptions" element={protect(<Following />)} />
+        <Route path="/followers" element={protect(<Followers />)} />
+        <Route path="/notifications" element={protect(<Notifications />)} />
+        <Route path="/post-creation" element={protect(<PostCreation />)} />
+        <Route path="/user-account" element={protect(<AccountSettings />)} />
+        <Route path="/user-page" element={protect(<UserPage />)} />
+        <Route path="/user/:handle" element={protect(<UserPage />)} />
+        <Route path="/post/:id" element={protect(<PostPage />)} />
       </Route>
 
       {/* Any address that doesn't match a page above */}
