@@ -5,6 +5,18 @@ from django.db.models.functions import Lower
 
 from .validators import validate_username_rules
 
+import uuid
+from pathlib import Path
+
+def profile_picture_path(instance, filename):
+    ext = Path(filename).suffix.lower()
+    return f"profiles/profile_pictures/{instance.user_id}/{uuid.uuid4().hex}{ext}"
+
+def banner_path(instance, filename):
+    ext = Path(filename).suffix.lower()
+    return f"profiles/banner/{instance.user_id}/{uuid.uuid4().hex}{ext}"
+
+
 class User(AbstractUser):
     username = models.CharField(
         max_length=20,
@@ -42,7 +54,8 @@ class Profile(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
     bio = models.TextField(blank=True)
-    profile_picture = models.ImageField(upload_to="profiles/", blank=True, null=True)
+    profile_picture = models.ImageField(upload_to=profile_picture_path, blank=True, null=True)
+    banner = models.ImageField(upload_to=banner_path, blank=True, null=True)
     visibility = models.CharField(
         max_length=10, choices=Visibility.choices, default=Visibility.PUBLIC
     )

@@ -13,7 +13,17 @@ class PublicProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['id', 'user', 'username', 'first_name', 'last_name', 'bio', 'profile_picture', 'created_at']
+        fields = [
+                'id', 
+                'user', 
+                'username', 
+                'first_name', 
+                'last_name',
+                'bio', 
+                'profile_picture', 
+                'banner', 
+                'created_at'
+                ]
         read_only_fields = fields
 
 
@@ -21,6 +31,19 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
     first_name = serializers.ReadOnlyField(source='user.first_name')
     last_name = serializers.ReadOnlyField(source='user.last_name')
+
+    MAX_IMAGE_MB = 5
+
+    def _validate_image(self, image):
+        if image and image.size > self.MAX_IMAGE_MB * 1024 * 1024:
+            raise serializers.ValidationError(f"Image must be under {self.MAX_IMAGE_MB} MB.")
+        return image
+
+    def validate_profile_picture(self, value):
+        return self._validate_image(value)
+
+    def validate_banner(self, value):
+        return self._validate_image(value)
     
     class Meta:
         model = Profile
@@ -32,6 +55,7 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
             'last_name',
             'bio', 
             'profile_picture', 
+            'banner',
             'visibility', 
             'created_at'
             ]
