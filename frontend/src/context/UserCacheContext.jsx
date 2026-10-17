@@ -1,4 +1,4 @@
-import React, {useContext, createContext, useState} from 'react'
+import React, {useContext, createContext, useState, useEffect} from 'react'
 import { useAuthContext } from './AuthContext.jsx'
 
 export const UserCacheContext = createContext(null)
@@ -13,18 +13,32 @@ export const UserCacheProvider = ({children}) => {
             access = accessToken
         }
 
-        const data = await fetchWithToken('/api/profile/me', {
+        const data = await fetchWithToken('/api/profile/me/', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             }
         }, access)
 
+        // fetchWithToken returns { error } on failure; keep the old cache in that case
+        if (!data || data.error) return
+
         localStorage.setItem("user", JSON.stringify(data))
         setUser(data)
 
         console.log("User cache refreshed:", data)
     }
+
+    // Image URLs in the profile are signed and expire after an hour,
+    // so re-fetch the profile on app load instead of trusting the stored copy
+    useEffect(() => {
+        if (accessToken) { 
+                refreshUserCache()
+        } else {
+            localStorage.removeItem('user')
+            setUser(null)
+        }
+    }, [accessToken])
 
     return (
         <UserCacheContext.Provider value={{ user, setUser, refreshUserCache }}>
