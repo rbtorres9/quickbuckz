@@ -11,6 +11,6 @@ This is a list of items that we should implement into our project that anyone ca
 - Work on preserving login session by using cookies (adding more on token refresh mechanism)
 - Implement Posts interaction logics (likes, comments, share) once there is a working user dashboard
 - Show all posts in the /home page - Done
-- Add API that can get user details with their username
-- Add API that can get all of a user's posts with their username
+- ~~Add API that can get user details with their username~~ - Done RT
+- ~~Add API that can get all of a user's posts with their username~~ Done RT
 - Add functionality to /post-creation page
