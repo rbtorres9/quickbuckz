@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import AccountSecurity, Profile, User
+from .models import AccountSecurity, Profile, User, Follow
 
 class ProfileInline(admin.StackedInline):
     model = Profile
@@ -26,5 +26,13 @@ class CustomUserAdmin(UserAdmin):
         if obj is None:
             return []
         return super().get_inline_instances(request, obj)
+
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ["id", "follower", "following", "created_at"]
+    list_filter = ["created_at"]
+    search_fields = ["follower__username", "following__username"]
+    autocomplete_fields = ["follower", "following"]
+    list_select_related = ["follower", "following"]
 
 

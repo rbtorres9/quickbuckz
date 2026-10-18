@@ -1,6 +1,8 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from .models import Profile
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Profile, Follow
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.db.models import Q
@@ -53,3 +55,15 @@ class ProfileByUsernameView(generics.RetrieveUpdateAPIView):
             return get_object_or_404(visible_profiles(self.request.user), user__username=username)
     
 
+class FollowToggleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, username):
+        profile = get_object_or_404(visible_profiles(request.user), user__username=username.strip().lower())
+        target = profile.user
+        if target == request.user:
+            return Response({"detail": "You can't follow yourself."}, status=400)
+        follow, created = Follow.objects.get_or_create(follower=request.user, following=target)
+        if not created:
+            follow.delete()
+        return Response({"following": created})

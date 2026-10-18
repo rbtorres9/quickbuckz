@@ -9,5 +9,3 @@ class AccountsConfig(AppConfig):
         import accounts.signals
 
 
-from django.apps import AppConfig
-
