@@ -4,9 +4,9 @@ from django.core.exceptions import ValidationError
 
 def validate_username_rules(value):
     # Accepts A-Z because the model lowercases it afterward.
-    if not re.fullmatch(r"[A-Za-z0-9_.]{4,20}", value):
+    if not re.fullmatch(r"[A-Za-z0-9_.]{3,20}", value):
         raise ValidationError(
-            "Usernames must be 4-20 characters: letters, numbers, underscores, and dots only."
+            "Usernames must be 3-20 characters: letters, numbers, underscores, and dots only."
         )
     if value[0] == "." or value[-1] == ".":
         raise ValidationError("Usernames cannot start or end with a dot.")
@@ -18,3 +18,7 @@ def validate_username_rules(value):
         raise ValidationError("Usernames need at least two letters or numbers.")
     if not any(c.isalpha() for c in value):
         raise ValidationError("Usernames need at least one letter.")
+
+    reserved_keywords = [ 'me', 'follow', 'following', 'followers', 'posts', 'admin']
+    if value.lower() in reserved_keywords:
+        raise ValidationError("Usernames cannot use reserved words.")

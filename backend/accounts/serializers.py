@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile
+from .models import Profile, Follow
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.contrib.auth.password_validation import validate_password
@@ -10,6 +10,8 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
     first_name = serializers.ReadOnlyField(source='user.first_name')
     last_name = serializers.ReadOnlyField(source='user.last_name')
+    followers_count = serializers.IntegerField(source='user.follower_set.count', read_only=True)
+    following_count = serializers.IntegerField(source='user.following_set.count', read_only=True)
 
     class Meta:
         model = Profile
@@ -22,7 +24,9 @@ class PublicProfileSerializer(serializers.ModelSerializer):
                 'bio', 
                 'profile_picture', 
                 'banner', 
-                'created_at'
+                'followers_count',
+                'following_count',
+                'created_at',
                 ]
         read_only_fields = fields
 
@@ -31,6 +35,9 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
     first_name = serializers.ReadOnlyField(source='user.first_name')
     last_name = serializers.ReadOnlyField(source='user.last_name')
+    followers_count = serializers.IntegerField(source='user.follower_set.count', read_only=True)
+    following_count = serializers.IntegerField(source='user.following_set.count', read_only=True)
+
 
     MAX_IMAGE_MB = 5
 
@@ -88,3 +95,16 @@ class RegisterSerializer(serializers.ModelSerializer):
         except DjangoValidationError as e:
             raise serializers.ValidationError({'password': list(e.messages)})
         return attrs
+
+
+class FollowListSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source="user.username")
+    first_name = serializers.ReadOnlyField(source="user.first_name")
+    last_name = serializers.ReadOnlyField(source="user.last_name")
+    followed_at = serializers.DateTimeField(read_only=True)
+    is_following = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ["username", "first_name", "last_name", "bio",
+                  "profile_picture", "followed_at", "is_following"]
