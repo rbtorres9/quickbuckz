@@ -14,3 +14,8 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Add API that can get user details with their username~~ - Done RT
 - ~~Add API that can get all of a user's posts with their username~~ Done RT
 - Add functionality to /post-creation page
+
+- Add more functionalities to Follow model: Current user viewing another profile can show “Follows you” (check login session/auth while viewing /api/profile/<username>/, then add field for 'follows_you' flag), shows if current user is following the profile being viewed, with follow/unfollow toggle (same logic, /api/profile/<username>/ would have field like 'is_followed'), mutual follows “followed by <users on your follow list>” (something like "/api/profile/<username>/mutuals")
+- Implement share post functionality: most likely will be a Share model to follow the current backend design
+- Implement fields or models for any additional personalized features from frontend (currently has ThemePicker)
+- Touch on AccountSecurity backend design when a frontend design for account settings is drafted.
