@@ -3,20 +3,40 @@ import { ImagePlus } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
+import { useEffect, useMemo, useState } from 'react'
+
+import { useApiContext } from '../context/ApiContext.jsx'
 
 export default function Home() {
-  const { posts, profile, following } = useStore()
+  const { profile, following } = useStore()
+  const { fetchPosts } = useApiContext()
+  const [posts, setPosts] = useState([])
 
-  // Posts from people you follow, newest first
-  const feed = posts
-    .filter((p) => following.includes(p.handle))
-    .sort((a, b) => b.createdAt - a.createdAt)
+  const sortFilterPosts = (posts) => {
+    return [...posts]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  }
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const result = await fetchPosts()
+
+      if (!result.isError) {
+        let newPosts = sortFilterPosts(result.result)
+        setPosts(newPosts)
+        console.log(newPosts)
+      } else {
+        setPosts([])
+      }
+    }
+
+    fetchData()
+  }, [])
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
       <h1 className="sr-only">Home</h1>
 
-      {/* Quick start: opens the New post page */}
       <Link
         to="/post-creation"
         className="flex items-center gap-3 rounded-2xl border border-line bg-card px-5 py-4 transition hover:border-accent/40"
@@ -34,8 +54,8 @@ export default function Home() {
       </div>
 
       <div className="mt-3 space-y-4">
-        {feed.length ? (
-          feed.map((p) => <PostCard key={p.id} post={p} />)
+        {posts.length > 0 ? (
+          posts.map((post) => <PostCard key={post.id} post={post} />)
         ) : (
           <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
             <p className="font-medium">Your feed is empty</p>

@@ -31,6 +31,7 @@ export const UserCacheProvider = ({children}) => {
 
     // Image URLs in the profile are signed and expire after an hour,
     // so re-fetch the profile on app load instead of trusting the stored copy
+    /*
     useEffect(() => {
         if (accessToken) { 
                 refreshUserCache()
@@ -38,7 +39,7 @@ export const UserCacheProvider = ({children}) => {
             localStorage.removeItem('user')
             setUser(null)
         }
-    }, [accessToken])
+    }, [accessToken]) */
 
     return (
         <UserCacheContext.Provider value={{ user, setUser, refreshUserCache }}>

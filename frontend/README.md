@@ -10,15 +10,9 @@ npm run dev
 Pages done: `/login`, `/create-account` (placeholder).
 To do: `/user-page`, `/top-content`, `/subscriptions`, `/user-account`, `/post-creation`.
 
-## Login and Account Creator
-- Added basic functionality to the /create-account and /login page
-- /create-account creates a new account on the database.
-- /login verifies if credentials fit in the database and redirects the user to a different page on success.
-
 TODO:
-- Test errors when creating and logging into an account e.g. username already exists, password fits criteria, credentials don't match...
-- Ensure the appropriate messages appear when there is an error.
 - Store access and refresh tokens securely and effectively.
+- Fix bug that allows the same post to be posted multiple times when pressing the post button multiple times
 
 UPDATES:
 - Updated the /create-account page to display errors appropriately such as non-unique emails, non-unique usernames, invalid usernames, etc..
@@ -27,6 +21,11 @@ UPDATES:
 - Modified App.jsx by removing PublicRoute for /create-account, but also fixed the redirect logic where /create-account is still accessible with a login session (due to implementing above note). - RT 10/11
 - Moved UserCacheContext and AuthContext to their own folder named 'context'
 - Added a utils folder with DateTileUtils.js
+
+## Login and Account Creator
+- Added basic functionality to the /create-account and /login page
+- /create-account creates a new account on the database.
+- /login verifies if credentials fit in the database and redirects the user to a different page on success.
 
 ## Site Functionality
 - /user-page now shows the logged in user's full name, bio, and username
@@ -42,3 +41,11 @@ UPDATES:
 ## DateTimeUtils
 - This is a file that has basic functions to format dates into readable strings
 - Current used in PostCard.jsx to show a post's date
+
+## ApiResult 10/19
+- This is a file that stores a simple class to contain a result and whether or not the result is an error
+- This provides a way to check if an API call has failed without breaking everything
+
+## ApiContext 10/19
+- This is a React context to store a bunch of functions that will make API calls to the backend simpler
+- This file is also used to prevent overriding code when the frontend has massive changes
