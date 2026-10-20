@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../data/store.jsx'
 import PostCard from '../components/PostCard.jsx'
+import { useApiContext } from '../context/ApiContext.jsx'
+import { getTimeDiffSecs } from '../utils/DateTimeUtils.js'
 
-const DAY = 24 * 60 * 60 * 1000
+const DAY = 24 * 60 * 60
 
 const timeOptions = [
   { value: 'day', label: 'Today', ms: DAY },
@@ -17,7 +19,7 @@ const typeOptions = [
   { value: 'text', label: 'Text only' },
 ]
 
-const hasPhoto = (p) => Boolean(p.imageUrl || p.image)
+const hasPhoto = (p) => Boolean(p.image)
 
 function Pills({ label, options, value, onChange }) {
   return (
@@ -40,18 +42,45 @@ function Pills({ label, options, value, onChange }) {
 }
 
 export default function Top() {
-  const { posts } = useStore()
+  const { fetchPosts } = useApiContext()
+  const [ posts, setPosts ] = useState([])
   const [time, setTime] = useState('week')
   const [type, setType] = useState('all')
 
   const range = timeOptions.find((o) => o.value === time).ms
 
+  /*
   // Most-liked posts that match the filters. TODO: get this ranking from the backend
   const top = posts
     .filter((p) => Date.now() - p.createdAt < range)
     .filter((p) => type === 'all' || (type === 'photos' ? hasPhoto(p) : !hasPhoto(p)))
     .sort((a, b) => b.likes - a.likes)
     .slice(0, 20)
+  
+    const [posts, setPosts] = useState([])
+  */
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const result = await fetchPosts()
+
+      if (!result.isError) {
+        setPosts(result.result)
+      } else {
+        setPosts([])
+      }
+    }
+
+    fetchData()
+  }, [])
+    
+  const top = [...posts]
+      .filter((p) => getTimeDiffSecs(p.created_at) < range)
+      .filter((p) => type === 'all' || (type === 'photos' ? hasPhoto(p) : !hasPhoto(p)))
+      .sort((a, b) => b.likes_count - a.likes_count)
+      .slice(0, 20)
+
+  console.log(posts, top)
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">

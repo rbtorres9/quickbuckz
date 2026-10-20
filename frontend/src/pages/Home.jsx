@@ -24,7 +24,6 @@ export default function Home() {
       if (!result.isError) {
         let newPosts = sortFilterPosts(result.result)
         setPosts(newPosts)
-        console.log(newPosts)
       } else {
         setPosts([])
       }
