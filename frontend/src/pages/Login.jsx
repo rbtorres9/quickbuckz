@@ -4,6 +4,9 @@ import { Lock } from 'lucide-react'
 import Logo from '../components/Logo.jsx'
 import { AuthContext } from '../context/AuthContext.jsx'
 import { useUserCache } from '../context/UserCacheContext.jsx'
+import { API_URL } from '../config.js'
+
+
 
 function Field({ id, label, ...props }) {
   return (
@@ -36,7 +39,7 @@ export default function Login() {
     const slowTimer = setTimeout(() => setSlow(true), 4000);
 
     try {
-      const response = await fetch("https://quickbuckz.onrender.com/api/token/", {
+      const response = await fetch(`${API_URL}/api/token/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Home, Flame, Users, Plus, User, Settings, Bell } from 'lucide-react'
 import Logo from './Logo.jsx'
 import { useStore } from '../data/store.jsx'
@@ -24,11 +24,29 @@ const mobileLink = ({ isActive }) =>
 function NotificationBell() {
   const { notifications } = useStore()
   const unread = notifications.filter((n) => !n.read).length
+  // remembers what page before clicking the notification bell
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // flag for if we are on notifications page
+  const onNotifications = location.pathname === '/notifications'
+  const handleClick = (e) =>  {
+    if (!onNotifications) return // normal NavLink behaviour; state is passed below
+    e.preventDefault();
+    if (location.state?.fromBell) {
+      navigate(-1) // pop back to the page we came from (e.g. /user-page)
+    } else {
+      navigate('/home') // landed here directly (typed URL / refresh) — no page to go back to
+    }
+  }
   return (
     <NavLink
       to="/notifications"
+      state={{ fromBell: true }}
+      onClick={handleClick}
       className={desktopLink}
       aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}
+      aria-pressed={onNotifications}
     >
       <span className="relative">
         <Bell size={17} />

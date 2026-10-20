@@ -1,25 +1,26 @@
 import React, {useContext, createContext, useState} from 'react'
 
-export const AuthContext = createContext(null)
+// easy api url reference
+// will import const API_URL =  'https://quickbuckz.onrender.com'
+import { API_URL } from '../config.js' 
 
-/* 
-    THIS NEEDS TO BE UPDATED SO THAT ACCESS AND REFRESH TOKENS ARE STORED SECURELY
-    THIS IS SIMPLY FOR TESTING PURPOSES AND CONVENIENCE
-*/
+export const AuthContext = createContext(null)
 
 export const AuthProvider = ({children}) => {
     const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token'))
-    const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token'))
+//    const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token')) // might be unused state
 
     const refresh = async () => {
         try {
-            const response = await fetch('https://quickbuckz.onrender.com/api/token/refresh/', {
+            const stored = localStorage.getItem('refresh_token')
+            if (!stored) { logout(); return null}
+            const response = await fetch(`${API_URL}/api/token/refresh/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    'refresh': `${refreshToken}`
+                    'refresh': stored
                 })
             })
 
@@ -49,22 +50,23 @@ export const AuthProvider = ({children}) => {
         localStorage.setItem('access_token', access)
         localStorage.setItem('refresh_token', refresh)
         setAccessToken((_) => access)
-        setRefreshToken((_) => refresh)
+//        setRefreshToken((_) => refresh) // might be unused state
     }
     const logout = () => {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         setAccessToken((_) => null)
-        setRefreshToken((_) => null)
+//        setRefreshToken((_) => null) //  might be unused state
     }
 
-    const fetchWithToken = async (url, options = {}, access=null) => {
+    const fetchWithToken = async (url, options = {}) => {
         try {
-            let response = await fetch(`https://quickbuckz.onrender.com${url}`, {
+            const token = localStorage.getItem('access_token')
+            let response = await fetch(`${API_URL}${url}`, {
                 ...options,
                 headers: {
                     ...options.headers,
-                    'Authorization': `Bearer ${access ?? accessToken}`
+                    'Authorization': `Bearer ${token}`
                 }
             })
 
@@ -72,7 +74,7 @@ export const AuthProvider = ({children}) => {
             if (response.status === 401) {
                 const newToken = await refresh()
                 if (newToken) {
-                    response = await fetch(`https://quickbuckz.onrender.com${url}`, {
+                    response = await fetch(`${API_URL}${url}`, {
                         ...options,
                         headers: {
                             ...options.headers,

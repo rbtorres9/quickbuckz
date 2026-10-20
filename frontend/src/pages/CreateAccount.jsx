@@ -5,6 +5,7 @@ import { useUserCache } from '../context/UserCacheContext.jsx'
 import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 import { themeVars } from '../data/themes.js'
+import { API_URL } from '../config.js'
 
 const fields = [
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
@@ -55,7 +56,7 @@ export default function CreateAccount() {
 
     try {
       const {email, username, password, first_name, last_name } = form
-      const response = await fetch("https://quickbuckz.onrender.com/api/signup/", {
+      const response = await fetch(`${API_URL}/api/signup/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -87,7 +88,7 @@ export default function CreateAccount() {
       }
 
       // signup succeeded, so sign the new user in
-      const tokenResponse = await fetch("https://quickbuckz.onrender.com/api/token/", {
+      const tokenResponse = await fetch(`${API_URL}/api/token/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
