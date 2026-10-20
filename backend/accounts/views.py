@@ -45,7 +45,7 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
 
 
 
-class ProfileByUsernameView(generics.RetrieveUpdateAPIView):
+class ProfileByUsernameView(generics.RetrieveAPIView):
     serializer_class = PublicProfileSerializer
     permission_classes = [AllowAny]
 
