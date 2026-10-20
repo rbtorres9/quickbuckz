@@ -64,6 +64,8 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
             'profile_picture', 
             'banner',
             'visibility', 
+            'followers_count',
+            'following_count',
             'created_at'
             ]
         read_only_fields = ['user']
