@@ -32,6 +32,8 @@ UPDATES:
 - /user-page also shows the current user's posts
 - for now, certain features of /user-page will be hidden such as likes, followers, and following as it is not implemented on the backend
 - Users can edit their bio and profile picture in /user-page (although more testing should be done)
+- /home shows all posts ordered by recency
+- /top content shows all posts and can be filtered
 
 ## UserCacheContext
 - UserCacheContext provides a cache of the user's first name, last name, username, bio, and profile picture in order to reduce api calls to the backend.
