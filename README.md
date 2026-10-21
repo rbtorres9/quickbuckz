@@ -19,3 +19,5 @@ This is a list of items that we should implement into our project that anyone ca
 - Implement share post functionality: most likely will be a Share model to follow the current backend design
 - Implement fields or models for any additional personalized features from frontend (currently has ThemePicker)
 - Touch on AccountSecurity backend design when a frontend design for account settings is drafted.
+- I think /api/posts should return more details about the author
+    - For example, the author field can return an object containing data about the user's username, first name, last name, and profile picture to display on each post.

@@ -4,13 +4,15 @@ import { useStore } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import { useEffect, useMemo, useState } from 'react'
+import Logo from '../components/Logo.jsx'
 
 import { useApiContext } from '../context/ApiContext.jsx'
 
 export default function Home() {
   const { profile, following } = useStore()
-  const { fetchPosts } = useApiContext()
-  const [posts, setPosts] = useState([])
+  const { fetchPosts, loading } = useApiContext()
+  const [ posts, setPosts ] = useState([])
+  const [ error, setError ] = useState(null)
 
   const sortFilterPosts = (posts) => {
     return [...posts]
@@ -25,7 +27,7 @@ export default function Home() {
         let newPosts = sortFilterPosts(result.result)
         setPosts(newPosts)
       } else {
-        setPosts([])
+        setError(result.result)
       }
     }
 
@@ -53,14 +55,28 @@ export default function Home() {
       </div>
 
       <div className="mt-3 space-y-4">
-        {posts.length > 0 ? (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
-        ) : (
-          <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
-            <p className="font-medium">Your feed is empty</p>
-            <p className="mt-1 text-sm text-muted">Follow people to see their latest posts here.</p>
-          </div>
-        )}
+        {
+          loading ? (
+            <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+              <p className="font-medium">Loading posts...</p>
+              <div className="relative mt-7 h-14">
+                <div className='dog-run'>
+                  <Logo size={56} className={`text-accent ${'animate-bounce'}`} />
+                </div>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+              <p className="font-medium">Error fetching posts</p>
+            </div>
+          ) : posts.length > 0 ? (
+            posts.map((post) => <PostCard key={post.id} post={post} />)
+          ) : (
+            <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+              <p className="font-medium">Your feed is empty</p>
+              <p className="mt-1 text-sm text-muted">Follow people to see their latest posts here.</p>
+            </div>
+          )}
       </div>
     </main>
   )
