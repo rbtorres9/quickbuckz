@@ -10,9 +10,10 @@ import { useApiContext } from '../context/ApiContext.jsx'
 
 export default function Home() {
   const { profile, following } = useStore()
-  const { fetchPosts, loading } = useApiContext()
+  const { fetchPosts } = useApiContext()
   const [ posts, setPosts ] = useState([])
   const [ error, setError ] = useState(null)
+  const [ loading, setLoading ] = useState(true)
 
   const sortFilterPosts = (posts) => {
     return [...posts]
@@ -29,6 +30,8 @@ export default function Home() {
       } else {
         setError(result.result)
       }
+
+      setLoading(false)
     }
 
     fetchData()

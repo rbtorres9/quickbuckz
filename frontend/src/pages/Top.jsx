@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useStore } from '../data/store.jsx'
 import PostCard from '../components/PostCard.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { getTimeDiffSecs } from '../utils/DateTimeUtils.js'
+import Logo from '../components/Logo.jsx'
 
 const DAY = 24 * 60 * 60
 
@@ -43,22 +44,30 @@ function Pills({ label, options, value, onChange }) {
 
 export default function Top() {
   const { fetchPosts } = useApiContext()
-  const [ posts, setPosts ] = useState([])
   const [time, setTime] = useState('week')
   const [type, setType] = useState('all')
+  const [error, setError] = useState(null)
+  const [ filtering, setFiltering ] = useState(true)
+  const [ loading, setLoading ] = useState(true)
+  const [ posts, setPosts ] = useState([])
+  const [ feed, setFeed ] = useState([])
 
   const range = timeOptions.find((o) => o.value === time).ms
 
-  /*
-  // Most-liked posts that match the filters. TODO: get this ranking from the backend
-  const top = posts
-    .filter((p) => Date.now() - p.createdAt < range)
-    .filter((p) => type === 'all' || (type === 'photos' ? hasPhoto(p) : !hasPhoto(p)))
-    .sort((a, b) => b.likes - a.likes)
-    .slice(0, 20)
-  
-    const [posts, setPosts] = useState([])
-  */
+  useEffect(() => {
+    if (loading)
+      return
+    
+    setFeed(
+        [...posts]
+          .filter((p) => getTimeDiffSecs(p.created_at) < range)
+          .filter((p) => type === 'all' || (type === 'photos' ? hasPhoto(p) : !hasPhoto(p)))
+          .sort((a, b) => b.likes_count - a.likes_count)
+          .slice(0, 20)
+    )
+
+    setFiltering(false)
+  }, [posts, time, type, loading])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,20 +76,14 @@ export default function Top() {
       if (!result.isError) {
         setPosts(result.result)
       } else {
-        setPosts([])
+        setError(result.result)
       }
+
+      setLoading(false)
     }
 
     fetchData()
   }, [])
-    
-  const top = [...posts]
-      .filter((p) => getTimeDiffSecs(p.created_at) < range)
-      .filter((p) => type === 'all' || (type === 'photos' ? hasPhoto(p) : !hasPhoto(p)))
-      .sort((a, b) => b.likes_count - a.likes_count)
-      .slice(0, 20)
-
-  console.log(posts, top)
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
@@ -92,13 +95,28 @@ export default function Top() {
         <Pills label="Type" options={typeOptions} value={type} onChange={setType} />
       </div>
 
-      <div className="mt-5 space-y-4">
-        {top.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
-      </div>
-
-      {top.length === 0 && <p className="py-10 text-center text-sm text-muted">No posts match these filters.</p>}
+      {
+        filtering || loading ? (
+          <>
+            <p className="font-medium text-center mt-3">Loading posts...</p>
+            <div className="relative mt-7 h-14">
+              <div className='dog-run'>
+                <Logo size={56} className={`text-accent ${'animate-bounce'}`} />
+              </div>
+            </div>
+          </>
+        ) : error ? (
+          <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+            <p className="font-medium">Error fetching posts</p>
+          </div>
+        ) : feed.length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted">No posts match these filters.</p>
+        ) : <div className="mt-5 space-y-4">
+          {feed.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </div>
+      }
     </main>
   )
 }
