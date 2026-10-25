@@ -7,6 +7,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from accounts.views import visible_profiles
+from django.db.models import Prefetch
+
 
 from .models import Post, Like, Comment
 from .serializers import PostSerializer, CommentSerializer, PostDetailSerializer
@@ -24,6 +26,14 @@ class PostViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             return PostDetailSerializer
         return PostSerializer
+
+    def get_queryset(self):
+      qs = Post.objects.all().order_by("-created_at")
+      if self.action == "retrieve":
+          qs = qs.prefetch_related(
+              Prefetch("comments", queryset=Comment.objects.select_related("author__profile"))
+          )
+      return qs
 
     @action(detail=True, methods=["post"])
     def like(self, request, pk=None):

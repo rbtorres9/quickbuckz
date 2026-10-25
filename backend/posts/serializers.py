@@ -1,20 +1,29 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
 from .models import Post, Comment
 
+User = get_user_model()
 
-class PostSerializer(serializers.ModelSerializer):
-    author = serializers.ReadOnlyField(source="author.username")
-    likes_count = serializers.IntegerField(source="likes.count", read_only=True)
-    comments_count = serializers.IntegerField(source="comments.count", read_only=True)
+
+class CommentAuthorSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
 
     class Meta:
-        model = Post
-        fields = ["id", "author", "content", "image", "created_at", "likes_count", "comments_count"]
-        read_only_fields = ["id", "author", "created_at"]
+        model = User
+        fields = ["username", "first_name", "last_name", "profile_picture"]
+
+    def get_profile_picture(self, user):
+        profile = getattr(user, "profile", None)
+        if not profile or not profile.profile_picture:
+            return None
+        url = profile.profile_picture.url
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.ReadOnlyField(source="author.username")
+    author = CommentAuthorSerializer(read_only=True)
 
     class Meta:
         model = Comment
@@ -22,10 +31,31 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "post", "author", "created_at"]
 
 
+class PostSerializer(serializers.ModelSerializer):
+    author = serializers.ReadOnlyField(source="author.username")
+    likes_count = serializers.IntegerField(source="likes.count", read_only=True)
+    comments_count = serializers.IntegerField(source="comments.count", read_only=True)
+    comments = serializers.SerializerMethodField()
+
+    COMMENT_PREVIEW_LIMIT = 3
+
+    class Meta:
+        model = Post
+        fields = ["id", "author", "content", "image", "created_at",
+                  "likes_count", "comments_count", "comments"]
+        read_only_fields = ["id", "author", "created_at"]
+
+    def get_comments(self, post):
+        # Latest 3 comments, returned oldest -> newest so they read top to bottom
+        latest = (
+            post.comments.select_related("author__profile")
+            .order_by("-created_at")[: self.COMMENT_PREVIEW_LIMIT]
+        )
+        return CommentSerializer(reversed(list(latest)), many=True, context=self.context).data
+
+
 class PostDetailSerializer(PostSerializer):
-    comments = CommentSerializer(many=True, read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)  # all comments
 
     class Meta(PostSerializer.Meta):
-        fields = PostSerializer.Meta.fields + [ "comments" ]
-
-        
+        pass
