@@ -36,13 +36,14 @@ class PostSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(source="likes.count", read_only=True)
     comments_count = serializers.IntegerField(source="comments.count", read_only=True)
     comments = serializers.SerializerMethodField()
-
+    is_liked = serializers.BooleanField(read_only=True, default=False)
+    
     COMMENT_PREVIEW_LIMIT = 3
 
     class Meta:
         model = Post
         fields = ["id", "author", "content", "image", "created_at",
-                  "likes_count", "comments_count", "comments"]
+                  "likes_count", "comments_count", "comments", "is_liked"]
         read_only_fields = ["id", "author", "created_at"]
 
     def get_comments(self, post):

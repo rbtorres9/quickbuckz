@@ -87,22 +87,29 @@ class ProfileByUsernameView(generics.RetrieveAPIView):
 
 # --- FOLLOW BLOCK ---- 
 
-class FollowToggleView(APIView):
+class FollowView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def _state(self, viewer, target, status=200):
+        return Response({
+            "is_followed": Follow.objects.filter(follower=viewer, following=target).exists(),
+            "followers_count": target.follower_set.count(),
+        }, status=status)
+
     def post(self, request, username):
+        # Following still requires a visible profile
         profile = get_object_or_404(visible_profiles(request.user), user__username=username.strip().lower())
         target = profile.user
         if target == request.user:
             return Response({"detail": "You can't follow yourself."}, status=400)
-        follow, created = Follow.objects.get_or_create(follower=request.user, following=target)
-        if not created:
-            follow.delete()
-        return Response({
-            "following": created,          # kept so existing callers don't break
-            "is_followed": created,
-            "followers_count": target.follower_set.count(),
-        })
+        _, created = Follow.objects.get_or_create(follower=request.user, following=target)
+        return self._state(request.user, target, status=201 if created else 200)
+
+    def delete(self, request, username):
+        # Look up the user directly so you can unfollow someone who went private
+        target = get_object_or_404(User, username=username.strip().lower())
+        Follow.objects.filter(follower=request.user, following=target).delete()
+        return self._state(request.user, target)
 
     
 class FollowListView(generics.ListAPIView):
