@@ -110,3 +110,13 @@ class FollowListSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ["username", "first_name", "last_name", "bio",
                   "profile_picture", "followed_at", "is_following"]
+
+
+class ProfileDetailSerializer(PublicProfileSerializer):
+    is_followed = serializers.BooleanField(read_only=True)
+    follows_you = serializers.BooleanField(read_only=True)
+    is_self = serializers.BooleanField(read_only=True)
+
+    class Meta(PublicProfileSerializer.Meta):
+        fields = PublicProfileSerializer.Meta.fields + ["is_followed", "follows_you", "is_self"]
+        read_only_fields = fields

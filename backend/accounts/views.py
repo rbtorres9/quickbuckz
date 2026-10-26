@@ -6,10 +6,24 @@ from rest_framework.exceptions import NotAuthenticated
 from .models import Profile, Follow
 from django.contrib.auth import get_user_model
 User = get_user_model()
-from django.db.models import Q, Exists, OuterRef, Subquery, Value
-from .serializers import PublicProfileSerializer, OwnerProfileSerializer, RegisterSerializer, FollowListSerializer
-from django.shortcuts import get_object_or_404
+from django.db.models import (
+    Q, 
+    Exists, 
+    OuterRef, 
+    Subquery, 
+    Value, 
+    BooleanField, 
+    ExpressionWrapper
+    )
+from .serializers import (
+    PublicProfileSerializer, 
+    OwnerProfileSerializer, 
+    RegisterSerializer, 
+    FollowListSerializer, 
+    ProfileDetailSerializer
+    )
 
+from django.shortcuts import get_object_or_404
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -36,6 +50,22 @@ def visible_profiles(user):
      
     return profiles.filter(visibility=Profile.Visibility.PUBLIC)
 
+def with_follow_flags(qs, viewer):
+    """Annotate each profile with how the viewer relates to its user."""
+    if not viewer.is_authenticated:
+        return qs.annotate(
+            is_self=Value(False, output_field=BooleanField()),
+            is_followed=Value(False, output_field=BooleanField()),
+            follows_you=Value(False, output_field=BooleanField()),
+        )
+    return qs.annotate(
+        is_self=ExpressionWrapper(Q(user=viewer), output_field=BooleanField()),
+        # viewer -> profile user
+        is_followed=Exists(Follow.objects.filter(follower=viewer, following=OuterRef("user"))),
+        # profile user -> viewer
+        follows_you=Exists(Follow.objects.filter(follower=OuterRef("user"), following=viewer)),
+    )
+
 class MyProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = OwnerProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -46,13 +76,14 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
 
 
 class ProfileByUsernameView(generics.RetrieveAPIView):
-    serializer_class = PublicProfileSerializer
+    serializer_class = ProfileDetailSerializer
     permission_classes = [AllowAny]
 
     def get_object(self):
-            username = self.kwargs["username"].strip().lower()
-            return get_object_or_404(visible_profiles(self.request.user), user__username=username)
-    
+        viewer = self.request.user
+        username = self.kwargs["username"].strip().lower()
+        qs = with_follow_flags(visible_profiles(viewer), viewer)
+        return get_object_or_404(qs, user__username=username)
 
 # --- FOLLOW BLOCK ---- 
 
@@ -67,8 +98,13 @@ class FollowToggleView(APIView):
         follow, created = Follow.objects.get_or_create(follower=request.user, following=target)
         if not created:
             follow.delete()
-        return Response({"following": created})
+        return Response({
+            "following": created,          # kept so existing callers don't break
+            "is_followed": created,
+            "followers_count": target.follower_set.count(),
+        })
 
+    
 class FollowListView(generics.ListAPIView):
     serializer_class = FollowListSerializer
     permission_classes = [AllowAny]
@@ -104,3 +140,26 @@ class FollowListView(generics.ListAPIView):
         else:
             qs = qs.annotate(is_following=Value(False))
         return qs
+
+class MutualFollowersView(FollowListView):
+    """Users the viewer follows who also follow <username> ("Followed by ...")."""
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        target = self.get_target()
+        viewer = self.request.user
+        if target == viewer:
+            return Profile.objects.none()
+
+        target_followers = Follow.objects.filter(following=target)
+        viewer_following = Follow.objects.filter(follower=viewer)
+
+        return (visible_profiles(viewer)
+                .filter(user__in=target_followers.values("follower"))
+                .filter(user__in=viewer_following.values("following"))
+                .annotate(
+                    followed_at=Subquery(
+                        target_followers.filter(follower=OuterRef("user")).values("created_at")[:1]),
+                    is_following=Value(True, output_field=BooleanField()),  # by definition
+                )
+                .order_by("-followed_at"))
