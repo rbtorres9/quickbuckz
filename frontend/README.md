@@ -52,3 +52,8 @@ UPDATES:
 ## ApiContext 10/19
 - This is a React context to store a bunch of functions that will make API calls to the backend simpler
 - This file is also used to prevent overriding code when the frontend has massive changes
+
+## API_URL changes
+- edited some pages to import API_URL from src/config.js, and replace hardcoded onrender backend link to API_URL variable
+- to test backend (localhost:8000) locally, uncomment the line and comment the onrender line.
+- !!! Before comitting, always change API_URL to quickbuckz.onrender.com and comment out the localhost link

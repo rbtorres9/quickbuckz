@@ -1,10 +1,11 @@
 import React, {createContext, useContext, useMemo, useState} from 'react'
 import ApiResult from '../utils/ApiResult'
+import { API_URL } from '../config.js'
 
 export const ApiContext = createContext(null)
 
 export const ApiProvider = ({children}) => {
-    const baseUrl = 'https://quickbuckz.onrender.com'
+    const baseUrl = API_URL
     const [loading, setLoading] = useState(false)
 
     const fetchBaseUrl = async (suffix = '', options = {}) => {

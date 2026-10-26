@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore, sampleUsers } from '../data/store.jsx'
 import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useApiContext } from '../context/ApiContext.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
+import Logo from '../components/Logo.jsx'
 import { getTheme, themeVars } from '../data/themes.js'
 
 // /user-page shows your own profile (real, from the database).
@@ -13,19 +15,35 @@ export default function UserPage() {
   const { handle } = useParams()
   const { posts, profile, following, toggleFollowUser } = useStore()
   const { user } = useUserCache()
+  const { fetchPosts } = useApiContext()
   const [tab, setTab] = useState('posts')
   const [editing, setEditing] = useState(false)
   const [myPosts, setMyPosts] = useState([])
+  const [loadingPosts, setLoadingPosts] = useState(true)
+  const [postsError, setPostsError] = useState(null)
 
   const isSelf = !handle || handle === user?.username
 
   // Load your own posts from the database, newest first
   useEffect(() => {
     if (!isSelf || !user) return
-    fetch('https://quickbuckz.onrender.com/api/posts/')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setMyPosts(data.filter((p) => p.author === user.username)))
-      .catch((err) => console.log('Fetch Posts Error: ', err))
+
+    const fetchData = async () => {
+      setLoadingPosts(true)
+      setPostsError(null)
+
+      const result = await fetchPosts()
+
+      if (!result.isError) {
+        setMyPosts(result.result.filter((p) => p.author === user.username))
+      } else {
+        setPostsError(result.result)
+      }
+
+      setLoadingPosts(false)
+    }
+
+    fetchData()
   }, [isSelf, user?.username])
 
   if (isSelf && !user) {
@@ -65,6 +83,10 @@ export default function UserPage() {
 
   const theirPosts = isSelf ? myPosts : posts.filter((p) => p.handle === person.handle)
   const shown = activeTab === 'top' ? [...theirPosts].sort((a, b) => b.likes - a.likes) : theirPosts
+
+  // Only your own profile fetches posts; sample profiles are available immediately
+  const isLoading = isSelf && loadingPosts
+  const hasError = isSelf && postsError
 
   let button
   if (isSelf) {
@@ -115,7 +137,7 @@ export default function UserPage() {
           <p className="text-sm text-muted">@{person.handle}</p>
           {person.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{person.bio}</p>}
           <div className="mt-4 flex gap-5 text-sm">
-            <span><b>{theirPosts.length}</b> <span className="text-muted">Posts</span></span>
+            <span><b>{isLoading ? '–' : theirPosts.length}</b> <span className="text-muted">Posts</span></span>
             {/* TODO: show your own follower counts once the backend tracks follows */}
             {!isSelf && (
               <>
@@ -141,7 +163,20 @@ export default function UserPage() {
         </nav>
 
         <div className="mt-4 space-y-4">
-          {shown.length ? (
+          {isLoading ? (
+            <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+              <p className="font-medium">Loading posts...</p>
+              <div className="relative mt-7 h-14">
+                <div className="dog-run">
+                  <Logo size={56} className="text-accent animate-bounce" />
+                </div>
+              </div>
+            </div>
+          ) : hasError ? (
+            <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+              <p className="font-medium">Error fetching posts</p>
+            </div>
+          ) : shown.length ? (
             shown.map((p) => <PostCard key={p.id} post={p} user={isSelf ? user : null} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">

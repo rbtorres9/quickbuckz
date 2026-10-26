@@ -27,6 +27,7 @@ def home(request):
         <li><a href="/api/posts/">/api/posts/</a></li>
         <li><a href="/admin/">/admin/</a></li>
         <li><a href="/api/profiles/">/api/profiles/</a></li>
+        <li><a href="/api-auth/login/">Test api with auth here.</a></li>
         </ul>
     """)
 

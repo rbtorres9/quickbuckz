@@ -76,10 +76,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
-
-
 
 if env('DATABASE_HOST', default=None):
     DATABASES = {
@@ -104,6 +100,10 @@ else:
 
 # Modified User Model ('user'-defined instead of django import)
 AUTH_USER_MODEL = "accounts.User"
+
+
+# REDIRECT URL AFTER LOGGING IN API-AUTH
+LOGIN_REDIRECT_URL = '/api/'
 
 
 # Password validation

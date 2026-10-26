@@ -15,9 +15,11 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Add functionality to /post-creation page~~
 
 - Work on preserving login session by using cookies (adding more on token refresh mechanism) - in progress RT
-- Add more functionalities to Follow model: Current user viewing another profile can show “Follows you” (check login session/auth while viewing /api/profile/<username>/, then add field for 'follows_you' flag), shows if current user is following the profile being viewed, with follow/unfollow toggle (same logic, /api/profile/<username>/ would have field like 'is_followed'), mutual follows “followed by <users on your follow list>” (something like "/api/profile/<username>/mutuals")
+- ~~Add more functionalities to Follow model: Current user viewing another profile can show “Follows you” (check login session/auth while viewing /api/profile/<username>/, then add field for 'follows_you' flag), shows if current user is following the profile being viewed, with follow/unfollow toggle (same logic, /api/profile/<username>/ would have field like 'is_followed'), mutual follows “followed by <users on your follow list>” (something like "/api/profile/<username>/mutuals")~~ - done backend
 - Implement share post functionality: most likely will be a Share model to follow the current backend design
 - Implement fields or models for any additional personalized features from frontend (currently has ThemePicker)
 - Touch on AccountSecurity backend design when a frontend design for account settings is drafted.
-- ~~I think /api/posts should return more details about the author
-    - For example, the author field can return an object containing data about the user's username, first name, last name, and profile picture to display on each post.~~ Done
+- ~~I think /api/posts should return more details about the author~~
+    ~~- For example, the author field can return an object containing data about the user's username, first name, last name, and profile picture to display on each post.~~ Done
+
+- Implement Notifications behaviour in frontend (testing Notifications model from backend) - in progress RT
