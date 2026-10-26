@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, X } from 'lucide-react'
-import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from './Avatar.jsx'
 import ThemePicker from './ThemePicker.jsx'
@@ -14,14 +14,14 @@ const MAX_IMAGE_MB = 5
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export default function EditProfileModal({ onClose }) {
-  const { user, setUser } = useUserCache()
+  const { userCache, setUserCache } = useCache()
   const { fetchWithToken } = useAuthContext()
   const { profile, updateProfile } = useStore()
-  const userFullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.username || '?'
-  const [bio, setBio] = useState(user?.bio ?? '')
-  const [profilePicture, setProfilePicture] = useState(user?.profile_picture)
+  const userFullName = `${userCache?.first_name ?? ''} ${userCache?.last_name ?? ''}`.trim() || userCache?.username || '?'
+  const [bio, setBio] = useState(userCache?.bio ?? '')
+  const [profilePicture, setProfilePicture] = useState(userCache?.profile_picture)
   const [selectedProfilePicture, setSelectedProfilePicture] = useState(null)
-  const [bannerUrl, setBannerUrl] = useState(user?.banner)
+  const [bannerUrl, setBannerUrl] = useState(userCache?.banner)
   const [selectedBanner, setSelectedBanner] = useState(null)
   // Profile theme. Saved on this device for now: the backend has no theme field yet.
   const [theme, setTheme] = useState(profile.theme)
@@ -96,7 +96,7 @@ export default function EditProfileModal({ onClose }) {
 
     if (!Object.hasOwn(data, 'error')) {
       // Use what the server sent back, so photos point at their saved addresses
-      setUser({ ...user, ...data })
+      setUserCache({ ...userCache, ...data })
       updateProfile({ theme }) // TODO: send the theme too, once the backend has a theme field
       freeUnused([])
       onClose()
@@ -230,7 +230,7 @@ export default function EditProfileModal({ onClose }) {
             <ThemePicker label="Profile theme" value={theme} onChange={setTheme} />
             <p className="text-xs text-muted">Everyone who visits your profile sees this theme.</p>
 
-            <p className="text-xs text-muted">Your username stays <span className="text-white">@{user?.username ?? ""}</span>.</p>
+            <p className="text-xs text-muted">Your username stays <span className="text-white">@{userCache?.username ?? ""}</span>.</p>
           </div>
 
           {error && <p className="mt-3 text-sm text-red-400">{error}</p>}

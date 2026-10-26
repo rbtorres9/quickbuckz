@@ -6,7 +6,7 @@ export const ApiContext = createContext(null)
 
 export const ApiProvider = ({children}) => {
     const baseUrl = API_URL
-    const [loading, setLoading] = useState(false)
+    const [fetching, setFetching] = useState(false)
 
     const fetchBaseUrl = async (suffix = '', options = {}) => {
         if (!suffix) {
@@ -26,7 +26,7 @@ export const ApiProvider = ({children}) => {
         const url = `${baseUrl}${resolvedSuffix}`
 
         try {
-            setLoading(true)
+            setFetching(true)
 
             const response = await fetch(url, {
                 method: 'GET',
@@ -53,7 +53,7 @@ export const ApiProvider = ({children}) => {
             return new ApiResult(err, true)
         }
         finally {
-            setLoading(false)
+            setFetching(false)
         }
     }
 
@@ -63,10 +63,10 @@ export const ApiProvider = ({children}) => {
 
     const value = useMemo(() => ({
         baseUrl,
-        loading,
+        loading: fetching,
         fetchBaseUrl,
         fetchPosts,
-    }), [baseUrl, loading])
+    }), [baseUrl, fetching])
 
     return (
         <ApiContext.Provider value={value}>

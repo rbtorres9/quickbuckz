@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ImagePlus, X } from 'lucide-react'
-import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from '../components/Avatar.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
@@ -13,9 +13,9 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 export default function PostCreation() {
   const navigate = useNavigate()
   const fileInput = useRef(null)
-  const { user } = useUserCache()
+  const { userCache } = useCache()
   const { fetchWithToken } = useAuthContext()
-  const userFullName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || user?.username || '?'
+  const userFullName = `${userCache?.first_name ?? ''} ${userCache?.last_name ?? ''}`.trim() || userCache?.username || '?'
 
   const [text, setText] = useState('')
   const [image, setImage] = useState(null) // { file, url }
@@ -84,7 +84,7 @@ export default function PostCreation() {
 
       <form onSubmit={handleSubmit} className="mt-5 rounded-2xl border border-line bg-card p-5">
         <div className="flex gap-3">
-          <Avatar name={userFullName} src={user?.profile_picture} />
+          <Avatar name={userFullName} src={userCache?.profile_picture} />
           <textarea
             value={text}
             onChange={(e) => { setText(e.target.value); setError('') }}

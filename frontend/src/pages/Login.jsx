@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import Logo from '../components/Logo.jsx'
 import { AuthContext } from '../context/AuthContext.jsx'
-import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
 import { API_URL } from '../config.js'
 
 
@@ -31,7 +31,7 @@ export default function Login() {
   const [slow, setSlow] = useState(false) // taking a while? (the server may be waking up)
   const navigate = useNavigate()
   const { login } = useContext(AuthContext)
-  const { refreshUserCache } = useUserCache()
+  const { refreshUserCache } = useCache()
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");

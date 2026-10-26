@@ -5,7 +5,7 @@ import App from './App.jsx'
 import { StoreProvider } from './data/store.jsx'
 import './index.css'
 import { AuthProvider } from './context/AuthContext.jsx'
-import { UserCacheProvider } from './context/UserCacheContext.jsx'
+import { CacheProvider } from './context/CacheContext.jsx'
 import { ApiProvider } from './context/ApiContext.jsx'
 import { NotificationsProvider } from './context/NotificationsContext.jsx'
 
@@ -15,13 +15,13 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <ApiProvider>
         <AuthProvider>
-          <UserCacheProvider>
+          <CacheProvider>
             <NotificationsProvider>
               <StoreProvider>
                 <App />
               </StoreProvider>
             </NotificationsProvider>
-          </UserCacheProvider>
+          </CacheProvider>
         </AuthProvider>
       </ApiProvider>
     </BrowserRouter>

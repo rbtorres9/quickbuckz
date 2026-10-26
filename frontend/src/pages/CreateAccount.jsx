@@ -1,7 +1,7 @@
 import { useState, useContext, useRef } from 'react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { AuthContext } from '../context/AuthContext'
-import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
 import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 import { themeVars } from '../data/themes.js'
@@ -28,7 +28,7 @@ export default function CreateAccount() {
   const [theme, setTheme] = useState('classic')
   const navigate = useNavigate()
   const { accessToken, login } = useContext(AuthContext)
-  const { refreshUserCache } = useUserCache()
+  const { refreshUserCache } = useCache()
   const { updateProfile } = useStore()
   const justSignedUp = useRef(false)
 

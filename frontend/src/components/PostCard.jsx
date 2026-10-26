@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, MoreHorizontal, Share2 } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
-import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
 import { getTimeAgoString, getDateTimeString } from '../utils/DateTimeUtils.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
@@ -13,7 +13,7 @@ import PhotoViewer from './PhotoViewer.jsx'
 // `user` is the author's profile, passed in for real posts.
 export default function PostCard({ post, user, full = false, onDeleted }) {
   const { toggleLike, deletePost, profile } = useStore()
-  const me = useUserCache().user
+  const { userCache } = useCache()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const [viewing, setViewing] = useState(false) // full-screen photo open?
@@ -23,7 +23,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
 
   const isReal = 'created_at' in post
   const handle = isReal ? post.author : post.handle
-  const isMine = handle === (me?.username ?? profile.handle)
+  const isMine = handle === (userCache?.username ?? profile.handle)
   const profileLink = isMine ? '/user-page' : `/user/${handle}`
 
   let authorName = post.author

@@ -1,10 +1,10 @@
 import React, {useContext, createContext, useState, useEffect} from 'react'
 import { useAuthContext } from './AuthContext.jsx'
 
-export const UserCacheContext = createContext(null)
+export const CacheContext = createContext(null)
 
-export const UserCacheProvider = ({children}) => {
-    const [ user, setUser ] = useState(() => localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null)
+export const CacheProvider = ({children}) => {
+    const [ userCache, setUserCache ] = useState(() => localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null)
 
     const { fetchWithToken, accessToken } = useAuthContext()
     
@@ -24,7 +24,7 @@ export const UserCacheProvider = ({children}) => {
         if (!data || data.error) return
 
         localStorage.setItem("user", JSON.stringify(data))
-        setUser(data)
+        setUserCache(data)
 
         console.log("User cache refreshed:", data)
     }
@@ -37,19 +37,19 @@ export const UserCacheProvider = ({children}) => {
                 refreshUserCache()
         } else {
             localStorage.removeItem('user')
-            setUser(null)
+            setUserCache(null)
         }
     }, [accessToken]) 
 
     return (
-        <UserCacheContext.Provider value={{ user, setUser, refreshUserCache }}>
+        <CacheContext.Provider value={{ userCache, setUserCache, refreshUserCache }}>
             { children }
-        </UserCacheContext.Provider>
+        </CacheContext.Provider>
     )
 }
 
-export const useUserCache = () => {
-    const context = useContext(UserCacheContext)
+export const useCache = () => {
+    const context = useContext(CacheContext)
     if (!context) {
         throw new Error("useUserCache must be used within a UserCacheProvider")
     }

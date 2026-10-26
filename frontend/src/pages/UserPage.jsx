@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore, sampleUsers } from '../data/store.jsx'
-import { useUserCache } from '../context/UserCacheContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
@@ -14,7 +14,7 @@ import { getTheme, themeVars } from '../data/themes.js'
 export default function UserPage() {
   const { handle } = useParams()
   const { posts, profile, following, toggleFollowUser } = useStore()
-  const { user } = useUserCache()
+  const { userCache } = useCache()
   const { fetchPosts } = useApiContext()
   const [tab, setTab] = useState('posts')
   const [editing, setEditing] = useState(false)
@@ -22,11 +22,11 @@ export default function UserPage() {
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [postsError, setPostsError] = useState(null)
 
-  const isSelf = !handle || handle === user?.username
+  const isSelf = !handle || handle === userCache?.username
 
   // Load your own posts from the database, newest first
   useEffect(() => {
-    if (!isSelf || !user) return
+    if (!isSelf || !userCache) return
 
     const fetchData = async () => {
       setLoadingPosts(true)
@@ -35,7 +35,7 @@ export default function UserPage() {
       const result = await fetchPosts()
 
       if (!result.isError) {
-        setMyPosts(result.result.filter((p) => p.author === user.username))
+        setMyPosts(result.result.filter((p) => p.author === userCache.username))
       } else {
         setPostsError(result.result)
       }
@@ -44,20 +44,20 @@ export default function UserPage() {
     }
 
     fetchData()
-  }, [isSelf, user?.username])
+  }, [isSelf, userCache?.username])
 
-  if (isSelf && !user) {
+  if (isSelf && !userCache) {
     return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…</main>
   }
 
   // TODO: load other users' profiles and posts from the backend database
   const person = isSelf
     ? {
-        name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username,
-        handle: user.username,
-        bio: user.bio,
-        avatarUrl: user.profile_picture,
-        bannerUrl: user.banner,
+        name: [userCache.first_name, userCache.last_name].filter(Boolean).join(' ') || userCache.username,
+        handle: userCache.username,
+        bio: userCache.bio,
+        avatarUrl: userCache.profile_picture,
+        bannerUrl: userCache.banner,
         theme: profile.theme, // TODO: save theme in the database
       }
     : sampleUsers[handle]
@@ -177,7 +177,7 @@ export default function UserPage() {
               <p className="font-medium">Error fetching posts</p>
             </div>
           ) : shown.length ? (
-            shown.map((p) => <PostCard key={p.id} post={p} user={isSelf ? user : null} />)
+            shown.map((p) => <PostCard key={p.id} post={p} user={isSelf ? userCache : null} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
               {isSelf ? 'Nothing here yet.' : `${person.name} hasn't posted yet.`}
