@@ -21,6 +21,7 @@ UPDATES:
 - Modified App.jsx by removing PublicRoute for /create-account, but also fixed the redirect logic where /create-account is still accessible with a login session (due to implementing above note). - RT 10/11
 - Moved UserCacheContext and AuthContext to their own folder named 'context'
 - Added a utils folder with DateTileUtils.js
+- Updated /user-page to apply 'loading post' behaviour as well
 
 ## Login and Account Creator
 - Added basic functionality to the /create-account and /login page
