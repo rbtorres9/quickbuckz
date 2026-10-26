@@ -1,7 +1,11 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Home, Flame, Users, Plus, User, Settings, Bell } from 'lucide-react'
 import Logo from './Logo.jsx'
-import { useStore } from '../data/store.jsx'
+// import { useStore } from '../data/store.jsx'
+
+// read the real unread count instead of store.jsx sample data
+import { useNotifications } from '../context/NotificationsContext.jsx'
+
 
 // Edit this list to add, remove, or rename nav links.
 const links = [
@@ -22,8 +26,13 @@ const mobileLink = ({ isActive }) =>
   }`
 
 function NotificationBell() {
-  const { notifications } = useStore()
-  const unread = notifications.filter((n) => !n.read).length
+  // const { notifications } = useStore()
+  // const unread = notifications.filter((n) => !n.read).length
+
+
+  // unread count comes from GET /api/notifications/unread-count/
+  const { unread } = useNotifications()
+
   // remembers what page before clicking the notification bell
   const location = useLocation()
   const navigate = useNavigate()
@@ -52,7 +61,8 @@ function NotificationBell() {
         <Bell size={17} />
         {unread > 0 && (
           <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-page">
-            {unread}
+            {/* cap the badge so a large count doesn't stretch it */}
+            {unread > 99 ? '99+' : unread}
           </span>
         )}
       </span>

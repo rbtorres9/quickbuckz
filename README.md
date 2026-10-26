@@ -22,4 +22,4 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~I think /api/posts should return more details about the author~~
     ~~- For example, the author field can return an object containing data about the user's username, first name, last name, and profile picture to display on each post.~~ Done
 
-- Implement Notifications behaviour in frontend (testing Notifications model from backend) - in progress RT
+- Implement Notifications behaviour in frontend (testing Notifications model from backend) - in progress RT (10/25 implemented, might need more testing)

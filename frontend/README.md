@@ -22,6 +22,7 @@ UPDATES:
 - Moved UserCacheContext and AuthContext to their own folder named 'context'
 - Added a utils folder with DateTileUtils.js
 - Updated /user-page to apply 'loading post' behaviour as well
+- Updated Notifications behaviour (might need more testing) -RT
 
 ## Login and Account Creator
 - Added basic functionality to the /create-account and /login page
@@ -57,4 +58,7 @@ UPDATES:
 ## API_URL changes
 - edited some pages to import API_URL from src/config.js, and replace hardcoded onrender backend link to API_URL variable
 - to test backend (localhost:8000) locally, uncomment the line and comment the onrender line.
-- !!! Before comitting, always change API_URL to quickbuckz.onrender.com and comment out the localhost link
+- **!!! Before comitting, always change API_URL to quickbuckz.onrender.com and comment out the localhost link**
+
+## NotificationsContext.jsx 10/25
+- Implements notifications logic such as time interval for when to check for new notifications, don't mark as read while the page is inactive, etc.

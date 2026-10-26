@@ -7,6 +7,8 @@ import './index.css'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { UserCacheProvider } from './context/UserCacheContext.jsx'
 import { ApiProvider } from './context/ApiContext.jsx'
+import { NotificationsProvider } from './context/NotificationsContext.jsx'
+
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -14,9 +16,11 @@ createRoot(document.getElementById('root')).render(
       <ApiProvider>
         <AuthProvider>
           <UserCacheProvider>
+            <NotificationsProvider>
               <StoreProvider>
                 <App />
-            </StoreProvider>
+              </StoreProvider>
+            </NotificationsProvider>
           </UserCacheProvider>
         </AuthProvider>
       </ApiProvider>
