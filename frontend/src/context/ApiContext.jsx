@@ -61,11 +61,21 @@ export const ApiProvider = ({children}) => {
         return fetchBaseUrl('/api/posts/')
     }
 
+    const fetchUserProfile = async (username) => {
+        return fetchBaseUrl(`/api/profile/${username}/`)
+    }
+
+    const fetchUserPosts = async (username) => {
+        return fetchBaseUrl(`/api/profile/${username}/posts/`)
+    }
+
     const value = useMemo(() => ({
         baseUrl,
-        loading: fetching,
+        fetching,
         fetchBaseUrl,
         fetchPosts,
+        fetchUserProfile,
+        fetchUserPosts
     }), [baseUrl, fetching])
 
     return (

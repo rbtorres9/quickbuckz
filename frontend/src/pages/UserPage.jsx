@@ -13,37 +13,87 @@ import { getTheme, themeVars } from '../data/themes.js'
 // /user/:handle shows someone else's (sample for now).
 export default function UserPage() {
   const { handle } = useParams()
-  const { posts, profile, following, toggleFollowUser } = useStore()
+  const { profile, following, toggleFollowUser } = useStore()
   const { userCache } = useCache()
-  const { fetchPosts } = useApiContext()
-  const [tab, setTab] = useState('posts')
-  const [editing, setEditing] = useState(false)
-  const [myPosts, setMyPosts] = useState([])
-  const [loadingPosts, setLoadingPosts] = useState(true)
-  const [postsError, setPostsError] = useState(null)
+  const { fetchUserPosts, fetchUserProfile } = useApiContext()
+  const [ tab, setTab ] = useState('posts')
+  const [ editing, setEditing ] = useState(false)
+  
+  const [ loadingUser, setLoadingUser ] = useState(true)
+  const [ loadingPosts, setLoadingPosts ] = useState(true)
+  const [ postsError, setPostsError ] = useState(null)
+  const [ userError, setUserError ] = useState(null)
+
+  const [ person, setPerson ] = useState(null)
+  const [ posts, setPosts ] = useState([])
+  // const person = isSelf
+  //   ? {
+  //       name: [userCache.first_name, userCache.last_name].filter(Boolean).join(' ') || userCache.username,
+  //       handle: userCache.username,
+  //       bio: userCache.bio,
+  //       avatarUrl: userCache.profile_picture,
+  //       bannerUrl: userCache.banner,
+  //       theme: profile.theme, // TODO: save theme in the database
+  //     }
+  //   : sampleUsers[handle]
 
   const isSelf = !handle || handle === userCache?.username
 
   // Load your own posts from the database, newest first
   useEffect(() => {
-    if (!isSelf || !userCache) return
-
-    const fetchData = async () => {
+    const fetchOtherUserData = async () => {
+      setLoadingUser(true)
       setLoadingPosts(true)
       setPostsError(null)
+      setUserError(null)
 
-      const result = await fetchPosts()
+      const userResult = await fetchUserProfile(handle)
+      setLoadingUser(false)
 
-      if (!result.isError) {
-        setMyPosts(result.result.filter((p) => p.author === userCache.username))
-      } else {
-        setPostsError(result.result)
+      if (userResult.isError) {
+        setUserError(userResult)
+        return
       }
 
+      setPerson(userResult.result)
+
+      const postsResult = await fetchUserPosts(handle)
+      setLoadingPosts(false)
+
+      if (postsResult.isError) {
+        setPostsError(postsError)
+        return
+      }
+
+      setPosts(postsResult.result)
+    }
+
+    const fetchMyData = async() => {
+      setLoadingUser(true)
+      setLoadingPosts(true)
+      setPostsError(null)
+      setUserError(null)
+
+      setPerson(userCache)
+      setLoadingUser(false)
+
+      const postsResult = await fetchUserPosts(userCache.username)
+      setLoadingPosts(false)
+
+      if (postsResult.isError) {
+        setPostsError(postsError)
+        return
+      }
+
+      setPosts(postsResult.result)
       setLoadingPosts(false)
     }
 
-    fetchData()
+    if (isSelf)
+      fetchMyData()
+    else {
+      fetchOtherUserData()
+    }
   }, [isSelf, userCache?.username])
 
   if (isSelf && !userCache) {
@@ -51,18 +101,21 @@ export default function UserPage() {
   }
 
   // TODO: load other users' profiles and posts from the backend database
-  const person = isSelf
-    ? {
-        name: [userCache.first_name, userCache.last_name].filter(Boolean).join(' ') || userCache.username,
-        handle: userCache.username,
-        bio: userCache.bio,
-        avatarUrl: userCache.profile_picture,
-        bannerUrl: userCache.banner,
-        theme: profile.theme, // TODO: save theme in the database
-      }
-    : sampleUsers[handle]
-
-  if (!person) {
+  if (loadingUser) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-24 text-center">
+        <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+          <p className="font-medium">Loading data about @{handle}.</p>
+          <div className="relative mt-7 h-14">
+            <div className="dog-run">
+              <Logo size={56} className="text-accent animate-bounce" />
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
+  else if (!person) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">User not found</h1>
@@ -81,12 +134,12 @@ export default function UserPage() {
   const tabs = isSelf ? [{ id: 'posts', label: 'Posts' }] : [{ id: 'posts', label: 'Posts' }, { id: 'top', label: 'Top' }]
   const activeTab = tabs.some((t) => t.id === tab) ? tab : 'posts'
 
-  const theirPosts = isSelf ? myPosts : posts.filter((p) => p.handle === person.handle)
-  const shown = activeTab === 'top' ? [...theirPosts].sort((a, b) => b.likes - a.likes) : theirPosts
+  const shown = activeTab === 'top' ? [...posts].sort((a, b) => b.likes - a.likes) : posts
 
   // Only your own profile fetches posts; sample profiles are available immediately
-  const isLoading = isSelf && loadingPosts
-  const hasError = isSelf && postsError
+  const isLoading = loadingUser || loadingPosts
+  const hasError = userError || postsError
+  const personName = person ? `${person.first_name} ${person.last_name}` : ""
 
   let button
   if (isSelf) {
@@ -121,28 +174,29 @@ export default function UserPage() {
   return (
     <>
       {/* The profile shows in its owner's theme, whatever your own site color is */}
-      <main className="mx-auto max-w-2xl px-4 pb-24" style={themeVars(person.theme)}>
+      {/* Theme support will be added later */}
+      <main className="mx-auto max-w-2xl px-4 pb-24" style={/* themeVars(person.theme) */ themeVars("classic")}>
         {person.bannerUrl ? (
-          <img src={person.bannerUrl} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
+          <img src={person.banner} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
         ) : (
           <div className="mt-4 h-32 rounded-2xl border border-line sm:h-40" style={{ background: getTheme(person.theme).banner }} />
         )}
 
         <div className="-mt-10 px-2 sm:px-4">
           <div className="flex items-end justify-between">
-            <Avatar name={person.name} src={person.avatarUrl} size="lg" />
+            <Avatar name={personName} src={person.profile_picture} size="lg" />
             {button}
           </div>
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">{person.name}</h1>
-          <p className="text-sm text-muted">@{person.handle}</p>
+          <h1 className="mt-3 text-2xl font-bold tracking-tight">{personName}</h1>
+          <p className="text-sm text-muted">@{person.username}</p>
           {person.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{person.bio}</p>}
           <div className="mt-4 flex gap-5 text-sm">
-            <span><b>{isLoading ? '–' : theirPosts.length}</b> <span className="text-muted">Posts</span></span>
+            <span><b>{isLoading ? '–' : posts.length}</b> <span className="text-muted">Posts</span></span>
             {/* TODO: show your own follower counts once the backend tracks follows */}
             {!isSelf && (
               <>
-                <span><b>{person.followers + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
-                <span><b>{person.following}</b> <span className="text-muted">Following</span></span>
+                <span><b>{person.followers_count + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
+                <span><b>{person.following_count}</b> <span className="text-muted">Following</span></span>
               </>
             )}
           </div>
@@ -180,7 +234,7 @@ export default function UserPage() {
             shown.map((p) => <PostCard key={p.id} post={p} user={isSelf ? userCache : null} />)
           ) : (
             <p className="py-10 text-center text-sm text-muted">
-              {isSelf ? 'Nothing here yet.' : `${person.name} hasn't posted yet.`}
+              {isSelf ? 'Nothing here yet.' : `${personName} hasn't posted yet.`}
             </p>
           )}
         </div>
