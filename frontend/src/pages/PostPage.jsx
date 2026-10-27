@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
+import { useApiContext } from '../context/ApiContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
+import { getName } from '../utils/NameHandler.js'
+import { getTimeAgoString } from '../utils/DateTimeUtils.js'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 
@@ -9,10 +13,45 @@ export default function PostPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { posts, profile, addComment, deleteComment } = useStore()
-  const [text, setText] = useState('')
+  const { fetchPostById, fetchUserProfile } = useApiContext()
+  const { userCache } = useCache()
 
-  const post = posts.find((p) => p.id === Number(id))
-  const ownsPost = post?.handle === profile.handle
+  const [ post, setPost ] = useState(null)
+  const [ user, setUser ] = useState(null)
+  const [ text, setText ] = useState('')
+
+  const [ error, setError ] = useState(null)
+  const [ loading, setLoading ] = useState(true)
+
+  useEffect(() => {
+    const fetchPost = async () => {
+      setLoading(true)
+      const result = await fetchPostById(id)
+      
+      if (result.isError) {
+        setError(result.result)
+        return
+      }
+
+      setPost(result.result)
+
+      const author = result.result.author
+      const userResult = await fetchUserProfile(author)
+
+      if (userResult.isError) {
+        setError(userResult.result)
+        return
+      }
+
+      setUser(userResult.result)
+
+      setLoading(false)
+    }
+
+    fetchPost()
+  }, [])
+
+  const ownsPost = post?.author === userCache?.handle
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -32,12 +71,14 @@ export default function PostPage() {
           <ArrowLeft size={16} /> Back
         </button>
 
-        {!post ? (
+        { loading ? (
+          <p className="py-16 text-center text-sm text-muted">Loading post...</p>
+        ) : error ? (
           <p className="py-16 text-center text-sm text-muted">This post doesn't exist or was deleted.</p>
         ) : (
           <>
             <div className="mt-3">
-              <PostCard post={post} full onDeleted={() => navigate('/user-page')} />
+              <PostCard post={post} user={user} full onDeleted={() => navigate('/user-page')} />
             </div>
 
             <section className="mt-4 rounded-2xl border border-line bg-card p-5">
@@ -64,15 +105,15 @@ export default function PostPage() {
                 )}
                 {post.comments.map((c) => (
                   <li key={c.id} className="flex gap-3 py-3">
-                    <Avatar name={c.name} size="sm" accent={false} />
+                    <Avatar name={getName(c.author)} size="sm" accent={false} />
                     <div className="flex-1 text-sm">
                       <div>
-                        <b>{c.name}</b> <span className="text-muted">@{c.handle} · {c.time}</span>
+                        <b>{getName(c.author)}</b> <span className="text-muted">@{c.author.username} · {getTimeAgoString(c.created_at)}</span>
                       </div>
                       {/* React escapes this text automatically, so comments can't inject HTML */}
-                      <p className="mt-0.5 break-words">{c.text}</p>
+                      <p className="mt-0.5 break-words">{c.content}</p>
                     </div>
-                    {(c.mine || ownsPost) && (
+                    {((c.author == userCache?.username) || ownsPost) && (
                       <button
                         onClick={() => deleteComment(post.id, c.id)}
                         className="self-start text-xs text-muted hover:text-red-400"

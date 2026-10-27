@@ -27,7 +27,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const profileLink = isMine ? '/user-page' : `/user/${handle}`
 
   let authorName = post.author
-  if (isReal) authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || handle
+  if (isReal) authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || ""
   else if (isMine) authorName = profile.name
   const avatar = isReal ? user?.profile_picture : isMine ? profile.avatarUrl : null
 
@@ -156,7 +156,11 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
           // TODO: make these clickable with /api/posts/{id}/like/ and /api/posts/{id}/comment/
           <>
             <span className="flex items-center gap-1.5"><Heart size={18} /> {likes}</span>
-            <span className="flex items-center gap-1.5"><MessageCircle size={18} /> {comments}</span>
+            <span className="flex items-center gap-1.5">
+              <Link to={`/post/${post.id}`} className="flex items-center gap-1.5 hover:text-white">
+                <MessageCircle size={18} /> {comments}
+              </Link>
+            </span>
           </>
         ) : (
           <>

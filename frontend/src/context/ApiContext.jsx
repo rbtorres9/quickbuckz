@@ -8,7 +8,7 @@ export const ApiProvider = ({children}) => {
     const baseUrl = API_URL
     const [fetching, setFetching] = useState(false)
 
-    const fetchBaseUrl = async (suffix = '', options = {}) => {
+    const fetchBaseUrl = async (suffix = '', method = 'GET', options = {}) => {
         if (!suffix) {
             return new ApiResult(null, true)
         }
@@ -29,7 +29,7 @@ export const ApiProvider = ({children}) => {
             setFetching(true)
 
             const response = await fetch(url, {
-                method: 'GET',
+                method: method,
                 ...options,
                 headers: {
                     'Content-Type': 'application/json',
@@ -69,13 +69,23 @@ export const ApiProvider = ({children}) => {
         return fetchBaseUrl(`/api/profile/${username}/posts/`)
     }
 
+    const fetchPostById = async (id) => {
+        return fetchBaseUrl(`/api/posts/${id}/`)
+    }
+
+    const postComment = async () => {
+        return ""
+    }
+
     const value = useMemo(() => ({
         baseUrl,
         fetching,
         fetchBaseUrl,
         fetchPosts,
         fetchUserProfile,
-        fetchUserPosts
+        fetchUserPosts,
+        fetchPostById,
+        postComment
     }), [baseUrl, fetching])
 
     return (
