@@ -62,3 +62,30 @@ UPDATES:
 
 ## NotificationsContext.jsx 10/25
 - Implements notifications logic such as time interval for when to check for new notifications, don't mark as read while the page is inactive, etc.
+## Profile/settings edits 10/26 - MM
+- Home's "Share a trip" box and Settings now show your real account instead of the sample user (no more "JR")
+- Post photos now show the whole picture instead of cropping it
+- Profile page: shows your username when you have no first/last name (no more blank circle), banner photos show, post errors show
+- Posts on Home and Top now show the author's name and profile picture (PostCard loads the author's profile once if the page doesn't pass it in)
+- Settings > Privacy (public/private) now saves to the database with PATCH /api/profile/me/
+- Site theme and profile theme are remembered on this device (localStorage) for now
+- **Backend requests:**
+  - add a `theme` field to Profile (text, default "classic") so profile themes save for everyone
+  - an endpoint to change email and one to change password (Settings has TODOs for both)
+
+## Real follows + side GIF 10/26 - MM
+- Follow buttons now use the backend: POST/DELETE /api/profile/<username>/follow/
+- /subscriptions (Following) and /followers load real lists from /api/profile/me/following/ and /api/profile/me/followers/
+- Profiles show real Followers/Following counts (yours link to those pages) and a "Follows you" tag
+- Home's "Following" count is real; the notifications Follow back button reads `is_followed` from the response
+- Fun: a GIF fills both sides of the page on wide screens (stretched to the side width and repeated top to bottom). Put any GIF at `frontend/public/side.gif` to change it (no file = no GIF). Hidden on phones and for people with reduced motion turned on.
+
+## Mod mode prototype 10/26 - MM
+- Settings > Moderator: enter the mod code (`qbmod` for now) to turn on mod mode; "Leave mod mode" turns it off
+- /mod (Mod tools): reported posts with Remove post and Dismiss. Real posts link to the post.
+- The Report button (⋯ on posts) asks for a reason and adds the post to the mod list. Real posts now have the ⋯ menu with Report (not on your own).
+- Reports are sample data kept in the browser for now; they reset on refresh
+- **Backend requests (needed before this is real):**
+  - a moderator role on accounts (e.g. `is_moderator` or Django `is_staff`), sent with /api/profile/me/, replacing the frontend mod code
+  - a Reports table + endpoints: create a report, list open reports (mods only), dismiss a report
+  - let moderators DELETE any post (right now only the author can; mod tools shows a message when the backend refuses)

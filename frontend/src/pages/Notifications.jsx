@@ -69,7 +69,7 @@ export default function Notifications() {
 
     // Update every notification from this person, not just the one clicked
     setNotifications((list) =>
-      list.map((n) => (n.actor_username === username ? { ...n, is_following_actor: data.following } : n))
+      list.map((n) => (n.actor_username === username ? { ...n, is_following_actor: data.is_followed } : n))
     )
   }
 

@@ -47,3 +47,25 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .dog-run { animation: none; left: 0; }
 }
+
+/* Fun GIF filling both sides of the page (Layout.jsx). The GIF is stretched to the
+   side's width and repeated top to bottom. Only on screens wide enough to have empty sides. */
+.side-gif {
+  display: none;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc((100vw - 42rem) / 2 - 0.5rem);
+  background-size: 100% auto;
+  background-repeat: repeat-y;
+  pointer-events: none;
+}
+.side-gif.flip { left: auto; right: 0; transform: scaleX(-1); }
+@media (min-width: 1100px) {
+  .side-gif { display: block; }
+}
+/* People who turn off animations on their device don't get the GIF */
+@media (prefers-reduced-motion: reduce) {
+  .side-gif { display: none; }
+}

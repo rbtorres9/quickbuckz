@@ -13,6 +13,7 @@ import NotFound from './pages/NotFound.jsx'
 import Home from './pages/Home.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Top from './pages/Top.jsx'
+import ModTools from './pages/ModTools.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import PublicRoute from './components/PublicRoute.jsx'
 
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/user-page" element={protect(<UserPage />)} />
         <Route path="/user/:handle" element={protect(<UserPage />)} />
         <Route path="/post/:id" element={protect(<PostPage />)} />
+        <Route path="/mod" element={protect(<ModTools />)} />
       </Route>
 
       {/* Any address that doesn't match a page above */}
