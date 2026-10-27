@@ -26,6 +26,7 @@ export default function UserPage() {
 
   const [ person, setPerson ] = useState(null)
   const [ posts, setPosts ] = useState([])
+  const [ shown, setShown ] = useState([])
   // const person = isSelf
   //   ? {
   //       name: [userCache.first_name, userCache.last_name].filter(Boolean).join(' ') || userCache.username,
@@ -96,6 +97,17 @@ export default function UserPage() {
     }
   }, [isSelf, userCache?.username])
 
+
+  // Your own profile only has Posts for now (Top and Likes need backend support)
+  const tabs = isSelf ? [{ id: 'posts', label: 'Posts' }] : [{ id: 'posts', label: 'Posts' }, { id: 'top', label: 'Top' }]
+  const activeTab = tabs.some((t) => t.id === tab) ? tab : 'posts'
+  useEffect(() => {
+    if (loadingPosts)
+      return
+
+    setShown(activeTab === 'top' ? [...posts].sort((a, b) => b.likes_count - a.likes_count) : posts)
+  }, [posts, tab, loadingPosts])
+
   if (isSelf && !userCache) {
     return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…</main>
   }
@@ -129,14 +141,8 @@ export default function UserPage() {
 
   const followed = following.includes(person.handle)
   const toggleFollow = () => toggleFollowUser(person.handle)
+  
 
-  // Your own profile only has Posts for now (Top and Likes need backend support)
-  const tabs = isSelf ? [{ id: 'posts', label: 'Posts' }] : [{ id: 'posts', label: 'Posts' }, { id: 'top', label: 'Top' }]
-  const activeTab = tabs.some((t) => t.id === tab) ? tab : 'posts'
-
-  const shown = activeTab === 'top' ? [...posts].sort((a, b) => b.likes - a.likes) : posts
-
-  // Only your own profile fetches posts; sample profiles are available immediately
   const isLoading = loadingUser || loadingPosts
   const hasError = userError || postsError
   const personName = person ? `${person.first_name} ${person.last_name}` : ""
