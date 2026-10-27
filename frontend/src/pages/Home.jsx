@@ -1,16 +1,17 @@
 import { Link } from 'react-router-dom'
 import { ImagePlus } from 'lucide-react'
-import { useStore } from '../data/store.jsx'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import { useEffect, useMemo, useState } from 'react'
 import Logo from '../components/Logo.jsx'
 
 import { useApiContext } from '../context/ApiContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
+import { getName } from '../utils/NameHandler.js'
 
 export default function Home() {
-  const { profile, following } = useStore()
   const { fetchPosts } = useApiContext()
+  const { userCache } = useCache()
   const [ posts, setPosts ] = useState([])
   const [ error, setError ] = useState(null)
   const [ loading, setLoading ] = useState(true)
@@ -45,7 +46,7 @@ export default function Home() {
         to="/post-creation"
         className="flex items-center gap-3 rounded-2xl border border-line bg-card px-5 py-4 transition hover:border-accent/40"
       >
-        <Avatar name={profile.name} src={profile.avatarUrl} />
+        <Avatar name={getName(userCache) || userCache?.username || '?'} src={userCache?.profile_picture} />
         <span className="flex-1 text-sm text-muted">Share a trip, a tip, or a photo…</span>
         <ImagePlus size={18} className="text-muted" />
       </Link>
@@ -53,7 +54,7 @@ export default function Home() {
       <div className="mt-6 flex items-baseline justify-between">
         <h2 className="text-sm font-semibold">Latest from people you follow</h2>
         <Link to="/subscriptions" className="text-xs text-muted hover:text-accent">
-          Following {following.length}
+          Following {userCache?.following_count ?? 0}
         </Link>
       </div>
 

@@ -3,18 +3,24 @@ import { Link, useParams } from 'react-router-dom'
 import { useStore, sampleUsers } from '../data/store.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
 import Logo from '../components/Logo.jsx'
 import { getTheme, themeVars } from '../data/themes.js'
+import { getName } from '../utils/NameHandler.js'
 
 // /user-page shows your own profile (real, from the database).
 // /user/:handle shows someone else's (sample for now).
 export default function UserPage() {
   const { handle } = useParams()
-  const { profile, following, toggleFollowUser } = useStore()
-  const { userCache } = useCache()
+  const { profile } = useStore()
+  const { fetchWithToken } = useAuthContext()
+  const [ followBusy, setFollowBusy ] = useState(false)
+  const [ followError, setFollowError ] = useState('')
+  const { userCache, refreshUserCache } = useCache()
   const { fetchUserPosts, fetchUserProfile } = useApiContext()
   const [ tab, setTab ] = useState('posts')
   const [ editing, setEditing ] = useState(false)
@@ -48,21 +54,22 @@ export default function UserPage() {
       setPostsError(null)
       setUserError(null)
 
-      const userResult = await fetchUserProfile(handle)
+      // Sent with your login so the backend can say whether you follow them (is_followed)
+      const userData = await fetchWithToken(`/api/profile/${handle}/`)
       setLoadingUser(false)
 
-      if (userResult.isError) {
-        setUserError(userResult)
+      if (Object.hasOwn(userData, 'error')) {
+        setUserError(userData.error)
         return
       }
 
-      setPerson(userResult.result)
+      setPerson(userData)
 
       const postsResult = await fetchUserPosts(handle)
       setLoadingPosts(false)
 
       if (postsResult.isError) {
-        setPostsError(postsError)
+        setPostsError(postsResult)
         return
       }
 
@@ -82,7 +89,7 @@ export default function UserPage() {
       setLoadingPosts(false)
 
       if (postsResult.isError) {
-        setPostsError(postsError)
+        setPostsError(postsResult)
         return
       }
 
@@ -90,8 +97,9 @@ export default function UserPage() {
       setLoadingPosts(false)
     }
 
-    if (isSelf)
-      fetchMyData()
+    if (isSelf) {
+      if (userCache) fetchMyData() // wait until your account has loaded
+    }
     else {
       fetchOtherUserData()
     }
@@ -139,13 +147,23 @@ export default function UserPage() {
     )
   }
 
-  const followed = following.includes(person.handle)
-  const toggleFollow = () => toggleFollowUser(person.handle)
+  // Follow = POST, Unfollow = DELETE. The backend sends back the new state and count.
+  const followed = person.is_followed
+  async function toggleFollow() {
+    setFollowBusy(true)
+    setFollowError('')
+    const data = await fetchWithToken(`/api/profile/${person.username}/follow/`, { method: followed ? 'DELETE' : 'POST' })
+    setFollowBusy(false)
+    if (Object.hasOwn(data, 'error')) return setFollowError(errorMessage(data.error))
+    refreshUserCache() // so your own Following count stays right
+    setPerson({ ...person, is_followed: data.is_followed, followers_count: data.followers_count })
+  }
   
 
   const isLoading = loadingUser || loadingPosts
   const hasError = userError || postsError
-  const personName = person ? `${person.first_name} ${person.last_name}` : ""
+  // Falls back to the username when someone has no first/last name
+  const personName = getName(person) || person.username || ''
 
   let button
   if (isSelf) {
@@ -161,6 +179,7 @@ export default function UserPage() {
     button = (
       <button
         onClick={toggleFollow}
+        disabled={followBusy}
         className="mb-1 rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300"
       >
         Following
@@ -170,6 +189,7 @@ export default function UserPage() {
     button = (
       <button
         onClick={toggleFollow}
+        disabled={followBusy}
         className="mb-1 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover"
       >
         Follow
@@ -182,7 +202,7 @@ export default function UserPage() {
       {/* The profile shows in its owner's theme, whatever your own site color is */}
       {/* Theme support will be added later */}
       <main className="mx-auto max-w-2xl px-4 pb-24" style={/* themeVars(person.theme) */ themeVars("classic")}>
-        {person.bannerUrl ? (
+        {person.banner ? (
           <img src={person.banner} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
         ) : (
           <div className="mt-4 h-32 rounded-2xl border border-line sm:h-40" style={{ background: getTheme(person.theme).banner }} />
@@ -198,14 +218,20 @@ export default function UserPage() {
           {person.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{person.bio}</p>}
           <div className="mt-4 flex gap-5 text-sm">
             <span><b>{isLoading ? '–' : posts.length}</b> <span className="text-muted">Posts</span></span>
-            {/* TODO: show your own follower counts once the backend tracks follows */}
-            {!isSelf && (
+            {isSelf ? (
               <>
-                <span><b>{person.followers_count + (followed ? 1 : 0)}</b> <span className="text-muted">Followers</span></span>
-                <span><b>{person.following_count}</b> <span className="text-muted">Following</span></span>
+                <Link to="/followers" className="hover:underline"><b>{person.followers_count ?? 0}</b> <span className="text-muted">Followers</span></Link>
+                <Link to="/subscriptions" className="hover:underline"><b>{person.following_count ?? 0}</b> <span className="text-muted">Following</span></Link>
+              </>
+            ) : (
+              <>
+                <span><b>{person.followers_count ?? 0}</b> <span className="text-muted">Followers</span></span>
+                <span><b>{person.following_count ?? 0}</b> <span className="text-muted">Following</span></span>
+                {person.follows_you && <span className="rounded bg-white/10 px-1.5 text-xs text-muted">Follows you</span>}
               </>
             )}
           </div>
+          {followError && <p className="mt-2 text-sm text-red-400">{followError}</p>}
         </div>
 
         <nav className="mt-6 flex border-b border-line text-sm font-medium">

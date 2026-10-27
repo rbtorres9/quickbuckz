@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, MoreHorizontal, Share2 } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
 import { useCache } from '../context/CacheContext.jsx'
+import { useApiContext } from '../context/ApiContext.jsx'
 import { getTimeAgoString, getDateTimeString } from '../utils/DateTimeUtils.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
@@ -10,9 +11,13 @@ import PhotoViewer from './PhotoViewer.jsx'
 // Shows two kinds of post:
 //  - real posts from the database (they have created_at, content, author = username)
 //  - sample posts from store.jsx (they have date, text, handle)
-// `user` is the author's profile, passed in for real posts.
+// `user` is the author's profile. If a page doesn't pass it, the card loads it itself.
+
+// Each author's profile is loaded once and shared by all their posts
+const authorProfiles = {}
+
 export default function PostCard({ post, user, full = false, onDeleted }) {
-  const { toggleLike, deletePost, profile } = useStore()
+  const { toggleLike, deletePost, profile, addReport } = useStore()
   const { userCache } = useCache()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -20,14 +25,24 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const [burst, setBurst] = useState(false) // heart animation showing?
   const [copied, setCopied] = useState(false) // "Link copied" showing?
   const clickTimer = useRef(null)
+  const { fetchUserProfile } = useApiContext()
+  const [loadedAuthor, setLoadedAuthor] = useState(null)
 
   const isReal = 'created_at' in post
   const handle = isReal ? post.author : post.handle
+
+  // Load the author's name and photo when the page didn't pass them in
+  useEffect(() => {
+    if (!isReal || user) return
+    authorProfiles[handle] ??= fetchUserProfile(handle)
+    authorProfiles[handle].then((res) => { if (!res.isError) setLoadedAuthor(res.result) })
+  }, [isReal, user, handle])
+  user = user ?? loadedAuthor
   const isMine = handle === (userCache?.username ?? profile.handle)
   const profileLink = isMine ? '/user-page' : `/user/${handle}`
 
   let authorName = post.author
-  if (isReal) authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || ""
+  if (isReal) authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || handle
   else if (isMine) authorName = profile.name
   const avatar = isReal ? user?.profile_picture : isMine ? profile.avatarUrl : null
 
@@ -49,6 +64,16 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     if (!confirm('Delete this post?')) return
     deletePost(post.id)
     onDeleted?.()
+  }
+
+  // Report: ask why, then send it to the moderators' list
+  function handleReport() {
+    setMenuOpen(false)
+    const reason = prompt('Why are you reporting this post?')
+    if (!reason?.trim()) return
+    // TODO: send to a backend Reports endpoint instead of the sample list
+    addReport({ postId: post.id, isReal, author: handle, text, reason: reason.trim(), reportedBy: userCache?.username ?? profile.handle })
+    alert('Thanks, this post was reported.')
   }
 
   // Click a photo: open it full-screen. Double-click: like it with a heart burst.
@@ -82,7 +107,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   }
 
   const photo = photoUrl ? (
-    <img src={photoUrl} alt="" className={`w-full rounded-xl object-cover ${full ? 'max-h-[32rem]' : 'h-56'}`} />
+    <img src={photoUrl} alt="" className={`w-full rounded-xl bg-black/30 object-contain ${full ? 'max-h-[32rem]' : 'max-h-96'}`} />
   ) : (
     <div className={`${gradient} rounded-xl ${full ? 'h-72' : 'h-56'}`} />
   )
@@ -100,8 +125,8 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
             {isReal ? <span title={getDateTimeString(post.created_at)}>{getTimeAgoString(post.created_at)}</span> : post.date}
           </span>
         </div>
-        {/* TODO: Edit/Delete/Report for real posts (backend must only let owners delete) */}
-        {!isReal && (
+        {/* Real posts: Report only for now. TODO: Edit/Delete for your own real posts */}
+        {(!isReal || !isMine) && (
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -112,7 +137,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
             </button>
             {menuOpen && (
               <div className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
-                {isMine ? (
+                {isMine && !isReal ? (
                   <>
                     <button className="block w-full px-3 py-2 text-left hover:bg-white/5">Edit</button>
                     <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
@@ -121,7 +146,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
                   </>
                 ) : (
                   <button
-                    onClick={() => { setMenuOpen(false); alert('Thanks, this post was reported.') }}
+                    onClick={handleReport}
                     className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
                   >
                     Report

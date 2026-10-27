@@ -73,6 +73,13 @@ const sampleNotifications = [
   { id: 2, type: 'follow', handle: 'samp', time: '3d', read: true },
 ]
 
+// Reported posts waiting for a moderator (sample).
+// TODO: load and save reports from a Reports table on the backend
+const sampleReports = [
+  { id: 1, postId: 7, isReal: false, author: 'miat', text: 'First time in Juneau. Where should I eat?', reason: 'Spam', reportedBy: 'samp', time: '1h' },
+  { id: 2, postId: 6, isReal: false, author: 'leog', text: 'Packed light for once: one backpack, ten days. Never going back.', reason: 'Not about travel', reportedBy: 'avak', time: '5h' },
+]
+
 const StoreContext = createContext(null)
 
 export function StoreProvider({ children }) {
@@ -81,6 +88,13 @@ export function StoreProvider({ children }) {
   const [following, setFollowing] = useState(sampleFollowing)
   // TODO: load notifications from the backend database
   const [notifications, setNotifications] = useState(sampleNotifications)
+  // Mod mode (prototype). TODO: the backend must check the moderator role, not the browser
+  const [reports, setReports] = useState(sampleReports)
+  const addReport = (report) => setReports((list) => [{ id: Date.now(), time: 'now', ...report }, ...list])
+  const removeReport = (id) => setReports((list) => list.filter((r) => r.id !== id))
+  const [modMode, setModMode] = useState(() => localStorage.getItem('modMode') === 'on')
+  useEffect(() => localStorage.setItem('modMode', modMode ? 'on' : 'off'), [modMode])
+
   const markAllRead = () => setNotifications((list) => list.map((n) => ({ ...n, read: true })))
 
   const toggleFollowUser = (handle) =>
@@ -88,19 +102,23 @@ export function StoreProvider({ children }) {
   // The logged-in user. Pages compare against this to know if you're the owner
   // (your profile, your posts) or a visitor (anyone else's).
   // TODO: after login, load this from GET /api/profile/me/
-  const [profile, setProfile] = useState({ ...sampleUser, avatarUrl: null, bannerUrl: null, email: 'jordan@example.com', visibility: 'public', theme: 'classic' })
+  const [profile, setProfile] = useState({ ...sampleUser, avatarUrl: null, bannerUrl: null, email: 'jordan@example.com', visibility: 'public', theme: localStorage.getItem('profileTheme') || 'classic' })
 
   // How the site looks to you (Settings). Recolors the whole site.
-  // TODO: save this choice for the user on the backend
-  const [siteTheme, setSiteTheme] = useState('classic')
+  // Remembered on this device. TODO: save this choice for the user on the backend
+  const [siteTheme, setSiteTheme] = useState(() => localStorage.getItem('siteTheme') || 'classic')
   useEffect(() => {
+    localStorage.setItem('siteTheme', siteTheme)
     for (const [name, value] of Object.entries(themeVars(siteTheme))) {
       document.documentElement.style.setProperty(name, value)
     }
   }, [siteTheme])
 
-  // TODO: save profile changes to the backend database
-  const updateProfile = (changes) => setProfile((current) => ({ ...current, ...changes }))
+  // TODO: save the profile theme to the backend once it has a theme field (remembered on this device for now)
+  const updateProfile = (changes) => {
+    if (changes.theme) localStorage.setItem('profileTheme', changes.theme)
+    setProfile((current) => ({ ...current, ...changes }))
+  }
 
   function updatePost(id, change) {
     setPosts((all) => all.map((p) => (p.id === id ? { ...p, ...change(p) } : p)))
@@ -135,7 +153,7 @@ export function StoreProvider({ children }) {
 
   return (
     <StoreContext.Provider
-      value={{ posts, toggleLike, addComment, deleteComment, deletePost, addPost, profile, updateProfile, following, toggleFollowUser, followers: sampleFollowers, notifications, markAllRead, siteTheme, setSiteTheme }}
+      value={{ posts, toggleLike, addComment, deleteComment, deletePost, addPost, profile, updateProfile, following, toggleFollowUser, followers: sampleFollowers, notifications, markAllRead, siteTheme, setSiteTheme, reports, addReport, removeReport, modMode, setModMode }}
     >
       {children}
     </StoreContext.Provider>

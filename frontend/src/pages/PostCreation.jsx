@@ -98,7 +98,7 @@ export default function PostCreation() {
 
         {image && (
           <div className="relative mt-4">
-            <img src={image.url} alt="Preview of your photo" className="max-h-96 w-full rounded-xl object-cover" />
+            <img src={image.url} alt="Preview of your photo" className="max-h-96 w-full rounded-xl bg-black/30 object-contain" />
             <button
               type="button"
               onClick={() => setImage(null)}

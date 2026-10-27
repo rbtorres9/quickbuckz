@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../context/AuthContext.jsx'
+import { useCache } from '../context/CacheContext.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
 import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 
@@ -9,19 +11,19 @@ const inputClass =
 const saveClass = 'rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover'
 
 export default function AccountSettings() {
-  const { profile, updateProfile, siteTheme, setSiteTheme } = useStore()
-  const { logout } = useAuthContext()
+  const { siteTheme, setSiteTheme, modMode, setModMode } = useStore()
+  const { logout, fetchWithToken } = useAuthContext()
+  const { userCache, setUserCache } = useCache()
   const navigate = useNavigate()
 
   // Email
-  const [email, setEmail] = useState(profile.email)
+  const [email, setEmail] = useState(userCache?.email ?? '')
   const [emailMsg, setEmailMsg] = useState('')
 
   function saveEmail(e) {
     e.preventDefault()
-    // TODO: save the new email to the backend
+    // TODO: save the new email to the backend (there's no endpoint for it yet)
     const clean = email.trim().toLowerCase()
-    updateProfile({ email: clean })
     setEmail(clean)
     setEmailMsg('Email saved.')
   }
@@ -47,10 +49,38 @@ export default function AccountSettings() {
     setPasswordMsg('Password updated.')
   }
 
-  // Privacy
-  function setVisibility(visibility) {
-    // TODO: save with PATCH /api/profile/me/ (the backend already supports "visibility")
-    updateProfile({ visibility })
+  // Privacy: saved to the database right away
+  const [privacyMsg, setPrivacyMsg] = useState('')
+  async function setVisibility(visibility) {
+    const old = userCache
+    setUserCache({ ...userCache, visibility }) // show the change right away
+    setPrivacyMsg('Saving…')
+    const data = await fetchWithToken('/api/profile/me/', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visibility }),
+    })
+    if (Object.hasOwn(data, 'error')) {
+      setUserCache(old) // put it back if saving failed
+      return setPrivacyMsg(errorMessage(data.error))
+    }
+    setUserCache({ ...userCache, ...data })
+    localStorage.setItem('user', JSON.stringify({ ...userCache, ...data }))
+    setPrivacyMsg('Saved.')
+  }
+
+  // Moderator login (prototype)
+  // TODO: replace with a real check on the backend (a moderator role on the account).
+  // Anyone can read this code in the browser, so it only keeps out people clicking around.
+  const MOD_CODE = 'qbmod'
+  const [modCode, setModCode] = useState('')
+  const [modError, setModError] = useState('')
+  function enterModMode(e) {
+    e.preventDefault()
+    if (modCode !== MOD_CODE) return setModError('That mod code is not right.')
+    setModError('')
+    setModCode('')
+    setModMode(true)
   }
 
   return (
@@ -62,7 +92,7 @@ export default function AccountSettings() {
         <h2 className="font-semibold">Account</h2>
         <div className="space-y-1.5">
           <p className="text-sm font-medium">Username</p>
-          <p className="text-sm text-muted">@{profile.handle} · usernames can't be changed</p>
+          <p className="text-sm text-muted">@{userCache?.username} · usernames can't be changed</p>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="email" className="block text-sm font-medium">Email</label>
@@ -126,7 +156,7 @@ export default function AccountSettings() {
                 type="radio"
                 name="visibility"
                 value={option.value}
-                checked={profile.visibility === option.value}
+                checked={(userCache?.visibility ?? 'public') === option.value}
                 onChange={() => setVisibility(option.value)}
                 className="mt-1 accent-[#e6ff6b]"
               />
@@ -137,6 +167,30 @@ export default function AccountSettings() {
             </label>
           ))}
         </fieldset>
+        {privacyMsg && <p className={`text-sm ${privacyMsg === 'Saved.' || privacyMsg === 'Saving…' ? 'text-accent' : 'text-red-400'}`}>{privacyMsg}</p>}
+      </section>
+
+      {/* Moderator */}
+      <section className="space-y-4 rounded-2xl border border-line bg-card p-6">
+        <h2 className="font-semibold">Moderator</h2>
+        {modMode ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="flex-1 text-sm text-muted">Mod mode is on. You can review reports and remove posts.</p>
+            <Link to="/mod" className={saveClass}>Open mod tools</Link>
+            <button onClick={() => setModMode(false)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5">
+              Leave mod mode
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={enterModMode} className="space-y-3">
+            <label htmlFor="modCode" className="block text-sm text-muted">Moderators: enter your mod code to see reports.</label>
+            <div className="flex gap-3">
+              <input id="modCode" type="password" value={modCode} onChange={(e) => { setModCode(e.target.value); setModError('') }} className={inputClass} />
+              <button type="submit" className={saveClass}>Enter</button>
+            </div>
+            {modError && <p className="text-sm text-red-400">{modError}</p>}
+          </form>
+        )}
       </section>
 
       {/* Log out */}
