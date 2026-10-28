@@ -55,14 +55,17 @@ export default function AccountSettings() {
     const old = userCache
     setUserCache({ ...userCache, visibility }) // show the change right away
     setPrivacyMsg('Saving…')
-    const data = await fetchWithToken('/api/profile/me/', {
+    const result = await fetchWithToken('/api/profile/me/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ visibility }),
     })
-    if (Object.hasOwn(data, 'error')) {
+
+    const data = result.result
+
+    if (result.isError) {
       setUserCache(old) // put it back if saving failed
-      return setPrivacyMsg(errorMessage(data.error))
+      return setPrivacyMsg(errorMessage(data))
     }
     setUserCache({ ...userCache, ...data })
     localStorage.setItem('user', JSON.stringify({ ...userCache, ...data }))

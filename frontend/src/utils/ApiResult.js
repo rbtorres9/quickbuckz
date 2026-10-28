@@ -2,7 +2,7 @@ class ApiResult {
   constructor(result, response) {
     this.result = result
     this.response = response
-    this.isError = !response?.ok ?? false
+    this.isError = !response?.ok ?? true
   }
 
   stringify() {

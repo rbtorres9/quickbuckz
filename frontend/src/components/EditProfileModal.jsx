@@ -88,13 +88,16 @@ export default function EditProfileModal({ onClose }) {
     }
 
     setSaving(true)
-    const data = await fetchWithToken('/api/profile/me/', {
+    const result = await fetchWithToken('/api/profile/me/', {
       method: 'PUT',
       body: formData
     })
+
     setSaving(false)
 
-    if (!Object.hasOwn(data, 'error')) {
+    const data = result.result
+
+    if (!result.isError) {
       // Use what the server sent back, so photos point at their saved addresses
       setUserCache({ ...userCache, ...data })
       updateProfile({ theme }) // TODO: send the theme too, once the backend has a theme field
@@ -102,7 +105,7 @@ export default function EditProfileModal({ onClose }) {
       onClose()
     }
     else {
-      setError(errorMessage(data.error))
+      setError(errorMessage(result.result))
     }
   }
 

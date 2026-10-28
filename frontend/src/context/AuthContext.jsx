@@ -3,6 +3,9 @@ import React, {useContext, createContext, useState} from 'react'
 // easy api url reference
 // will import const API_URL =  'https://quickbuckz.onrender.com'
 import { API_URL } from '../config.js' 
+import { useApiContext } from './ApiContext.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
+import ApiResult from '../utils/ApiResult'
 
 export const AuthContext = createContext(null)
 
@@ -10,11 +13,14 @@ export const AuthProvider = ({children}) => {
     const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token'))
 //    const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token')) // might be unused state
 
+    const { fetchBaseUrl } = useApiContext()
+
     const refresh = async () => {
         try {
             const stored = localStorage.getItem('refresh_token')
             if (!stored) { logout(); return null}
-            const response = await fetch(`${API_URL}/api/token/refresh/`, {
+
+            const result = await fetchBaseUrl(`/api/token/refresh/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -24,14 +30,11 @@ export const AuthProvider = ({children}) => {
                 })
             })
 
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw errorData
+            if (result.isError) {
+                throw result
             }
 
-            const data = await response.json()
-
-            if (Object.hasOwn(data, 'access')) {
+            if (Object.hasOwn(result, 'access')) {
                 console.log("Set Access Token: ", data.access)
                 localStorage.setItem('access_token', data.access)
                 setAccessToken((_) => data.access)
@@ -40,7 +43,12 @@ export const AuthProvider = ({children}) => {
             }
         }
         catch (err) {
-            console.log(`Refresh Failed: `, err)
+            result = new ApiResult(
+                err?.result ?? "Refresh request failed",
+                err?.response
+            )
+
+            console.error(`Error refreshing token:`, errorMessage(result.result))
             logout()
         }
         
@@ -62,44 +70,39 @@ export const AuthProvider = ({children}) => {
     const fetchWithToken = async (url, options = {}) => {
         try {
             const token = localStorage.getItem('access_token')
-            let response = await fetch(`${API_URL}${url}`, {
+            const options_with_token = {
                 ...options,
                 headers: {
                     ...options.headers,
                     'Authorization': `Bearer ${token}`
                 }
-            })
+            }
+
+            let result = await fetchBaseUrl(`${url}`, options_with_token)
 
             // If the token is invalid, refresh it and try again
-            if (response.status === 401) {
+            if (result.response?.status === 401) {
                 const newToken = await refresh()
                 if (newToken) {
-                    response = await fetch(`${API_URL}${url}`, {
-                        ...options,
-                        headers: {
-                            ...options.headers,
-                            'Authorization': `Bearer ${newToken}`
-                        }
-                    })
+                    result = await fetchBaseUrl(`${url}`, options_with_token)
                 }
             }
 
-            if (!response.ok) {
-                throw await response.json()
+            if (result.isError) {
+                throw result
             }
 
-            const data = await response.json()
-
-            return data
+            return result
         }
         catch (err) {
-            let errorJson = {
-                "error": err
-            }
+            let result = new ApiResult(
+                err?.result ?? err ?? `Failed to fetch ${url}`,
+                err?.response
+            )
 
-            console.error(`Error in fetchWithToken:`, err)
+            console.error(`Error fetching with token:`, errorMessage(result.result))
 
-            return  errorJson
+            return result
         }
     }
 

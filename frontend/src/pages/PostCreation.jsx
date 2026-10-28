@@ -65,7 +65,10 @@ export default function PostCreation() {
     if (image) formData.append('image', image.file)
 
     setPosting(true)
-    const data = await fetchWithToken('/api/posts/', { method: 'POST', body: formData })
+    
+    const result = await fetchWithToken('/api/posts/', { method: 'POST', body: formData })
+    const data = result.result
+
     setPosting(false)
 
     if (Object.hasOwn(data, 'error')) {

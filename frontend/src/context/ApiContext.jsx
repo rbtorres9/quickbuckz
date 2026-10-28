@@ -1,6 +1,7 @@
 import React, {createContext, useContext, useMemo, useState} from 'react'
 import ApiResult from '../utils/ApiResult'
 import { API_URL } from '../config.js'
+import { errorMessage } from '../utils/errorMessage.js'
 
 export const ApiContext = createContext(null)
 
@@ -8,7 +9,7 @@ export const ApiProvider = ({children}) => {
     const baseUrl = API_URL
     const [fetching, setFetching] = useState(false)
 
-    const fetchBaseUrl = async (suffix = '', method = 'GET', options = {}) => {
+    const fetchBaseUrl = async (suffix = '', options = {}) => {
         if (!suffix) {
             return new ApiResult(null, true)
         }
@@ -29,12 +30,7 @@ export const ApiProvider = ({children}) => {
             setFetching(true)
 
             const response = await fetch(url, {
-                method: method,
                 ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers,
-                }
             })
 
             const contentType = response.headers.get('content-type') || ''
@@ -52,12 +48,13 @@ export const ApiProvider = ({children}) => {
             return new ApiResult(data, response)
         }
         catch (err) {
-            if (!err.data) {
-                err.data = { message: "request failed" }
-            }
+            let result = new ApiResult(
+                err?.result ?? err ?? "Request failed",
+                err?.response
+            )
 
-            console.error(`Error fetching ${url}`, err)
-            return new ApiResult(err.result, err.response)
+            console.error(`Error fetching ${url}:`, errorMessage(result.result))
+            return new result
         }
         finally {
             setFetching(false)

@@ -12,7 +12,8 @@ export function NotificationsProvider({ children }) {
 
   const refreshUnread = async () => {
     if (!localStorage.getItem('access_token')) return
-    const data = await fetchWithToken('/api/notifications/unread-count/')
+    const result = await fetchWithToken('/api/notifications/unread-count/')
+    const data = result.result
     // fetchWithToken returns { error } on failure; keep the old count in that case
     if (data && typeof data.unread === 'number') setUnread(data.unread)
   }
