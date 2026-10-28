@@ -43,14 +43,21 @@ export const ApiProvider = ({children}) => {
                 : await response.text()
 
             if (!response.ok) {
-                throw data ?? { message: 'Request failed' }
+                throw {
+                    result: data,
+                    response: response
+                }
             }
 
-            return new ApiResult(data, false)
+            return new ApiResult(data, response)
         }
         catch (err) {
+            if (!err.data) {
+                err.data = { message: "request failed" }
+            }
+
             console.error(`Error fetching ${url}`, err)
-            return new ApiResult(err, true)
+            return new ApiResult(err.result, err.response)
         }
         finally {
             setFetching(false)
