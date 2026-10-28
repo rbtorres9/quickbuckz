@@ -6,6 +6,8 @@ import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 import { themeVars } from '../data/themes.js'
 import { API_URL } from '../config.js'
+import { useApiContext } from '../context/ApiContext.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
 
 const fields = [
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
@@ -30,6 +32,7 @@ export default function CreateAccount() {
   const { accessToken, login } = useContext(AuthContext)
   const { refreshUserCache } = useCache()
   const { updateProfile } = useStore()
+  const { fetchBaseUrl } = useApiContext()
   const justSignedUp = useRef(false)
 
   // Already signed in? Go to your profile (unless you just made this account)
@@ -56,22 +59,21 @@ export default function CreateAccount() {
 
     try {
       const {email, username, password, first_name, last_name } = form
-      const response = await fetch(`${API_URL}/api/signup/`, {
+      const result = await fetchBaseUrl(`/api/signup/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
-      
       // ERR: This runs when certain fields are invalid such as the username which is unhelpful
-      if (!response.ok) {
-        let errorDetails = `${response.status} Error`
+      if (result.isError) {
+        let errorDetails = `${result.response.status} Error`
 
         try {
           let errors = []
-          const errorJson = await response.json()
+          const errorData = result.result
           
-          for (const [key, value] of Object.entries(errorJson)) {
+          for (const [key, value] of Object.entries(errorData)) {
             if (Array.isArray(value)) {
               for (const err of value)
                 errors.push(err)
@@ -88,19 +90,19 @@ export default function CreateAccount() {
       }
 
       // signup succeeded, so sign the new user in
-      const tokenResponse = await fetch(`${API_URL}/api/token/`, {
+      const tokenResult = await fetchBaseUrl(`/api/token/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
-      if (!tokenResponse.ok) {
+      if (tokenResult.isError) {
         // account exists but auto-login failed, so fall back to the login page
         navigate("/login", { replace: true })
         return
       }
 
-      const tokens = await tokenResponse.json()
+      const tokens = tokenResult.result
 
       justSignedUp.current = true
       login(tokens.access, tokens.refresh)
@@ -108,7 +110,7 @@ export default function CreateAccount() {
       updateProfile({ theme }) // TODO: send the theme to the backend once the profile has a theme field
       navigate("/user-page")
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err));
     } finally {
       clearTimeout(slowTimer);
       setLoading(false);

@@ -54,7 +54,7 @@ export const ApiProvider = ({children}) => {
             )
 
             console.error(`Error fetching ${url}:`, errorMessage(result.result))
-            return new result
+            return result
         }
         finally {
             setFetching(false)
