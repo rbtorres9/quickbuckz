@@ -77,7 +77,7 @@ class PostViewSet(viewsets.ModelViewSet):
             "likes_count": post.likes.count(),
         }, status=status_code)
  
-    @action(detail=True, methods=["get", "post"])
+    @action(detail=True, methods=["get", "post", "delete"])
     def comment(self, request, pk=None):
         post = self.get_object()
         context = self.get_serializer_context()  # lets avatars become full URLs
@@ -86,6 +86,25 @@ class PostViewSet(viewsets.ModelViewSet):
             comments = post.comments.select_related("author__profile")
             serializer = CommentSerializer(comments, many=True, context=context)
             return Response(serializer.data)
+
+        if request.method == "DELETE":
+            comment_id = request.query_params.get("comment_id")
+            if not comment_id:
+                return Response(
+                    {"detail": "comment_id is required."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            comment = get_object_or_404(post.comments.all(), pk=comment_id)
+
+            if request.user != comment.author and request.user != post.author and not request.user.is_mod:
+                return Response(
+                    {"detail": "You can't delete this comment."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            comment.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
  
         serializer = CommentSerializer(data=request.data, context=context)
         serializer.is_valid(raise_exception=True)
