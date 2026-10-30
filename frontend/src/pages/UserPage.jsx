@@ -61,7 +61,7 @@ export default function UserPage() {
       setLoadingUser(false)
 
       if (userResult.isError) {
-        setUserError(userData.error)
+        setUserError(userData)
         return
       }
 
@@ -107,6 +107,11 @@ export default function UserPage() {
     }
   }, [isSelf, userCache?.username])
 
+
+  // Your own profile: show changes from Edit profile right away
+  useEffect(() => {
+    if (isSelf && userCache) setPerson(userCache)
+  }, [isSelf, userCache])
 
   // Your own profile only has Posts for now (Top and Likes need backend support)
   const tabs = isSelf ? [{ id: 'posts', label: 'Posts' }] : [{ id: 'posts', label: 'Posts' }, { id: 'top', label: 'Top' }]

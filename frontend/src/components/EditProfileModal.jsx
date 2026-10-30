@@ -17,7 +17,10 @@ export default function EditProfileModal({ onClose }) {
   const { userCache, setUserCache } = useCache()
   const { fetchWithToken } = useAuthContext()
   const { profile, updateProfile } = useStore()
-  const userFullName = `${userCache?.first_name ?? ''} ${userCache?.last_name ?? ''}`.trim() || userCache?.username || '?'
+  const [firstName, setFirstName] = useState(userCache?.first_name ?? '')
+  const [lastName, setLastName] = useState(userCache?.last_name ?? '')
+  // The photo preview uses the name as you type it
+  const userFullName = `${firstName} ${lastName}`.trim() || userCache?.username || '?'
   const [bio, setBio] = useState(userCache?.bio ?? '')
   const [profilePicture, setProfilePicture] = useState(userCache?.profile_picture)
   const [selectedProfilePicture, setSelectedProfilePicture] = useState(null)
@@ -74,6 +77,8 @@ export default function EditProfileModal({ onClose }) {
     const trimmed = bio.trim()
     const formData = new FormData()
     formData.append('bio', trimmed)
+    formData.append('first_name', firstName.trim())
+    formData.append('last_name', lastName.trim())
 
     if (selectedProfilePicture) {
       formData.append('profile_picture', selectedProfilePicture)
@@ -102,6 +107,11 @@ export default function EditProfileModal({ onClose }) {
       setUserCache({ ...userCache, ...data })
       updateProfile({ theme }) // TODO: send the theme too, once the backend has a theme field
       freeUnused([])
+      // The backend ignores names until first_name/last_name are writable there (see README).
+      // If they didn't change, say so instead of closing like it worked.
+      if ((data.first_name ?? '') !== firstName.trim() || (data.last_name ?? '') !== lastName.trim()) {
+        return setError("Everything else saved, but your name can't be changed yet. The backend needs an update.")
+      }
       onClose()
     }
     else {
@@ -199,7 +209,31 @@ export default function EditProfileModal({ onClose }) {
 
           {/* Fields */}
           <div className="mt-5 space-y-4">
-            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="firstName" className="block text-sm font-medium">First name</label>
+                <input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => { setFirstName(e.target.value); setError('') }}
+                  maxLength={MAX_NAME}
+                  autoComplete="given-name"
+                  className="w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="lastName" className="block text-sm font-medium">Last name</label>
+                <input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => { setLastName(e.target.value); setError('') }}
+                  maxLength={MAX_NAME}
+                  autoComplete="family-name"
+                  className="w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+                />
+              </div>
+            </div>
+
             {/* <div className="space-y-1.5">
               <div className="flex justify-between text-sm">
                 <label htmlFor="displayName" className="font-medium">Display name</label>

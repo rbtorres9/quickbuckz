@@ -90,9 +90,26 @@ UPDATES:
   - a Reports table + endpoints: create a report, list open reports (mods only), dismiss a report
   - let moderators DELETE any post (right now only the author can; mod tools shows a message when the backend refuses)
 
-## Likes + real mod access 10/30 - MM
-- Like button works on real posts: click the heart (or double-click a photo) to like, click again to unlike. Uses POST/DELETE /api/posts/<id>/like/. The heart changes right away and goes back if saving fails. Fast repeat clicks are ignored while a like is saving.
+## Real mod access 10/30 - MM
 - Mod tools now use the backend role check (GET /api/users/me/role/) through `src/utils/useIsMod.js`. Any error counts as "not a mod".
 - Removed the prototype mod code (`qbmod`) and the `modMode` flag. The Moderator section in Settings only shows for mods/admins.
 - To make someone a mod: Django admin site > Users > Role
 - Still TODO: reports are sample data until the backend has a Reports table
+
+
+## Name fields + people search 10/30 - MM
+- Edit profile has First name and Last name fields (sent with PUT /api/profile/me/)
+- Following page has a search bar: type a name or username to find people (filters GET /api/profiles/ in the browser)
+- Fixed: opening someone else's profile crashed (leftover `result` variable in UserPage). Your own profile now updates right after Edit profile.
+- **Backend request:** `first_name` / `last_name` are read-only in `OwnerProfileSerializer`, so names don't save yet (Edit profile shows a message). Make them writable, e.g.:
+  ```python
+  first_name = serializers.CharField(source='user.first_name', required=False, allow_blank=True, max_length=150)
+  last_name = serializers.CharField(source='user.last_name', required=False, allow_blank=True, max_length=150)
+
+  def update(self, instance, validated_data):
+      user_data = validated_data.pop('user', {})
+      for field, value in user_data.items():
+          setattr(instance.user, field, value)
+      instance.user.save()
+      return super().update(instance, validated_data)
+  ```
