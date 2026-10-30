@@ -6,6 +6,7 @@ import { useCache } from '../context/CacheContext.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { getTimeAgoString, getDateTimeString } from '../utils/DateTimeUtils.js'
+import { errorMessage } from '../utils/errorMessage.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
 
@@ -29,6 +30,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const { fetchUserProfile } = useApiContext()
   const { fetchWithToken } = useAuthContext()
   const [loadedAuthor, setLoadedAuthor] = useState(null)
+  const [deleted, setDeleted] = useState(false) // hides the card after you delete it
   const [ isLiked, setIsLiked ] = useState(post.is_liked)
   const [ likesCount, setLikesCount ] = useState(post.likes_count)
 
@@ -64,9 +66,17 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     return () => document.removeEventListener('mousedown', close)
   }, [menuOpen])
 
-  function handleDelete() {
-    if (!confirm('Delete this post?')) return
-    deletePost(post.id)
+  // Delete your own post. Real posts are deleted on the backend (only the author or a mod can).
+  async function handleDelete() {
+    setMenuOpen(false)
+    if (!confirm("Delete this post? This can't be undone.")) return
+    if (isReal) {
+      const result = await fetchWithToken(`/api/posts/${post.id}/`, { method: 'DELETE' })
+      if (result.isError) return alert(errorMessage(result.result))
+      setDeleted(true)
+    } else {
+      deletePost(post.id)
+    }
     onDeleted?.()
   }
 
@@ -128,6 +138,8 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     }
   }
 
+  if (deleted) return null
+
   const photo = photoUrl ? (
     <img src={photoUrl} alt="" className={`w-full rounded-xl bg-black/30 object-contain ${full ? 'max-h-[32rem]' : 'max-h-96'}`} />
   ) : (
@@ -147,8 +159,8 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
             {isReal ? <span title={getDateTimeString(post.created_at)}>{getTimeAgoString(post.created_at)}</span> : post.date}
           </span>
         </div>
-        {/* Real posts: Report only for now. TODO: Edit/Delete for your own real posts */}
-        {(!isReal || !isMine) && (
+        {/* Your posts: Delete. Anyone else's: Report. TODO: Edit for your own real posts */}
+        {(
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -159,13 +171,10 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
             </button>
             {menuOpen && (
               <div className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
-                {isMine && !isReal ? (
-                  <>
-                    <button className="block w-full px-3 py-2 text-left hover:bg-white/5">Edit</button>
-                    <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
-                      Delete
-                    </button>
-                  </>
+                {isMine ? (
+                  <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                    Delete
+                  </button>
                 ) : (
                   <button
                     onClick={handleReport}
