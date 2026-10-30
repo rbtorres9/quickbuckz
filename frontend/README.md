@@ -89,3 +89,10 @@ UPDATES:
   - a moderator role on accounts (e.g. `is_moderator` or Django `is_staff`), sent with /api/profile/me/, replacing the frontend mod code
   - a Reports table + endpoints: create a report, list open reports (mods only), dismiss a report
   - let moderators DELETE any post (right now only the author can; mod tools shows a message when the backend refuses)
+
+## Likes + real mod access 10/30 - MM
+- Like button works on real posts: click the heart (or double-click a photo) to like, click again to unlike. Uses POST/DELETE /api/posts/<id>/like/. The heart changes right away and goes back if saving fails. Fast repeat clicks are ignored while a like is saving.
+- Mod tools now use the backend role check (GET /api/users/me/role/) through `src/utils/useIsMod.js`. Any error counts as "not a mod".
+- Removed the prototype mod code (`qbmod`) and the `modMode` flag. The Moderator section in Settings only shows for mods/admins.
+- To make someone a mod: Django admin site > Users > Role
+- Still TODO: reports are sample data until the backend has a Reports table
