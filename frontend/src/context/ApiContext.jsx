@@ -77,10 +77,6 @@ export const ApiProvider = ({children}) => {
         return fetchBaseUrl(`/api/posts/${id}/`)
     }
 
-    const postComment = async () => {
-        return ""
-    }
-
     const value = useMemo(() => ({
         baseUrl,
         fetching,
@@ -89,7 +85,6 @@ export const ApiProvider = ({children}) => {
         fetchUserProfile,
         fetchUserPosts,
         fetchPostById,
-        postComment
     }), [baseUrl, fetching])
 
     return (

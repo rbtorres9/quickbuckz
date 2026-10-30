@@ -71,10 +71,11 @@ export default function PostCreation() {
 
     setPosting(false)
 
-    if (Object.hasOwn(data, 'error')) {
-      setError(errorMessage(data.error))
+    if (result.isError) {
+      setError(errorMessage(data))
       return
     }
+
     navigate('/user-page') // see the new post on your profile
   }
 

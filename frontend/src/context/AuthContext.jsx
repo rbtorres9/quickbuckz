@@ -111,8 +111,24 @@ export const AuthProvider = ({children}) => {
         }
     }
 
+    const fetchPosts = async () => {
+        return fetchWithToken('/api/posts/')
+    }
+
+    const fetchUserProfile = async (username) => {
+        return fetchWithToken(`/api/profile/${username}/`)
+    }
+
+    const fetchUserPosts = async (username) => {
+        return fetchWithToken(`/api/profile/${username}/posts/`)
+    }
+
+    const fetchPostById = async (id) => {
+        return fetchWithToken(`/api/posts/${id}/`)
+    }
+
     return (
-    <AuthContext.Provider value={{ accessToken, login, logout, refresh, fetchWithToken }}>
+    <AuthContext.Provider value={{ accessToken, login, logout, refresh, fetchWithToken, fetchPosts, fetchUserProfile, fetchUserPosts, fetchPostById }}>
         { children }
     </AuthContext.Provider>
     )

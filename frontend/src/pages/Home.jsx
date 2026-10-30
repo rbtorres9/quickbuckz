@@ -2,17 +2,15 @@ import { Link } from 'react-router-dom'
 import { ImagePlus } from 'lucide-react'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Logo from '../components/Logo.jsx'
 
-import { useApiContext } from '../context/ApiContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { getName } from '../utils/NameHandler.js'
 
 export default function Home() {
-  const { fetchPosts } = useApiContext()
-  const { fetchWithToken } = useAuthContext()
+  const { fetchWithToken, fetchPosts } = useAuthContext()
   const { userCache } = useCache()
   const [ posts, setPosts ] = useState([])
   const [ error, setError ] = useState(null)
@@ -29,7 +27,7 @@ export default function Home() {
     const fetchData = async () => {
       // Load posts and the list of people you follow at the same time
       const [result, followingResult] = await Promise.all([
-        fetchWithToken('/api/posts'),
+        fetchPosts(),
         fetchWithToken('/api/profile/me/following/'),
       ])
 

@@ -4,7 +4,6 @@ import { Lock } from 'lucide-react'
 import Logo from '../components/Logo.jsx'
 import { AuthContext } from '../context/AuthContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
-import { API_URL } from '../config.js'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
 

@@ -5,7 +5,6 @@ import { useCache } from '../context/CacheContext.jsx'
 import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 import { themeVars } from '../data/themes.js'
-import { API_URL } from '../config.js'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
 

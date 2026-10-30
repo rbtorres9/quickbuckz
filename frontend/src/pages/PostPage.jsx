@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { useStore } from '../data/store.jsx'
-import { useApiContext } from '../context/ApiContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
@@ -14,8 +12,7 @@ import PostCard from '../components/PostCard.jsx'
 export default function PostPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { posts, profile, addComment, deleteComment } = useStore()
-  const { fetchPostById, fetchUserProfile } = useApiContext()
+  const { fetchPostById, fetchUserProfile } = useAuthContext()
   const { userCache } = useCache()
   const { fetchWithToken } = useAuthContext()
   const [ submitting, setSubmitting ] = useState(false)
@@ -55,6 +52,10 @@ export default function PostPage() {
 
   const ownsPost = post?.author === userCache?.handle
 
+  async function deleteComment(post_id, comment_id) {
+
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     const trimmed = text.trim()
@@ -76,6 +77,7 @@ export default function PostPage() {
     setPost((prev) => ({ ...prev, comments: [...prev.comments, result.result] }))
     setText('')
   }
+
 
   return (
     <>
