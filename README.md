@@ -24,7 +24,7 @@ This is a list of items that we should implement into our project that anyone ca
 
 - Implement Notifications behaviour in frontend (testing Notifications model from backend) - in progress RT (10/25 implemented, might need more testing)
 - Be able to post comments on the frontend
-- Be able to like posts on the frontend
-- Be able to follow another user on their page
-- Show a list of current followers on the follower page
+~~- Be able to like posts on the frontend~~ - Done JDN (10/30)
+~~- Be able to follow another user on their page~~
+~~- Show a list of current followers on the follower page~~
 - Create a fully working setting menu
