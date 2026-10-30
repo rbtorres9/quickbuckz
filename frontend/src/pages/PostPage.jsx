@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
 import { getName } from '../utils/NameHandler.js'
 import { getTimeAgoString } from '../utils/DateTimeUtils.js'
 import Avatar from '../components/Avatar.jsx'
@@ -15,6 +17,8 @@ export default function PostPage() {
   const { posts, profile, addComment, deleteComment } = useStore()
   const { fetchPostById, fetchUserProfile } = useApiContext()
   const { userCache } = useCache()
+  const { fetchWithToken } = useAuthContext()
+  const [ submitting, setSubmitting ] = useState(false)
 
   const [ post, setPost ] = useState(null)
   const [ user, setUser ] = useState(null)
@@ -26,38 +30,50 @@ export default function PostPage() {
   useEffect(() => {
     const fetchPost = async () => {
       setLoading(true)
-      const result = await fetchPostById(id)
-      
-      if (result.isError) {
-        setError(result.result)
-        return
+      setError(null)
+      try {
+        const result = await fetchPostById(id)
+        if (result.isError) {
+          setError(result.result)
+          return
+        }
+        setPost(result.result)
+
+        const userResult = await fetchUserProfile(result.result.author)
+        if (userResult.isError) {
+          setError(userResult.result)
+          return
+        }
+        setUser(userResult.result)
+      } finally {
+        setLoading(false)
       }
-
-      setPost(result.result)
-
-      const author = result.result.author
-      const userResult = await fetchUserProfile(author)
-
-      if (userResult.isError) {
-        setError(userResult.result)
-        return
-      }
-
-      setUser(userResult.result)
-
-      setLoading(false)
     }
 
     fetchPost()
-  }, [])
+  }, [id])
 
   const ownsPost = post?.author === userCache?.handle
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     const trimmed = text.trim()
-    if (!trimmed) return
-    addComment(post.id, trimmed.slice(0, 500)) // cap length; the backend should enforce this too
+    if (!trimmed || submitting) return
+
+    setSubmitting(true)
+    const result = await fetchWithToken(`/api/posts/${post.id}/comment/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: trimmed.slice(0, 500) }),
+    })
+    setSubmitting(false)
+
+    if (result.isError) {
+      console.error('Failed to post comment:', errorMessage(result.result))
+      return
+    }
+
+    setPost((prev) => ({ ...prev, comments: [...prev.comments, result.result] }))
     setText('')
   }
 
@@ -94,7 +110,10 @@ export default function PostPage() {
                   placeholder="Add a comment…"
                   className="flex-1 rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
                 />
-                <button className="rounded-lg bg-accent px-4 text-sm font-semibold text-page hover:bg-accent-hover">
+                <button type="submit"
+                  disabled={submitting}
+                  className="rounded-lg bg-accent px-4 text-sm font-semibold text-page hover:bg-accent-hover disabled:opacity-50"
+                >
                   Post
                 </button>
               </form>
@@ -105,7 +124,7 @@ export default function PostPage() {
                 )}
                 {post.comments.map((c) => (
                   <li key={c.id} className="flex gap-3 py-3">
-                    <Avatar name={getName(c.author)} size="sm" accent={false} />
+                    <Avatar name={getName(c.author)} size="sm" accent={false} src={c.author.profile_picture} />
                     <div className="flex-1 text-sm">
                       <div>
                         <b>{getName(c.author)}</b> <span className="text-muted">@{c.author.username} · {getTimeAgoString(c.created_at)}</span>
@@ -113,7 +132,7 @@ export default function PostPage() {
                       {/* React escapes this text automatically, so comments can't inject HTML */}
                       <p className="mt-0.5 break-words">{c.content}</p>
                     </div>
-                    {((c.author == userCache?.username) || ownsPost) && (
+                    {((c.author?.username === userCache?.username) || ownsPost) && (
                       <button
                         onClick={() => deleteComment(post.id, c.id)}
                         className="self-start text-xs text-muted hover:text-red-400"
