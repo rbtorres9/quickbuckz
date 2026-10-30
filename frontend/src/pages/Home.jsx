@@ -6,11 +6,13 @@ import { useEffect, useMemo, useState } from 'react'
 import Logo from '../components/Logo.jsx'
 
 import { useApiContext } from '../context/ApiContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { getName } from '../utils/NameHandler.js'
 
 export default function Home() {
   const { fetchPosts } = useApiContext()
+  const { fetchWithToken } = useAuthContext()
   const { userCache } = useCache()
   const [ posts, setPosts ] = useState([])
   const [ error, setError ] = useState(null)
@@ -23,7 +25,7 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const result = await fetchPosts()
+      const result = await fetchWithToken('/api/posts')
 
       if (!result.isError) {
         let newPosts = sortFilterPosts(result.result)
