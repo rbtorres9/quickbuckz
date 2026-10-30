@@ -1,8 +1,6 @@
 import React, {useContext, createContext, useState} from 'react'
 
 // easy api url reference
-// will import const API_URL =  'https://quickbuckz.onrender.com'
-import { API_URL } from '../config.js' 
 import { useApiContext } from './ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
 import ApiResult from '../utils/ApiResult'
@@ -11,7 +9,7 @@ export const AuthContext = createContext(null)
 
 export const AuthProvider = ({children}) => {
     const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token'))
-//    const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token')) // might be unused state
+    const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token')) // might be unused state
 
     const { fetchBaseUrl } = useApiContext()
 
@@ -34,21 +32,30 @@ export const AuthProvider = ({children}) => {
                 throw result
             }
 
-            if (Object.hasOwn(result, 'access')) {
-                console.log("Set Access Token: ", data.access)
-                localStorage.setItem('access_token', data.access)
-                setAccessToken((_) => data.access)
+            const newAccess = result.result?.access
+            if (newAccess) {
+                localStorage.setItem('access_token', newAccess)
+                setAccessToken(newAccess)
 
-                return data.access
+                const newRefresh = result.result?.refresh
+                if (newRefresh) {
+                    localStorage.setItem('refresh_token', newRefresh)
+                    setRefreshToken(newRefresh)
+                }
+
+                return newAccess
             }
+
+            logout()
+            return null
         }
         catch (err) {
-            result = new ApiResult(
+            const failed = new ApiResult(
                 err?.result ?? "Refresh request failed",
                 err?.response
             )
 
-            console.error(`Error refreshing token:`, errorMessage(result.result))
+            console.error(`Error refreshing token:`, errorMessage(failed.result))
             logout()
         }
         
@@ -58,33 +65,31 @@ export const AuthProvider = ({children}) => {
         localStorage.setItem('access_token', access)
         localStorage.setItem('refresh_token', refresh)
         setAccessToken((_) => access)
-//        setRefreshToken((_) => refresh) // might be unused state
+        setRefreshToken((_) => refresh) // might be unused state
     }
     const logout = () => {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         setAccessToken((_) => null)
-//        setRefreshToken((_) => null) //  might be unused state
+        setRefreshToken((_) => null) //  might be unused state
     }
 
     const fetchWithToken = async (url, options = {}) => {
         try {
-            const token = localStorage.getItem('access_token')
-            const options_with_token = {
+            const withToken = (token) => ({
                 ...options,
                 headers: {
                     ...options.headers,
-                    'Authorization': `Bearer ${token}`
-                }
-            }
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+            })
 
-            let result = await fetchBaseUrl(`${url}`, options_with_token)
+            let result = await fetchBaseUrl(url, withToken(localStorage.getItem('access_token')))
 
-            // If the token is invalid, refresh it and try again
             if (result.response?.status === 401) {
                 const newToken = await refresh()
                 if (newToken) {
-                    result = await fetchBaseUrl(`${url}`, options_with_token)
+                    result = await fetchBaseUrl(url, withToken(newToken))
                 }
             }
 
