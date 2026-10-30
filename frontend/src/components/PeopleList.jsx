@@ -8,7 +8,8 @@ import Avatar from './Avatar.jsx'
 
 // A list of people with Follow / Following buttons. Used by the Following and Followers pages.
 // direction: "following" (people you follow) or "followers" (people who follow you)
-export default function PeopleList({ title, direction, emptyText }) {
+// children: anything to show under the title (the Following page puts the search bar here)
+export default function PeopleList({ title, direction, emptyText, children }) {
   const { fetchWithToken } = useAuthContext()
   const { refreshUserCache } = useCache()
   const [people, setPeople] = useState([])
@@ -47,6 +48,8 @@ export default function PeopleList({ title, direction, emptyText }) {
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {!loading && <span className="text-sm text-muted">{people.length} {people.length === 1 ? 'person' : 'people'}</span>}
       </div>
+
+      {children}
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
