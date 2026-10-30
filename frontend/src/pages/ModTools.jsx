@@ -27,11 +27,11 @@ export default function ModTools() {
     setMessage('')
     if (report.isReal) {
       setBusy(report.id)
-      const data = await fetchWithToken(`/api/posts/${report.postId}/`, { method: 'DELETE' })
+      const result = await fetchWithToken(`/api/posts/${report.postId}/`, { method: 'DELETE' })
       setBusy(null)
       // Note: a successful DELETE sends no JSON back, which fetchWithToken reports as an error,
       // so only treat a "permission" answer as a real failure.
-      if (data.error && JSON.stringify(data.error).toLowerCase().includes('permission')) {
+      if (result.isError && JSON.stringify(data.error).toLowerCase().includes('permission')) {
         return setMessage("The backend doesn't let mods remove other people's posts yet.")
       }
     } else {

@@ -13,7 +13,7 @@ export const CacheProvider = ({children}) => {
             access = accessToken
         }
 
-        const data = await fetchWithToken('/api/profile/me/', {
+        const result = await fetchWithToken('/api/profile/me/', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -21,7 +21,9 @@ export const CacheProvider = ({children}) => {
         }, access)
 
         // fetchWithToken returns { error } on failure; keep the old cache in that case
-        if (!data || data.error) return
+        if (result.isError) return
+
+        const data = result.result
 
         localStorage.setItem("user", JSON.stringify(data))
         setUserCache(data)

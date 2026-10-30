@@ -55,10 +55,12 @@ export default function UserPage() {
       setUserError(null)
 
       // Sent with your login so the backend can say whether you follow them (is_followed)
-      const userData = await fetchWithToken(`/api/profile/${handle}/`)
+      const userResult = await fetchWithToken(`/api/profile/${handle}/`)
+      const userData = result.result
+
       setLoadingUser(false)
 
-      if (Object.hasOwn(userData, 'error')) {
+      if (userResult.isError) {
         setUserError(userData.error)
         return
       }

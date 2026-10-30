@@ -25,7 +25,9 @@ export default function Notifications() {
     let cancelled = false
 
     async function load() {
-      const data = await fetchWithToken('/api/notifications/')
+      const result = await fetchWithToken('/api/notifications/')
+      const data = result.result
+      
       if (cancelled) return // StrictMode runs effects twice in dev; ignore the first run
 
       if (!Array.isArray(data)) {

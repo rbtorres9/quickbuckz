@@ -5,7 +5,8 @@ import Logo from '../components/Logo.jsx'
 import { AuthContext } from '../context/AuthContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { API_URL } from '../config.js'
-
+import { useApiContext } from '../context/ApiContext.jsx'
+import { errorMessage } from '../utils/errorMessage.js'
 
 
 function Field({ id, label, ...props }) {
@@ -32,6 +33,8 @@ export default function Login() {
   const navigate = useNavigate()
   const { login } = useContext(AuthContext)
   const { refreshUserCache } = useCache()
+  const { fetchBaseUrl } = useApiContext()
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
@@ -39,17 +42,17 @@ export default function Login() {
     const slowTimer = setTimeout(() => setSlow(true), 4000);
 
     try {
-      const response = await fetch(`${API_URL}/api/token/`, {
+      const result = await fetchBaseUrl(`/api/token/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
-      if (!response.ok) {
+      if (result.isError) {
         throw new Error("Invalid credentials");
       }
 
-      const data = await response.json();
+      const data = result.result;
 
       if (Object.hasOwn(data, "access") && Object.hasOwn(data, "refresh")) {
         login(data.access, data.refresh)
@@ -57,7 +60,7 @@ export default function Login() {
         navigate("/user-page")
       }
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err));
     } finally {
       clearTimeout(slowTimer);
       setLoading(false);

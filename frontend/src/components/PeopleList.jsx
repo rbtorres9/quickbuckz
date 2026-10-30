@@ -17,9 +17,11 @@ export default function PeopleList({ title, direction, emptyText }) {
   const [pending, setPending] = useState(null) // username whose button is busy
 
   useEffect(() => {
-    fetchWithToken(`/api/profile/me/${direction}/`).then((data) => {
+    fetchWithToken(`/api/profile/me/${direction}/`).then((result) => {
+      const data = result.result
+
       setLoading(false)
-      if (Object.hasOwn(data, 'error')) return setError(errorMessage(data.error))
+      if (result.isError) return setError(errorMessage(data))
       setPeople(data.results ?? data)
     })
   }, [direction])
@@ -28,11 +30,13 @@ export default function PeopleList({ title, direction, emptyText }) {
   // Unfollow doesn't make the person vanish; tap Follow again to undo.
   async function toggleFollow(person) {
     setPending(person.username)
-    const data = await fetchWithToken(`/api/profile/${person.username}/follow/`, {
+    const result = await fetchWithToken(`/api/profile/${person.username}/follow/`, {
       method: person.is_following ? 'DELETE' : 'POST',
     })
+    const data = result.result
+
     setPending(null)
-    if (Object.hasOwn(data, 'error')) return setError(errorMessage(data.error))
+    if (result.isError) return setError(errorMessage(data))
     refreshUserCache() // so your own Following count stays right
     setPeople((list) => list.map((p) => (p.username === person.username ? { ...p, is_following: data.is_followed } : p)))
   }
