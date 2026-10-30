@@ -1,5 +1,8 @@
 from django.db.models import Prefetch, Exists, OuterRef, Value, BooleanField
 from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
+from django.utils import timezone
+
  
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
@@ -9,13 +12,20 @@ from rest_framework.permissions import (
     BasePermission,
     IsAuthenticatedOrReadOnly,
     SAFE_METHODS,
+    IsAuthenticated,
 )
+from accounts.permissions import IsModerator, IsAuthorOrModerator
  
 from accounts.views import visible_profiles
 from accounts.permissions import IsAuthorOrModerator
  
-from .models import Post, Like, Comment
-from .serializers import PostSerializer, CommentSerializer, PostDetailSerializer
+from .models import Post, Like, Comment, Report
+from .serializers import (
+    PostSerializer, 
+    CommentSerializer, 
+    PostDetailSerializer,
+    ReportSerializer,
+)
 
  
 def with_like_flag(qs, viewer):
@@ -45,7 +55,11 @@ class PostViewSet(viewsets.ModelViewSet):
         viewer = self.request.user
         qs = Post.objects.select_related("author").order_by("-created_at")
 
-        mod_delete = (self.action == "destroy" and viewer.is_authenticated and viewer.is_mod)
+        is_mod = viewer.is_authenticated and viewer.is_mod
+        mod_delete = is_mod and (
+            self.action == "destroy"
+            or (self.action == "comment" and self.request.method == "DELETE")
+        )
         if not mod_delete:
             qs = qs.filter(author__in=visible_profiles(viewer).values("user"))
 
@@ -58,8 +72,8 @@ class PostViewSet(viewsets.ModelViewSet):
  
     def get_permissions(self):
         # Anyone logged in can like or comment; only the author can edit or delete
-        if self.action in ("like", "comment"):
-            return [IsAuthenticatedOrReadOnly()]
+        if self.action in ("like", "comment", "report"):  # REPORTS: added "report"
+             return [IsAuthenticatedOrReadOnly()]
         return super().get_permissions()
  
     @action(detail=True, methods=["post", "delete"])
@@ -110,6 +124,36 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(post=post, author=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def report(self, request, pk=None):
+        post = self.get_object()
+
+        comment = None
+        comment_id = request.data.get("comment_id")
+        if comment_id:
+            comment = get_object_or_404(post.comments.all(), pk=comment_id)
+
+        target_author = comment.author if comment else post.author
+        if target_author == request.user:
+            return Response(
+                {"detail": "You can't report your own content."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        already = Report.objects.filter(
+            post=post, comment=comment, reporter=request.user, status=Report.Status.OPEN
+        ).exists()
+        if already:
+            return Response({"detail": "You already reported this."}, status=status.HTTP_200_OK)
+
+        serializer = ReportCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.save(post=post, comment=comment, reporter=request.user)
+        except IntegrityError:
+            return Response({"detail": "You already reported this."}, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
  
  
 class UserPostsView(generics.ListAPIView):
@@ -125,4 +169,45 @@ class UserPostsView(generics.ListAPIView):
               .select_related("author")
               .order_by("-created_at"))
         return with_like_flag(qs, viewer)
- 
+
+
+class ReportViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ReportSerializer
+    permission_classes = [IsAuthenticated, IsModerator]
+
+    def get_queryset(self):
+        qs = Report.objects.select_related(
+            "post__author", "comment__author", "reporter", "reviewed_by"
+        )
+
+        status_param = self.request.query_params.get("status", Report.Status.OPEN)
+        if status_param != "all":
+            qs = qs.filter(status=status_param)
+
+        type_param = self.request.query_params.get("type")
+        if type_param == "post":
+            qs = qs.filter(comment__isnull=True)
+        elif type_param == "comment":
+            qs = qs.filter(comment__isnull=False)
+
+        return qs
+
+    @action(detail=True, methods=["post"])
+    def dismiss(self, request, pk=None):
+        report = self.get_object()
+        if report.status != Report.Status.OPEN:
+            return Response(
+                {"detail": "This report is already closed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dismissed = Report.objects.filter(
+            post_id=report.post_id,
+            comment_id=report.comment_id,
+            status=Report.Status.OPEN,
+        ).update(
+            status=Report.Status.DISMISSED,
+            reviewed_by=request.user,
+            reviewed_at=timezone.now(),
+        )
+        return Response({"dismissed": dismissed}, status=status.HTTP_200_OK)

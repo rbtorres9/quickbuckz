@@ -56,3 +56,49 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ['created_at']
+
+
+class Report(models.Model):
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        DISMISSED = "dismissed", "Dismissed"
+
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="reports")
+    comment = models.ForeignKey(
+        Comment, on_delete=models.CASCADE, null=True, blank=True, related_name="reports"
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reports_made"
+    )
+    reason = models.CharField(max_length=200)
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.OPEN, db_index=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="reports_reviewed",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["post", "reporter"],
+                condition=models.Q(status="open", comment__isnull=True),
+                name="one_open_post_report_per_user",
+            ),
+            models.UniqueConstraint(
+                fields=["comment", "reporter"],
+                condition=models.Q(status="open", comment__isnull=False),
+                name="one_open_comment_report_per_user",
+            ),
+        ]
+
+    @property
+    def target_type(self):
+        return "comment" if self.comment_id else "post"
+
+    def __str__(self):
+        return f"Report #{self.pk} on {self.target_type} {self.comment_id or self.post_id}"

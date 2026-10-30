@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import PostViewSet, UserPostsView
+from .views import PostViewSet, UserPostsView, ReportViewSet
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -14,6 +14,7 @@ def api_root(request, format=None):
         "signup": reverse("signup", request=request),
         "token": reverse("token_obtain_pair", request=request),
         "notifications": reverse("notification-list", request=request),
+        "reports": reverse("report-list", request=request),
     })
 
 router = DefaultRouter()
