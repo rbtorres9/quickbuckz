@@ -2,22 +2,28 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../data/store.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
+import { useIsMod } from '../utils/useIsMod.js'
+import { errorMessage } from '../utils/errorMessage.js'
 
 // Mod tools: reported posts, with Remove post or Dismiss.
-// Prototype: reports are sample data and mod mode is turned on in Settings.
-// TODO: backend needs a moderator role, a Reports table, and permission for mods to delete any post.
+// Only for moderators/admins (the backend decides). Roles are set in the Django admin site.
+// TODO: reports are still sample data until the backend has a Reports table.
+// The page check is only for looks: the backend still decides if a delete is allowed.
 export default function ModTools() {
-  const { reports, removeReport, deletePost, modMode } = useStore()
+  const { reports, removeReport, deletePost } = useStore()
+  const isMod = useIsMod()
   const { fetchWithToken } = useAuthContext()
   const [busy, setBusy] = useState(null) // report id being handled
   const [message, setMessage] = useState('')
 
-  if (!modMode) {
+  if (isMod === null) return null // still checking; avoids flashing "Moderators only"
+
+  if (!isMod) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Moderators only</h1>
-        <p className="mt-2 text-sm text-muted">Turn on mod mode in Settings to see reports.</p>
-        <Link to="/user-account" className="mt-5 inline-block text-sm font-semibold text-accent hover:underline">Go to Settings</Link>
+        <p className="mt-2 text-sm text-muted">Your account doesn't have moderator access.</p>
+        <Link to="/home" className="mt-5 inline-block text-sm font-semibold text-accent hover:underline">Back to Home</Link>
       </main>
     )
   }
@@ -29,11 +35,7 @@ export default function ModTools() {
       setBusy(report.id)
       const result = await fetchWithToken(`/api/posts/${report.postId}/`, { method: 'DELETE' })
       setBusy(null)
-      // Note: a successful DELETE sends no JSON back, which fetchWithToken reports as an error,
-      // so only treat a "permission" answer as a real failure.
-      if (result.isError && JSON.stringify(data.error).toLowerCase().includes('permission')) {
-        return setMessage("The backend doesn't let mods remove other people's posts yet.")
-      }
+      if (result.isError) return setMessage(errorMessage(result.result))
     } else {
       deletePost(report.postId)
     }
