@@ -24,6 +24,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
                 'bio', 
                 'profile_picture', 
                 'banner', 
+                'birthday',
                 'followers_count',
                 'following_count',
                 'created_at',
@@ -63,6 +64,7 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
             'bio', 
             'profile_picture', 
             'banner',
+            'birthday',
             'visibility', 
             'followers_count',
             'following_count',
@@ -120,3 +122,4 @@ class ProfileDetailSerializer(PublicProfileSerializer):
     class Meta(PublicProfileSerializer.Meta):
         fields = PublicProfileSerializer.Meta.fields + ["is_followed", "follows_you", "is_self"]
         read_only_fields = fields
+

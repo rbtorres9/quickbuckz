@@ -6,6 +6,8 @@ from rest_framework.exceptions import NotAuthenticated
 from .models import Profile, Follow
 from django.contrib.auth import get_user_model
 User = get_user_model()
+from .permissions import IsModerator
+
 from django.db.models import (
     Q, 
     Exists, 
@@ -23,24 +25,8 @@ from .serializers import (
     ProfileDetailSerializer
     )
 
+
 from django.shortcuts import get_object_or_404
-
-class RegisterView(generics.CreateAPIView):
-    serializer_class = RegisterSerializer
-    permission_classes = [AllowAny]
-
-class ProfileListView(generics.ListAPIView):
-    serializer_class = PublicProfileSerializer
-    permission_classes = [AllowAny]
-
-    def get_queryset(self):
-        profiles = Profile.objects.select_related("user")
-        user = self.request.user
-        if user.is_authenticated:
-            return profiles.filter(
-                Q(visibility=Profile.Visibility.PUBLIC) | Q(user=user)
-            )
-        return profiles.filter(visibility=Profile.Visibility.PUBLIC)
 
 
 def visible_profiles(user):
@@ -66,6 +52,25 @@ def with_follow_flags(qs, viewer):
         follows_you=Exists(Follow.objects.filter(follower=OuterRef("user"), following=viewer)),
     )
 
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
+
+class ProfileListView(generics.ListAPIView):
+    serializer_class = PublicProfileSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        profiles = Profile.objects.select_related("user")
+        user = self.request.user
+        if user.is_authenticated:
+            return profiles.filter(
+                Q(visibility=Profile.Visibility.PUBLIC) | Q(user=user)
+            )
+        return profiles.filter(visibility=Profile.Visibility.PUBLIC)
+
+
+
 class MyProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = OwnerProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -84,6 +89,11 @@ class ProfileByUsernameView(generics.RetrieveAPIView):
         username = self.kwargs["username"].strip().lower()
         qs = with_follow_flags(visible_profiles(viewer), viewer)
         return get_object_or_404(qs, user__username=username)
+
+    def get_serializer_class(self):
+        if self.request.user.is_authenticated:
+            return ProfileDetailSerializer
+        return PublicProfileSerializer
 
 # --- FOLLOW BLOCK ---- 
 
@@ -170,3 +180,12 @@ class MutualFollowersView(FollowListView):
                     is_following=Value(True, output_field=BooleanField()),  # by definition
                 )
                 .order_by("-followed_at"))
+
+# --- User Role Block ---
+
+class UserRoleView(APIView):
+    # RBAC: (For now) only serves the request for accessing the mod page
+    permission_classes = [IsAuthenticated, IsModerator]
+
+    def get(self, request):
+        return Response(status=204)

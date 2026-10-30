@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.functions import Lower
 
-from .validators import validate_username_rules
+from .validators import *
 
 import uuid
 from pathlib import Path
@@ -26,6 +26,23 @@ class User(AbstractUser):
     )
     email = models.EmailField(unique=True)
 
+
+    # RBAC 
+    class Role(models.TextChoices):
+        USER = "user", "User"
+        MODERATOR = "mod", "Moderator"
+        ADMIN = "admin", "Admin"
+
+    role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER, db_index=True)
+
+    @property
+    def is_admin(self):
+        return self.is_superuser or self.role == self.Role.ADMIN
+
+    @property
+    def is_mod(self):
+        return self.is_admin or self.role == self.Role.MODERATOR
+
     class Meta:
         constraints = [
             models.UniqueConstraint(Lower("email"), name="unique_email_ci"),
@@ -40,9 +57,14 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         self.username = self.username.strip().lower()
+        # RBAC: Superusers are always admin
+        if self.is_superuser:
+            self.role = self.Role.ADMIN
         if self.email:
             self.email = self.email.strip().lower()
         super().save(*args, **kwargs)
+
+
 
 
 class Profile(models.Model):
@@ -60,6 +82,8 @@ class Profile(models.Model):
         max_length=10, choices=Visibility.choices, default=Visibility.PUBLIC
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    birthday = models.DateField(blank=True, null=True, validators=[validate_minimum_age])
 
     def __str__(self):
         return self.user.username

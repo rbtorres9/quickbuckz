@@ -1,6 +1,9 @@
 import re
 from django.core.exceptions import ValidationError
 
+from datetime import datetime
+from django.utils import timezone
+
 
 def validate_username_rules(value):
     # Accepts A-Z because the model lowercases it afterward.
@@ -19,6 +22,27 @@ def validate_username_rules(value):
     if not any(c.isalpha() for c in value):
         raise ValidationError("Usernames need at least one letter.")
 
-    reserved_keywords = [ 'me', 'follow', 'following', 'followers', 'posts', 'admin']
+    reserved_keywords = [ 'me', 'follow', 'following', 'followers', 'posts', 'admin', 'like', 'comment', 'posts', 'post']
     if value.lower() in reserved_keywords:
         raise ValidationError("Usernames cannot use reserved words.")
+
+
+MINIMUM_AGE = 12
+
+def calculate_age(birthday, today):
+    return (today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day)))
+
+def validate_minimum_age(value):
+    if value is None:
+        return
+
+    if isinstance(value, datetime):
+        value = timezone.localtime(value).date() if timezone.is_aware(value) else value.date()
+
+    today = timezone.localdate()
+
+    if value > today:
+        raise ValidationError("Birthday cannot be in the future.")
+
+    if calculate_age(value, today) < MINIMUM_AGE:
+        raise ValidationError(f"You must be at least {MINIMUM_AGE} years old per TOS.")

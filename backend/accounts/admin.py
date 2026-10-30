@@ -19,7 +19,11 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = UserAdmin.add_fieldsets + (
         (None, {"fields": ("email",)}),
     )
-    list_display = ("username", "email", "is_staff", "is_active")
+
+    fieldsets = UserAdmin.fieldsets + (("Role", {"fields": ("role",)}),)
+    list_display = ("username", "email", "role", "is_staff", "is_active")
+    list_filter = UserAdmin.list_filter + ("role",)
+
     search_fields = ("username", "email")
 
     def get_inline_instances(self, request, obj=None):

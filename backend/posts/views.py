@@ -3,24 +3,20 @@ from django.shortcuts import get_object_or_404
  
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.permissions import (
     AllowAny,
     BasePermission,
     IsAuthenticatedOrReadOnly,
     SAFE_METHODS,
 )
-from rest_framework.response import Response
  
 from accounts.views import visible_profiles
+from accounts.permissions import IsAuthorOrModerator
  
 from .models import Post, Like, Comment
 from .serializers import PostSerializer, CommentSerializer, PostDetailSerializer
- 
- 
-class IsAuthorOrReadOnly(BasePermission):
-    def has_object_permission(self, request, view, obj):
-        return request.method in SAFE_METHODS or obj.author == request.user
- 
+
  
 def with_like_flag(qs, viewer):
     """Annotate each post with whether the viewer has liked it."""
@@ -35,7 +31,7 @@ class PostViewSet(viewsets.ModelViewSet):
     # No class-level queryset: get_queryset() builds it, and urls.py
     # registers this viewset with basename="post".
     serializer_class = PostSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrModerator]
  
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -47,14 +43,17 @@ class PostViewSet(viewsets.ModelViewSet):
  
     def get_queryset(self):
         viewer = self.request.user
-        qs = (Post.objects
-              .filter(author__in=visible_profiles(viewer).values("user"))
-              .select_related("author")
-              .order_by("-created_at"))
+        qs = Post.objects.select_related("author").order_by("-created_at")
+
+        mod_delete = (self.action == "destroy" and viewer.is_authenticated and viewer.is_mod)
+        if not mod_delete:
+            qs = qs.filter(author__in=visible_profiles(viewer).values("user"))
+
         if self.action == "retrieve":
             qs = qs.prefetch_related(
                 Prefetch("comments", queryset=Comment.objects.select_related("author__profile"))
             )
+        
         return with_like_flag(qs, viewer)
  
     def get_permissions(self):
