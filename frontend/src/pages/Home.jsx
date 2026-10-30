@@ -18,20 +18,26 @@ export default function Home() {
   const [ error, setError ] = useState(null)
   const [ loading, setLoading ] = useState(true)
 
-  const sortFilterPosts = (posts) => {
-    return [...posts]
+  // Only people you follow (and you), newest first
+  const sortFilterPosts = (posts, followed) => {
+    return posts
+      .filter((p) => followed.includes(p.author) || p.author === userCache?.username)
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   }
 
   useEffect(() => {
     const fetchData = async () => {
-      const result = await fetchWithToken('/api/posts')
+      // Load posts and the list of people you follow at the same time
+      const [result, followingResult] = await Promise.all([
+        fetchWithToken('/api/posts'),
+        fetchWithToken('/api/profile/me/following/'),
+      ])
 
-      if (!result.isError) {
-        let newPosts = sortFilterPosts(result.result)
-        setPosts(newPosts)
+      if (result.isError || followingResult.isError) {
+        setError(result.isError ? result.result : followingResult.result)
       } else {
-        setError(result.result)
+        const list = followingResult.result.results ?? followingResult.result
+        setPosts(sortFilterPosts(result.result, list.map((person) => person.username)))
       }
 
       setLoading(false)

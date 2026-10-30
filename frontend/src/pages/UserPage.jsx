@@ -270,7 +270,9 @@ export default function UserPage() {
               <p className="font-medium">Error fetching posts</p>
             </div>
           ) : shown.length ? (
-            shown.map((p) => <PostCard key={p.id} post={p} user={isSelf ? userCache : null} />)
+            shown.map((p) => (
+              <PostCard key={p.id} post={p} user={isSelf ? userCache : null} onDeleted={() => setPosts((all) => all.filter((x) => x.id !== p.id))} />
+            ))
           ) : (
             <p className="py-10 text-center text-sm text-muted">
               {isSelf ? 'Nothing here yet.' : `${personName} hasn't posted yet.`}
