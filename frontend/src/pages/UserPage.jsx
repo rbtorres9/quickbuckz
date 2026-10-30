@@ -56,7 +56,7 @@ export default function UserPage() {
 
       // Sent with your login so the backend can say whether you follow them (is_followed)
       const userResult = await fetchWithToken(`/api/profile/${handle}/`)
-      const userData = result.result
+      const userData = userResult.result
 
       setLoadingUser(false)
 
