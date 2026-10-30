@@ -116,8 +116,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
 
   function handlePhotoDoubleClick() {
     clearTimeout(clickTimer.current)
-    if (isReal) return setViewing(true) // TODO: like real posts with POST /api/posts/{id}/like/
-    if (!post.liked) toggleLike(post.id)
+    if (!isLiked) toggleLike(post)
     setBurst(true)
     setTimeout(() => setBurst(false), 700)
   }

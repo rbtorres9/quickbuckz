@@ -107,6 +107,11 @@ export default function UserPage() {
     }
   }, [isSelf, userCache?.username])
 
+  // Update own profile when edited
+  useEffect(() => {
+    if (isSelf)
+      setPerson(userCache)
+  }, [userCache])
 
   // Your own profile: show changes from Edit profile right away
   useEffect(() => {
