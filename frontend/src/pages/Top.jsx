@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useStore } from '../data/store.jsx'
 import PostCard from '../components/PostCard.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
 import { getTimeDiffSecs } from '../utils/DateTimeUtils.js'
 import Logo from '../components/Logo.jsx'
 
@@ -44,6 +45,7 @@ function Pills({ label, options, value, onChange }) {
 
 export default function Top() {
   const { fetchPosts } = useApiContext()
+  const { fetchWithToken } = useAuthContext()
   const [time, setTime] = useState('week')
   const [type, setType] = useState('all')
   const [error, setError] = useState(null)
@@ -71,7 +73,7 @@ export default function Top() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const result = await fetchPosts()
+      const result = await fetchWithToken('/api/posts')
 
       if (!result.isError) {
         setPosts(result.result)

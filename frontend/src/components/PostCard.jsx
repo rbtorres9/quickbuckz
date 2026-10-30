@@ -4,6 +4,7 @@ import { Heart, MessageCircle, MoreHorizontal, Share2 } from 'lucide-react'
 import { useStore } from '../data/store.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
+import { useAuthContext } from '../context/AuthContext.jsx'
 import { getTimeAgoString, getDateTimeString } from '../utils/DateTimeUtils.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
@@ -17,7 +18,7 @@ import PhotoViewer from './PhotoViewer.jsx'
 const authorProfiles = {}
 
 export default function PostCard({ post, user, full = false, onDeleted }) {
-  const { toggleLike, deletePost, profile, addReport } = useStore()
+  const { deletePost, profile, addReport } = useStore()
   const { userCache } = useCache()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -26,7 +27,10 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const [copied, setCopied] = useState(false) // "Link copied" showing?
   const clickTimer = useRef(null)
   const { fetchUserProfile } = useApiContext()
+  const { fetchWithToken } = useAuthContext()
   const [loadedAuthor, setLoadedAuthor] = useState(null)
+  const [ isLiked, setIsLiked ] = useState(post.is_liked)
+  const [ likesCount, setLikesCount ] = useState(post.likes_count)
 
   const isReal = 'created_at' in post
   const handle = isReal ? post.author : post.handle
@@ -82,6 +86,24 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     clearTimeout(clickTimer.current)
     clickTimer.current = setTimeout(() => setViewing(true), 250)
   }
+
+  async function toggleLike(post) {
+    let options = {
+      method: "POST"
+    }
+
+    if (isLiked) {
+      options.method = "DELETE"
+      setLikesCount(likesCount - 1)
+    }
+    else {
+      setLikesCount(likesCount + 1)
+    }
+
+    setIsLiked(!isLiked)
+    fetchWithToken(`/api/posts/${post.id}/like`, options)
+  }
+
   function handlePhotoDoubleClick() {
     clearTimeout(clickTimer.current)
     if (isReal) return setViewing(true) // TODO: like real posts with POST /api/posts/{id}/like/
@@ -178,9 +200,14 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
 
       <div className="flex items-center gap-5 px-5 py-4 text-sm text-muted">
         {isReal ? (
-          // TODO: make these clickable with /api/posts/{id}/like/ and /api/posts/{id}/comment/
           <>
-            <span className="flex items-center gap-1.5"><Heart size={18} /> {likes}</span>
+            <span className="flex items-center gap-1.5"><button
+              onClick={() => toggleLike(post)}
+              className={`flex items-center gap-1.5 hover:text-white ${isLiked ? 'text-accent' : ''}`}
+            >
+              <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} /> {likesCount}
+            </button>
+            </span>
             <span className="flex items-center gap-1.5">
               <Link to={`/post/${post.id}`} className="flex items-center gap-1.5 hover:text-white">
                 <MessageCircle size={18} /> {comments}
@@ -190,7 +217,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
         ) : (
           <>
             <button
-              onClick={() => toggleLike(post.id)}
+              onClick={() => {}}
               className={`flex items-center gap-1.5 hover:text-white ${post.liked ? 'text-accent' : ''}`}
             >
               <Heart size={18} fill={post.liked ? 'currentColor' : 'none'} /> {likes}
