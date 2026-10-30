@@ -113,3 +113,7 @@ UPDATES:
       instance.user.save()
       return super().update(instance, validated_data)
   ```
+
+## Delete posts + Home feed 10/30 - MM
+- Your own posts have Delete in the ⋯ menu (DELETE /api/posts/<id>/). Anyone else's has Report.
+- Home only shows posts from people you follow, plus your own (uses /api/profile/me/following/)
