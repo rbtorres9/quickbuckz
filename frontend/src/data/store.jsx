@@ -88,12 +88,10 @@ export function StoreProvider({ children }) {
   const [following, setFollowing] = useState(sampleFollowing)
   // TODO: load notifications from the backend database
   const [notifications, setNotifications] = useState(sampleNotifications)
-  // Mod mode (prototype). TODO: the backend must check the moderator role, not the browser
+  // Reported posts for mod tools. Who is a mod is decided by the backend (GET /api/users/me/role/).
   const [reports, setReports] = useState(sampleReports)
   const addReport = (report) => setReports((list) => [{ id: Date.now(), time: 'now', ...report }, ...list])
   const removeReport = (id) => setReports((list) => list.filter((r) => r.id !== id))
-  const [modMode, setModMode] = useState(() => localStorage.getItem('modMode') === 'on')
-  useEffect(() => localStorage.setItem('modMode', modMode ? 'on' : 'off'), [modMode])
 
   const markAllRead = () => setNotifications((list) => list.map((n) => ({ ...n, read: true })))
 
@@ -153,7 +151,7 @@ export function StoreProvider({ children }) {
 
   return (
     <StoreContext.Provider
-      value={{ posts, toggleLike, addComment, deleteComment, deletePost, addPost, profile, updateProfile, following, toggleFollowUser, followers: sampleFollowers, notifications, markAllRead, siteTheme, setSiteTheme, reports, addReport, removeReport, modMode, setModMode }}
+      value={{ posts, toggleLike, addComment, deleteComment, deletePost, addPost, profile, updateProfile, following, toggleFollowUser, followers: sampleFollowers, notifications, markAllRead, siteTheme, setSiteTheme, reports, addReport, removeReport }}
     >
       {children}
     </StoreContext.Provider>

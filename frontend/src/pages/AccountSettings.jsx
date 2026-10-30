@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
+import { useIsMod } from '../utils/useIsMod.js'
 import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 
@@ -11,7 +12,8 @@ const inputClass =
 const saveClass = 'rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover'
 
 export default function AccountSettings() {
-  const { siteTheme, setSiteTheme, modMode, setModMode } = useStore()
+  const { siteTheme, setSiteTheme } = useStore()
+  const isMod = useIsMod() // only mods and admins see the Moderator section
   const { logout, fetchWithToken } = useAuthContext()
   const { userCache, setUserCache } = useCache()
   const navigate = useNavigate()
@@ -70,20 +72,6 @@ export default function AccountSettings() {
     setUserCache({ ...userCache, ...data })
     localStorage.setItem('user', JSON.stringify({ ...userCache, ...data }))
     setPrivacyMsg('Saved.')
-  }
-
-  // Moderator login (prototype)
-  // TODO: replace with a real check on the backend (a moderator role on the account).
-  // Anyone can read this code in the browser, so it only keeps out people clicking around.
-  const MOD_CODE = 'qbmod'
-  const [modCode, setModCode] = useState('')
-  const [modError, setModError] = useState('')
-  function enterModMode(e) {
-    e.preventDefault()
-    if (modCode !== MOD_CODE) return setModError('That mod code is not right.')
-    setModError('')
-    setModCode('')
-    setModMode(true)
   }
 
   return (
@@ -173,28 +161,16 @@ export default function AccountSettings() {
         {privacyMsg && <p className={`text-sm ${privacyMsg === 'Saved.' || privacyMsg === 'Saving…' ? 'text-accent' : 'text-red-400'}`}>{privacyMsg}</p>}
       </section>
 
-      {/* Moderator */}
-      <section className="space-y-4 rounded-2xl border border-line bg-card p-6">
-        <h2 className="font-semibold">Moderator</h2>
-        {modMode ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="flex-1 text-sm text-muted">Mod mode is on. You can review reports and remove posts.</p>
-            <Link to="/mod" className={saveClass}>Open mod tools</Link>
-            <button onClick={() => setModMode(false)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5">
-              Leave mod mode
-            </button>
+      {/* Moderator: only shows for mods and admins (set in the Django admin site) */}
+      {isMod && (
+        <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-card p-6">
+          <div className="flex-1">
+            <h2 className="font-semibold">Moderator</h2>
+            <p className="text-sm text-muted">Review reports and remove posts.</p>
           </div>
-        ) : (
-          <form onSubmit={enterModMode} className="space-y-3">
-            <label htmlFor="modCode" className="block text-sm text-muted">Moderators: enter your mod code to see reports.</label>
-            <div className="flex gap-3">
-              <input id="modCode" type="password" value={modCode} onChange={(e) => { setModCode(e.target.value); setModError('') }} className={inputClass} />
-              <button type="submit" className={saveClass}>Enter</button>
-            </div>
-            {modError && <p className="text-sm text-red-400">{modError}</p>}
-          </form>
-        )}
-      </section>
+          <Link to="/mod" className={saveClass}>Open mod tools</Link>
+        </section>
+      )}
 
       {/* Log out */}
       <section className="flex items-center justify-between rounded-2xl border border-line bg-card p-6">
