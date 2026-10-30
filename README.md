@@ -23,8 +23,9 @@ This is a list of items that we should implement into our project that anyone ca
     ~~- For example, the author field can return an object containing data about the user's username, first name, last name, and profile picture to display on each post.~~ Done
 
 - Implement Notifications behaviour in frontend (testing Notifications model from backend) - in progress RT (10/25 implemented, might need more testing)
-- ~~ Be able to post comments on the frontend ~~ - Done
-- ~~ Be able to like posts on the frontend~~ - Done JDN (10/30)
-- ~~ Be able to follow another user on their page~~ - Done MM (10/30)
+- ~~Be able to post comments on the frontend ~~ - Done
+- ~~Be able to like posts on the frontend~~ - Done JDN (10/30)
+- ~~Be able to follow another user on their page~~ - Done MM (10/30)
 - ~~Show a list of current followers on the follower page~~ - Done MM (10/30)
 - Create a fully working setting menu
+- Report models up. TODO: api/reports/ , test report function, import changes in frontend - In progress RT
