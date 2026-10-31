@@ -34,8 +34,8 @@ class PublicProfileSerializer(serializers.ModelSerializer):
 
 class OwnerProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
-    first_name = serializers.ReadOnlyField(source='user.first_name')
-    last_name = serializers.ReadOnlyField(source='user.last_name')
+    first_name = serializers.CharField(source='user.first_name', required=False, allow_blank=True, max_length=150)
+    last_name = serializers.CharField(source='user.last_name', required=False, allow_blank=True, max_length=150)
     followers_count = serializers.IntegerField(source='user.follower_set.count', read_only=True)
     following_count = serializers.IntegerField(source='user.following_set.count', read_only=True)
 
@@ -52,6 +52,15 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
 
     def validate_banner(self, value):
         return self._validate_image(value)
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        if user_data:
+            user = instance.user
+            for attr, value in user_data.items():
+                setattr(user, attr, value)
+            user.save(update_fields=list(user_data.keys()))
+        return super().update(instance, validated_data)
     
     class Meta:
         model = Profile

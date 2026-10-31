@@ -113,7 +113,15 @@ UPDATES:
       instance.user.save()
       return super().update(instance, validated_data)
   ```
+  **UPDATE** fixed now. refer to backend/uodate docs/ownerprofile_firstlastname_changes.md -RT
 
 ## Delete posts + Home feed 10/30 - MM
 - Your own posts have Delete in the ⋯ menu (DELETE /api/posts/<id>/). Anyone else's has Report.
 - Home only shows posts from people you follow, plus your own (uses /api/profile/me/following/)
+
+
+## /mod page working post delete function -RT
+- the mod access button in account settings is only visible to accounts with mod or admin status from backend
+- reviewed regular user if they can access mod page: mod access button not visible, they cannot access the mod page through manual URL path input as well
+- so far only two functions: delete and dismiss. delete removes the post from both posts and reports api. dismiss removes the post in reports api
+- **TODO**: still needs comment options from the frontend to delete or report the comment, in order to test report function

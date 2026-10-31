@@ -29,3 +29,4 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Show a list of current followers on the follower page~~ - Done MM (10/30)
 - Create a fully working setting menu
 - Report models up. TODO: api/reports/ , test report function, import changes in frontend - In progress RT
+- maybe add being able to report profile as well, but for now, limit the action to sending a warning notification to the user reported when a moderator flags it

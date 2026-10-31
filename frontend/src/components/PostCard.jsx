@@ -19,7 +19,7 @@ import PhotoViewer from './PhotoViewer.jsx'
 const authorProfiles = {}
 
 export default function PostCard({ post, user, full = false, onDeleted }) {
-  const { deletePost, profile, addReport } = useStore()
+  const { deletePost, profile } = useStore()
   const { userCache } = useCache()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -81,13 +81,21 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   }
 
   // Report: ask why, then send it to the moderators' list
-  function handleReport() {
+  // send report to the backend
+  async function handleReport() {
     setMenuOpen(false)
+    if (!isReal) return alert("Sample posts can't be reported.")
+
     const reason = prompt('Why are you reporting this post?')
     if (!reason?.trim()) return
-    // TODO: send to a backend Reports endpoint instead of the sample list
-    addReport({ postId: post.id, isReal, author: handle, text, reason: reason.trim(), reportedBy: userCache?.username ?? profile.handle })
-    alert('Thanks, this post was reported.')
+
+    const result = await fetchWithToken(`/api/posts/${post.id}/report/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason.trim() }),
+    })
+    if (result.isError) return alert(errorMessage(result.result))
+    alert(result.result?.detail ?? 'Thanks, this post was reported.')
   }
 
   // Click a photo: open it full-screen. Double-click: like it with a heart burst.
