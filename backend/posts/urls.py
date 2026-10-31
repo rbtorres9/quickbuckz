@@ -20,6 +20,7 @@ def api_root(request, format=None):
 router = DefaultRouter()
 router.include_root_view = False
 router.register("posts", PostViewSet, basename="post")
+router.register("reports", ReportViewSet, basename="report")
 
 urlpatterns = [
     path("", api_root, name="api-root"),
