@@ -24,6 +24,8 @@ export default function PostPage() {
   const [ error, setError ] = useState(null)
   const [ loading, setLoading ] = useState(true)
 
+  const STATE_REPORTING = "reporting"
+  const STATE_REPORTED = "reported"
   const STATE_BUSY_DELETING = "deleting"
   const STATE_DELETED = "deleted"
   const STATE_NORMAL = "normal"
@@ -65,6 +67,19 @@ export default function PostPage() {
 
   function getState(comment) {
     return commentStates[comment.id]
+  }
+
+  function canDeleteComment(comment) {
+    return comment.author?.username === userCache?.username || ownsPost
+  }
+
+  function canReportComment(comment) {
+    return !(canDeleteComment(comment))
+  }
+
+  async function reportComment(comment) {
+    // TODO: Fill this function
+    return
   }
 
   async function deleteComment(comment) {
@@ -165,7 +180,8 @@ export default function PostPage() {
                           {/* React escapes this text automatically, so comments can't inject HTML */}
                           <p className={`mt-0.5 break-words ${getState(comment) === STATE_DELETED ? 'line-through text-white/50' : ''}`}>{comment.content}</p>
                       </div>
-                      {(comment.author?.username === userCache?.username || ownsPost) && (
+
+                      {(canDeleteComment(comment)) && (
                           getState(comment) === STATE_BUSY_DELETING ? (
                               <span className="self-start text-xs text-muted">
                                   Deleting...
@@ -183,8 +199,16 @@ export default function PostPage() {
                           </button>
                           )
                       )}
+
+                      {
+                        (canReportComment(comment)) && (
+                          <button
+                              onClick={() => reportComment(comment)}
+                              className="self-start text-xs text-red-400 hover:underline"
+                          >Report</button>
+                        )
+                      }
                   </li>
-                  // <CommentCard key={c.id} comment={c} isOwner={c.author?.username === userCache?.username || ownsPost}/>
                 ))}
               </ul>
             </section>
