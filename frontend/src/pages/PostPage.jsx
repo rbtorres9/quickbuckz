@@ -81,7 +81,7 @@ export default function PostPage() {
       return
     }
 
-    setCommentStates({...commentStates, [comment_id]: STATE_DELETED})
+    setCommentStates((prev) => {return {...prev, [comment_id]: STATE_DELETED}})
     setCommentCount((count) => count - 1)
   }
 
@@ -103,7 +103,7 @@ export default function PostPage() {
       return
     }
 
-    setComments([...comments, result.result])
+    setComments((prev) => [...prev, result.result])
     setCommentCount((count) => count + 1)
     setText('')
   }
