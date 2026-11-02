@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 
 from .models import AccountSecurity, Profile, User, Follow
 
+#the following classes are used for editing user accounts as an admin
 class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
@@ -12,7 +13,8 @@ class SecurityInline(admin.StackedInline):
     model = AccountSecurity
     can_delete = False
 
-
+#the following class is used to customize Django admin pages, has ui elements that allows for the search
+#of counts using methods such as username and email look up
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     inlines = [ProfileInline, SecurityInline]
@@ -31,6 +33,7 @@ class CustomUserAdmin(UserAdmin):
             return []
         return super().get_inline_instances(request, obj)
 
+#following code registers an admin page
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
     list_display = ["id", "follower", "following", "created_at"]

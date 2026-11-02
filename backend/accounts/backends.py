@@ -2,7 +2,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.db.models import Q
 
+#the following code is used for backend authentication
 
+#looks up user via matching login value against the username field, if its correct login succeeds, else it loops back until a valid username and password is entered
 class EmailOrUsernameBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
         User = get_user_model()
@@ -21,4 +23,4 @@ class EmailOrUsernameBackend(ModelBackend):
 
         if user.check_password(password) and self.user_can_authenticate(user):
             return user
-        return None
+        return Nones
