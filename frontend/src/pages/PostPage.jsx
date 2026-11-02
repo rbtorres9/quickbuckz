@@ -71,11 +71,11 @@ export default function PostPage() {
     const post_id = comment.post
     const comment_id = comment.id
 
-    setCommentStates({...commentStates, [comment_id]: STATE_BUSY_DELETING})
+    setCommentStates((prev) => {return {...prev, [comment_id]: STATE_BUSY_DELETING}})
     const result = await fetchWithToken(`/api/posts/${post_id}/comment/?comment_id=${comment_id}`, { method: "DELETE" })
 
     if (result.isError) {
-      setCommentStates({...commentStates, [comment_id]: STATE_NORMAL })
+      setCommentStates((prev) => {return {...prev, [comment_id]: STATE_NORMAL}})
       setError(result.result)
       console.error(`Failed to delete comment id: ${comment_id}`)
       return
