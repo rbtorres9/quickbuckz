@@ -20,10 +20,6 @@ export const ApiProvider = ({children}) => {
             resolvedSuffix = `/${resolvedSuffix}`
         }
 
-        if (!resolvedSuffix.endsWith('/')) {
-            resolvedSuffix += '/'
-        }
-
         const url = `${baseUrl}${resolvedSuffix}`
 
         try {

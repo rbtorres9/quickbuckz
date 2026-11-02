@@ -24,23 +24,36 @@ export default function PostPage() {
   const [ error, setError ] = useState(null)
   const [ loading, setLoading ] = useState(true)
 
+  const STATE_BUSY_DELETING = "deleting"
+  const STATE_DELETED = "deleted"
+  const STATE_NORMAL = "normal"
+
+  const [ comments, setComments ] = useState([])
+  const [ commentStates, setCommentStates ] = useState({})
+  const [ commentCount, setCommentCount ] = useState(comments.length)
+
   useEffect(() => {
     const fetchPost = async () => {
       setLoading(true)
       setError(null)
       try {
-        const result = await fetchPostById(id)
-        if (result.isError) {
-          setError(result.result)
+        const postResult = await fetchPostById(id)
+        if (postResult.isError) {
+          setError(postResult.result)
           return
         }
-        setPost(result.result)
+        let postData = postResult.result
 
-        const userResult = await fetchUserProfile(result.result.author)
+        setPost(postData)
+        setComments(postData.comments)
+        setCommentCount(postData.comments.length)
+
+        const userResult = await fetchUserProfile(postData.author)
         if (userResult.isError) {
           setError(userResult.result)
           return
         }
+
         setUser(userResult.result)
       } finally {
         setLoading(false)
@@ -50,10 +63,26 @@ export default function PostPage() {
     fetchPost()
   }, [id])
 
-  const ownsPost = post?.author === userCache?.handle
+  function getState(comment) {
+    return commentStates[comment.id]
+  }
 
-  async function deleteComment(post_id, comment_id) {
+  async function deleteComment(comment) {
+    const post_id = comment.post
+    const comment_id = comment.id
 
+    setCommentStates({...commentStates, [comment_id]: STATE_BUSY_DELETING})
+    const result = await fetchWithToken(`/api/posts/${post_id}/comment/?comment_id=${comment_id}`, { method: "DELETE" })
+
+    if (result.isError) {
+      setCommentStates({...commentStates, [comment_id]: STATE_NORMAL })
+      setError(result.result)
+      console.error(`Failed to delete comment id: ${comment_id}`)
+      return
+    }
+
+    setCommentStates({...commentStates, [comment_id]: STATE_DELETED})
+    setCommentCount((count) => count - 1)
   }
 
   async function handleSubmit(e) {
@@ -74,10 +103,12 @@ export default function PostPage() {
       return
     }
 
-    setPost((prev) => ({ ...prev, comments: [...prev.comments, result.result] }))
+    setComments([...comments, result.result])
+    setCommentCount((count) => count + 1)
     setText('')
   }
 
+  const ownsPost = post?.author === userCache?.handle
 
   return (
     <>
@@ -101,7 +132,7 @@ export default function PostPage() {
 
             <section className="mt-4 rounded-2xl border border-line bg-card p-5">
               <h2 className="text-sm font-semibold">
-                Comments <span className="text-muted">({post.comments.length})</span>
+                Comments <span className="text-muted">({commentCount})</span>
               </h2>
 
               <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
@@ -121,28 +152,39 @@ export default function PostPage() {
               </form>
 
               <ul className="mt-4 divide-y divide-line">
-                {post.comments.length === 0 && (
+                {commentCount === 0 && (
                   <li className="py-6 text-center text-sm text-muted">No comments yet. Be the first.</li>
                 )}
-                {post.comments.map((c) => (
-                  <li key={c.id} className="flex gap-3 py-3">
-                    <Avatar name={getName(c.author)} size="sm" accent={false} src={c.author.profile_picture} />
-                    <div className="flex-1 text-sm">
-                      <div>
-                        <b>{getName(c.author)}</b> <span className="text-muted">@{c.author.username} · {getTimeAgoString(c.created_at)}</span>
+                {comments.map((comment) => (
+                  <li key={comment.id}  className="flex gap-3 py-3">
+                      <Avatar name={getName(comment.author)} size="sm" accent={false} src={comment.author.profile_picture} />
+                      <div className="flex-1 text-sm">
+                          <div>
+                          <b>{getName(comment.author)}</b> <span className="text-muted">@{comment.author.username} · {getTimeAgoString(comment.created_at)}</span>
+                          </div>
+                          {/* React escapes this text automatically, so comments can't inject HTML */}
+                          <p className={`mt-0.5 break-words ${getState(comment) === STATE_DELETED ? 'line-through text-white/50' : ''}`}>{comment.content}</p>
                       </div>
-                      {/* React escapes this text automatically, so comments can't inject HTML */}
-                      <p className="mt-0.5 break-words">{c.content}</p>
-                    </div>
-                    {((c.author?.username === userCache?.username) || ownsPost) && (
-                      <button
-                        onClick={() => deleteComment(post.id, c.id)}
-                        className="self-start text-xs text-muted hover:text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
+                      {(comment.author?.username === userCache?.username || ownsPost) && (
+                          getState(comment) === STATE_BUSY_DELETING ? (
+                              <span className="self-start text-xs text-muted">
+                                  Deleting...
+                              </span>
+                          ) : getState(comment) === STATE_DELETED ? (
+                            <span className="self-start text-xs text-muted">
+                                  Deleted
+                              </span>
+                          ) : (
+                          <button
+                              onClick={() => deleteComment(comment)}
+                              className="self-start text-xs text-red-400 hover:underline"
+                          >
+                          Delete
+                          </button>
+                          )
+                      )}
                   </li>
+                  // <CommentCard key={c.id} comment={c} isOwner={c.author?.username === userCache?.username || ownsPost}/>
                 ))}
               </ul>
             </section>
