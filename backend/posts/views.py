@@ -15,9 +15,7 @@ from rest_framework.permissions import (
     IsAuthenticated,
 )
 from accounts.permissions import IsModerator, IsAuthorOrModerator
- 
 from accounts.views import visible_profiles
-from accounts.permissions import IsAuthorOrModerator
  
 from .models import Post, Like, Comment, Report
 from .serializers import (
@@ -25,6 +23,7 @@ from .serializers import (
     CommentSerializer, 
     PostDetailSerializer,
     ReportSerializer,
+    ReportCreateSerializer,
 )
 
  

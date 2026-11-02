@@ -1,20 +1,62 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useStore } from '../data/store.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { useIsMod } from '../utils/useIsMod.js'
 import { errorMessage } from '../utils/errorMessage.js'
+import { getTimeAgoString } from '../utils/DateTimeUtils.js'
+
 
 // Mod tools: reported posts, with Remove post or Dismiss.
 // Only for moderators/admins (the backend decides). Roles are set in the Django admin site.
-// TODO: reports are still sample data until the backend has a Reports table.
-// The page check is only for looks: the backend still decides if a delete is allowed.
-export default function ModTools() {
-  const { reports, removeReport, deletePost } = useStore()
+
+const FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'post', label: 'Posts' },
+  { value: 'comment', label: 'Comments' },
+]
+
+// One card per reported post or comment, even if several people reported it
+function groupReports(reports) {
+  const groups = {}
+  for (const report of reports) {
+    const key = report.type === 'comment' ? `comment-${report.comment.id}` : `post-${report.post.id}`
+    if (!groups[key]) {
+      groups[key] = { key, type: report.type, post: report.post, comment: report.comment, reports: [] }
+    }
+    groups[key].reports.push(report)
+  }
+  return Object.values(groups)
+}
+
+
+export default function ModTools() { 
   const isMod = useIsMod()
   const { fetchWithToken } = useAuthContext()
+
+  const [reports, setReports] = useState(null) // null = still loading
+  const [filter, setFilter] = useState('all')
   const [busy, setBusy] = useState(null) // report id being handled
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(null)
+
+  async function loadReports() {
+    const query = filter === 'all' ? '' : `?type=${filter}`
+    const result = await fetchWithToken(`/api/reports/${query}`)
+    if (result.isError) {
+      setMessage({ text: errorMessage(result.result), ok: false })
+      setReports([])
+      return
+    }
+    const data = result.result
+    setReports(Array.isArray(data) ? data : data?.results ?? [])
+  }
+
+  useEffect(() => {
+    if (isMod) loadReports()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMod, filter])
+
+  const groups = useMemo(() => groupReports(reports ?? []), [reports])  
+
 
   if (isMod === null) return null // still checking; avoids flashing "Moderators only"
 
@@ -28,65 +70,131 @@ export default function ModTools() {
     )
   }
 
-  async function removePost(report) {
-    if (!confirm(`Remove @${report.author}'s post? This can't be undone.`)) return
-    setMessage('')
-    if (report.isReal) {
-      setBusy(report.id)
-      const result = await fetchWithToken(`/api/posts/${report.postId}/`, { method: 'DELETE' })
-      setBusy(null)
-      if (result.isError) return setMessage(errorMessage(result.result))
-    } else {
-      deletePost(report.postId)
-    }
-    removeReport(report.id)
-    setMessage('Post removed.')
+  async function removeContent(group) {
+    const isComment = group.type === 'comment'
+    const target = isComment ? group.comment : group.post
+    if (!confirm(`Remove @${target.author}'s ${group.type}? This can't be undone.`)) return
+
+    const url = isComment
+      ? `/api/posts/${group.post.id}/comment/?comment_id=${group.comment.id}`
+      : `/api/posts/${group.post.id}/`
+
+    setBusy(group.key)
+    setMessage(null)
+    const result = await fetchWithToken(url, { method: 'DELETE' })
+    setBusy(null)
+    if (result.isError) return setMessage({ text: errorMessage(result.result), ok: false })
+
+    setMessage({ text: isComment ? 'Comment removed.' : 'Post removed.', ok: true })
+    loadReports() // deleting a post also clears reports on its comments
+  }
+
+  async function dismiss(group) {
+    setBusy(group.key)
+    setMessage(null)
+    const result = await fetchWithToken(`/api/reports/${group.reports[0].id}/dismiss/`, { method: 'POST' })
+    setBusy(null)
+    if (result.isError) return setMessage({ text: errorMessage(result.result), ok: false })
+
+    setMessage({ text: 'Report dismissed.', ok: true })
+    loadReports()
   }
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Mod tools</h1>
-        <span className="text-sm text-muted">{reports.length} open {reports.length === 1 ? 'report' : 'reports'}</span>
+        {reports && (
+          <span className="text-sm text-muted">{groups.length} open {groups.length === 1 ? 'item' : 'items'}</span>
+        )}
       </div>
-      {message && <p className={`mt-3 text-sm ${message === 'Post removed.' ? 'text-accent' : 'text-red-400'}`}>{message}</p>}
 
-      {reports.length === 0 ? (
+      {/* filter tabs */}
+      <div className="mt-4 flex gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => { setFilter(f.value); setReports(null) }}
+            className={`rounded-full px-3 py-1 text-sm font-semibold ${
+              filter === f.value ? 'bg-accent text-white' : 'border border-line hover:bg-white/5'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {message && <p className={`mt-3 text-sm ${message.ok ? 'text-accent' : 'text-red-400'}`}>{message.text}</p>}
+
+      {reports === null ? (
+        <p className="mt-6 text-sm text-muted">Loading reports…</p>
+      ) : groups.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center">
           <p className="font-medium">All clear</p>
-          <p className="mt-1 text-sm text-muted">No reported posts right now.</p>
+          <p className="mt-1 text-sm text-muted">Nothing reported right now.</p>
         </div>
       ) : (
         <ul className="mt-5 space-y-4">
-          {reports.map((report) => (
-            <li key={report.id} className="rounded-2xl border border-line bg-card p-5">
-              <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-                <p>
-                  <span className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-300">{report.reason}</span>
-                  <span className="ml-2 text-muted">reported by @{report.reportedBy} · {report.time}</span>
+          {/* report cards) */}
+          {groups.map((group) => {
+            const isComment = group.type === 'comment'
+            const target = isComment ? group.comment : group.post
+            const reasons = [...new Set(group.reports.map((r) => r.reason))]
+            const reporters = group.reports.map((r) => `@${r.reporter}`).join(', ')
+
+            return (
+              <li key={group.key} className="rounded-2xl border border-line bg-card p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span className="rounded bg-white/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                      {group.type}
+                    </span>
+                    {reasons.map((reason) => (
+                      <span key={reason} className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-300">{reason}</span>
+                    ))}
+                  </p>
+                  <Link to={`/user/${target.author}`} className="font-semibold hover:underline">@{target.author}</Link>
+                </div>
+
+                <p className="mt-1 text-xs text-muted">
+                  reported by {reporters} · {getTimeAgoString(group.reports[0].created_at)} ago
                 </p>
-                <Link to={`/user/${report.author}`} className="font-semibold hover:underline">@{report.author}</Link>
-              </div>
-              <p className="mt-3 rounded-lg border border-line bg-field px-4 py-3 text-sm leading-relaxed">
-                {report.text || <span className="text-muted">(photo only)</span>}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  onClick={() => removePost(report)}
-                  disabled={busy === report.id}
-                  className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
-                >
-                  Remove post
-                </button>
-                <button onClick={() => removeReport(report.id)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5">
-                  Dismiss
-                </button>
-                {report.isReal && (
-                  <Link to={`/post/${report.postId}`} className="ml-auto self-center text-sm text-muted hover:text-accent">View post</Link>
+
+                {isComment && (
+                  <p className="mt-3 truncate text-xs text-muted">
+                    On @{group.post.author}'s post: "{group.post.content}"
+                  </p>
                 )}
-              </div>
-            </li>
-          ))}
+
+                <div className="mt-3 rounded-lg border border-line bg-field px-4 py-3 text-sm leading-relaxed">
+                  {target.content || <span className="text-muted">(photo only)</span>}
+                  {!isComment && group.post.image && (
+                    <img src={group.post.image} alt="" className="mt-3 max-h-48 rounded-lg object-cover" />
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => removeContent(group)}
+                    disabled={busy === group.key}
+                    className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+                  >
+                    Remove {group.type}
+                  </button>
+                  <button
+                    onClick={() => dismiss(group)}
+                    disabled={busy === group.key}
+                    className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50"
+                  >
+                    Dismiss
+                  </button>
+                  <Link to={`/post/${group.post.id}`} className="ml-auto self-center text-sm text-muted hover:text-accent">
+                    View post
+                  </Link>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
     </main>

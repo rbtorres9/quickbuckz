@@ -20,6 +20,19 @@ export const ApiProvider = ({children}) => {
             resolvedSuffix = `/${resolvedSuffix}`
         }
 
+        // /api/reports/?type=post becomes ?type=post/, so the type filter matches nothing.
+        // /api/posts/12/comment/?comment_id=7 becomes ?comment_id=7/, so deleting a comment fails. 
+        // This affects comment deletes everywhere in the app, not just on the mod page.
+        // v only add the slash to the path, not the query string v
+        const queryStart = resolvedSuffix.indexOf('?')
+        let path = queryStart === -1 ? resolvedSuffix : resolvedSuffix.slice(0, queryStart)
+        const query = queryStart === -1 ? '' : resolvedSuffix.slice(queryStart)
+
+        if (!path.endsWith('/')) {
+            path += '/'
+        }
+        resolvedSuffix = path + query
+
         const url = `${baseUrl}${resolvedSuffix}`
 
         try {

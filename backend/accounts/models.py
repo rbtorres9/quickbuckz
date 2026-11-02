@@ -7,17 +7,18 @@ from .validators import *
 
 import uuid
 from pathlib import Path
-
+#Saves a profile picture
 def profile_picture_path(instance, filename):
     ext = Path(filename).suffix.lower()
     return f"profiles/profile_pictures/{instance.user_id}/{uuid.uuid4().hex}{ext}"
-
+#saves profile banner
 def banner_path(instance, filename):
     ext = Path(filename).suffix.lower()
     return f"profiles/banner/{instance.user_id}/{uuid.uuid4().hex}{ext}"
 
-
+#the following class makes different user values like usernames and emails unique from other users
 class User(AbstractUser):
+    #following defines a username field
     username = models.CharField(
         max_length=20,
         unique=True,
@@ -27,7 +28,8 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
 
 
-    # RBAC 
+    # RBAC
+    # adds a role field to a user like a mod admin or user 
     class Role(models.TextChoices):
         USER = "user", "User"
         MODERATOR = "mod", "Moderator"
@@ -35,20 +37,24 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER, db_index=True)
 
+    #checks if user is admin
     @property
     def is_admin(self):
         return self.is_superuser or self.role == self.Role.ADMIN
 
+    #checks if user is mod
     @property
     def is_mod(self):
         return self.is_admin or self.role == self.Role.MODERATOR
 
+    #enforces case insensitive uniqueness to usernames and emails
     class Meta:
         constraints = [
             models.UniqueConstraint(Lower("email"), name="unique_email_ci"),
             models.UniqueConstraint(Lower("username"), name="unique_username_ci"),
         ]
 
+    #forces a username and email to be lower case, save does this while also seting a superuser's role to admin upon creation
     def clean(self):
         super().clean()
         self.username = self.username.strip().lower()
@@ -66,7 +72,7 @@ class User(AbstractUser):
 
 
 
-
+#one to one extension of the user that stores bio, profile picture, banner, and other user information
 class Profile(models.Model):
     class Visibility(models.TextChoices):
         PUBLIC = "public", "Public"
@@ -88,7 +94,7 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.username
 
-
+#stores user account data that is secure and only accessible to account owners and admins
 class AccountSecurity(models.Model):
     """Private, owner/admin-only data. Intentionally empty for now."""
 
@@ -101,7 +107,7 @@ class AccountSecurity(models.Model):
     def __str__(self):
         return f"Security for {self.user.username}"
 
-
+#tracks which accounts follow who
 class Follow(models.Model):
     follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following_set")
     following = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="follower_set")

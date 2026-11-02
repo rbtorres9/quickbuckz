@@ -1,20 +1,22 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
+#custom permission classes that restrict access to users that don't have certain roles
 
+#checks if user is a moderator
 class IsModerator(BasePermission):
     message = "Moderator access required."
 
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.is_mod)
 
-
+#checks if user is an admin
 class IsAdminRole(BasePermission):
     message = "Admin access required."
 
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.is_admin)
 
-
+#checks if user is an admin or a moderator
 class IsAuthorOrModerator(BasePermission):
     """Read: anyone. Edit: author only. Delete: author, mod, or admin."""
 
