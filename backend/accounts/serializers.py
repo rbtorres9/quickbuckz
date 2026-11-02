@@ -5,7 +5,9 @@ User = get_user_model()
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 
+#main purpose of this code is profile serializers
 
+#Public profile serializer is a read only public view of a user account
 class PublicProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
     first_name = serializers.ReadOnlyField(source='user.first_name')
@@ -31,7 +33,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
                 ]
         read_only_fields = fields
 
-
+#owner profile serializer lets the owner edit their profile data including their bio username real name etc
 class OwnerProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
     first_name = serializers.CharField(source='user.first_name', required=False, allow_blank=True, max_length=150)
@@ -83,7 +85,7 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
 
 
 
-
+#registerserializer creates new user data
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -109,7 +111,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password': list(e.messages)})
         return attrs
 
-
+#follow serializer adds information regarding to account follow lists such as timestamps
 class FollowListSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source="user.username")
     first_name = serializers.ReadOnlyField(source="user.first_name")
@@ -122,7 +124,7 @@ class FollowListSerializer(serializers.ModelSerializer):
         fields = ["username", "first_name", "last_name", "bio",
                   "profile_picture", "followed_at", "is_following"]
 
-
+#this includes serialization regarding follow info as well
 class ProfileDetailSerializer(PublicProfileSerializer):
     is_followed = serializers.BooleanField(read_only=True)
     follows_you = serializers.BooleanField(read_only=True)
