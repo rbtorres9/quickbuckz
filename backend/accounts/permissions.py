@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-
+#custom permission classes that restrict access to users that don't have certain roles
 class IsModerator(BasePermission):
     message = "Moderator access required."
 
