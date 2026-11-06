@@ -85,6 +85,8 @@ export default function PostPage() {
   }
 
   async function deleteComment(comment) {
+    if (!confirm(`Delete comment from @${comment.author.username}? This can't be undone.`)) return
+
     const post_id = comment.post
     const comment_id = comment.id
 
