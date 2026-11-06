@@ -19,6 +19,12 @@ const typeOptions = [
   { value: 'text', label: 'Text only' },
 ]
 
+const sortMethodOptions = [
+  { value: 'likes', label: 'Likes' },
+  { value: 'comments', label: 'Comments'},
+  { value: 'recency', label: 'Recency'}
+]
+
 const hasPhoto = (p) => Boolean(p.image)
 
 function Pills({ label, options, value, onChange }) {
@@ -43,11 +49,15 @@ function Pills({ label, options, value, onChange }) {
 
 export default function Top() {
   const { fetchPosts } = useAuthContext()
+
   const [time, setTime] = useState('week')
   const [type, setType] = useState('all')
+  const [sortMethod, setSortMethod] = useState('likes')
+
   const [error, setError] = useState(null)
   const [ filtering, setFiltering ] = useState(true)
   const [ loading, setLoading ] = useState(true)
+
   const [ posts, setPosts ] = useState([])
   const [ feed, setFeed ] = useState([])
 
@@ -61,12 +71,16 @@ export default function Top() {
         [...posts]
           .filter((p) => getTimeDiffSecs(p.created_at) < range)
           .filter((p) => type === 'all' || (type === 'photos' ? hasPhoto(p) : !hasPhoto(p)))
-          .sort((a, b) => b.likes_count - a.likes_count)
+          .sort((a, b) =>
+            (sortMethod === 'likes' && b.likes_count - a.likes_count) ||
+            (sortMethod === 'comments' && b.comments_count - a.comments_count) ||
+            (sortMethod === 'recency' && b.created_at - a.created_at)
+          )
           .slice(0, 20)
     )
 
     setFiltering(false)
-  }, [posts, time, type, loading])
+  }, [posts, time, type, sortMethod, loading])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,6 +106,7 @@ export default function Top() {
       <div className="mt-5 space-y-3 rounded-2xl border border-line bg-card p-4">
         <Pills label="When" options={timeOptions} value={time} onChange={setTime} />
         <Pills label="Type" options={typeOptions} value={type} onChange={setType} />
+        <Pills label="Sort" options={sortMethodOptions} value={sortMethod} onChange={setSortMethod} />
       </div>
 
       {
