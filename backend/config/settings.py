@@ -194,6 +194,9 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  
+    "https://quickbuckz-1.onrender.com",
+
+
 ]
 
 if env('DEBUG', default=False) == True:
