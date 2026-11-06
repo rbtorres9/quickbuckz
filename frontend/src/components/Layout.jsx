@@ -7,7 +7,7 @@ import NavBar from './NavBar.jsx'
 const SIDE_GIF = '/side.gif'
 // Left side: this picture, shown once in the middle. Put it at frontend/public/side-left.png
 // (for a .jpg or .gif, change the name here to match). No file = the GIF on both sides.
-const LEFT_PICTURE = '/side-left.png'
+const LEFT_PICTURE = '/side.gif'
 
 // Wraps every logged-in page so they all get the nav bar.
 export default function Layout() {
