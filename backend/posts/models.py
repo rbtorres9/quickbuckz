@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
-# Create your models here.
+
 class Post(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts"
@@ -78,6 +79,7 @@ class Report(models.Model):
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="reports_reviewed",
+        limit_choices_to=models.Q(role__in=["mod", "admin"]) | models.Q(is_superuser=True),
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
 
@@ -99,6 +101,24 @@ class Report(models.Model):
     @property
     def target_type(self):
         return "comment" if self.comment_id else "post"
+
+    def clean(self):
+        super().clean()
+        errors = {}
+
+        if self.comment_id and self.post_id and self.comment.post_id != self.post_id:
+            errors["comment"] = "This comment belongs to a different post."
+
+        if self.reviewed_by_id and not self.reviewed_by.is_mod:
+            errors["reviewed_by"] = "Only moderators or admins can review reports."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.comment_id:
+            self.post_id = self.comment.post_id
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Report #{self.pk} on {self.target_type} {self.comment_id or self.post_id}"
