@@ -6,6 +6,7 @@ import { useApiContext } from '../context/ApiContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { getTimeAgoString, getDateTimeString } from '../utils/DateTimeUtils.js'
 import { errorMessage } from '../utils/errorMessage.js'
+import { useIsMod } from '../utils/useIsMod.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
 
@@ -25,6 +26,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const clickTimer = useRef(null)
   const { fetchUserProfile } = useApiContext()
   const { fetchWithToken } = useAuthContext()
+  const isMod = useIsMod() // mods can delete anyone's post
   const [loadedAuthor, setLoadedAuthor] = useState(null)
   const [deleted, setDeleted] = useState(false) // hides the card after you delete it
   const [ isLiked, setIsLiked ] = useState(post.is_liked)
@@ -83,7 +85,8 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   // Delete your own post. Real posts are deleted on the backend (only the author or a mod can).
   async function handleDelete() {
     setMenuOpen(false)
-    if (!confirm("Delete this post? This can't be undone.")) return
+    const whose = isMine ? 'this post' : `@${handle}'s post`
+    if (!confirm(`Delete ${whose}? This can't be undone.`)) return
     const result = await fetchWithToken(`/api/posts/${post.id}/`, { method: 'DELETE' })
     if (result.isError) return alert(errorMessage(result.result))
     setDeleted(true)
@@ -173,7 +176,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
             <span title={getDateTimeString(post.created_at)}>{getTimeAgoString(post.created_at)}</span>
           </span>
         </div>
-        {/* Your posts: Edit and Delete. Anyone else's: Report. */}
+        {/* Your posts: Edit and Delete. Anyone else's: Report (plus Delete for mods). */}
         {(
           <div className="relative" ref={menuRef}>
             <button
@@ -195,12 +198,19 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={handleReport}
-                    className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
-                  >
-                    Report
-                  </button>
+                  <>
+                    <button
+                      onClick={handleReport}
+                      className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
+                    >
+                      Report
+                    </button>
+                    {isMod && (
+                      <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                        Delete (mod)
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}

@@ -142,3 +142,18 @@ UPDATES:
   - Make the token single-use and short-lived (Django's `default_token_generator` + `PasswordResetTokenGenerator` does this), and run the normal password validators on reset.
 - Phone fixes: theme picker shows 3 per row on phones so names like "Midnight" aren't cut off; the selected filter tab in Mod tools was white text on the green, now dark and readable.
 - Removed the old sample data: `store.jsx` now only keeps the two themes (TODO: move to the backend). PostCard only handles real posts now. Removed the placeholder photo CSS.
+
+## Search 11/06 - MM
+- Search icon in the top bar (next to the bell) on every page, phones too. Opens /search.
+- /search?q=... finds people (name or username) and posts (text or author) as you type. The search stays in the address bar, so Back and links work.
+- Loads /api/profiles/ and /api/posts once and filters in the browser. TODO: backend search endpoint if the site gets big.
+
+## Mod delete anywhere 11/06 - MM
+- Mods/admins see "Delete (mod)" in the ⋯ menu on anyone's post (next to Report). Uses DELETE /api/posts/<id>/, which the backend already allows for mods.
+- `useIsMod()` now asks GET /api/users/me/role/ once per account and shares the answer, so a page full of posts doesn't send one request per post.
+- PostPage (separate zip, `mod-comments-update.zip`): mods see Delete on every comment. Also fixed `ownsPost` (compared to `userCache.handle`, which doesn't exist, now `userCache.username`), so post owners can delete comments on their own posts.
+- The buttons are only for looks; the backend checks every delete.
+
+## Left side picture 11/06 - MM
+- Left side now shows one picture (`frontend/public/side-left.png`), as big as fits, centered. Right side keeps the repeating `side.gif`.
+- For a .jpg or .gif, change `LEFT_PICTURE` in Layout.jsx to match the file name. No picture = the GIF on both sides like before.

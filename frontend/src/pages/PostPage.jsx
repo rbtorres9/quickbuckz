@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useCache } from '../context/CacheContext.jsx'
+import { useIsMod } from '../utils/useIsMod.js'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
 import { getName } from '../utils/NameHandler.js'
@@ -14,6 +15,7 @@ export default function PostPage() {
   const navigate = useNavigate()
   const { fetchPostById, fetchUserProfile } = useAuthContext()
   const { userCache } = useCache()
+  const isMod = useIsMod() // mods can delete any comment (the backend allows it)
   const { fetchWithToken } = useAuthContext()
   const [ submitting, setSubmitting ] = useState(false)
 
@@ -70,7 +72,7 @@ export default function PostPage() {
   }
 
   function canDeleteComment(comment) {
-    return comment.author?.username === userCache?.username || ownsPost
+    return comment.author?.username === userCache?.username || ownsPost || isMod
   }
 
   function canReportComment(comment) {
@@ -123,7 +125,7 @@ export default function PostPage() {
     setText('')
   }
 
-  const ownsPost = post?.author === userCache?.handle
+  const ownsPost = post?.author === userCache?.username
 
   return (
     <>
