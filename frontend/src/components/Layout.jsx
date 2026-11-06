@@ -21,10 +21,10 @@ export default function Layout() {
       <img src={SIDE_GIF} alt="" onError={() => setHasGif(false)} className="hidden" />
       <img src={LEFT_PICTURE} alt="" onError={() => setHasLeftPicture(false)} className="hidden" />
 
-      {hasLeftPicture ? (
+      { false  ? (
         <div className="side-gif single" style={{ backgroundImage: `url(${LEFT_PICTURE})` }} />
       ) : (
-        hasGif && <div className="side-gif" style={{ backgroundImage: `url(${SIDE_GIF})` }} />
+        true && <div className="side-gif" style={{ backgroundImage: `url(${SIDE_GIF})` }} />
       )}
       {/* the right side is mirrored so it faces the middle */}
       {hasGif && <div className="side-gif flip" style={{ backgroundImage: `url(${SIDE_GIF})` }} />}
