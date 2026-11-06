@@ -116,7 +116,7 @@ export default function ModTools() {
             key={f.value}
             onClick={() => { setFilter(f.value); setReports(null) }}
             className={`rounded-full px-3 py-1 text-sm font-semibold ${
-              filter === f.value ? 'bg-accent text-white' : 'border border-line hover:bg-white/5'
+              filter === f.value ? 'bg-accent font-semibold text-page' : 'border border-line hover:bg-white/5'
             }`}
           >
             {f.label}

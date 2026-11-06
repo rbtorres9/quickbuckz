@@ -125,3 +125,20 @@ UPDATES:
 - reviewed regular user if they can access mod page: mod access button not visible, they cannot access the mod page through manual URL path input as well
 - so far only two functions: delete and dismiss. delete removes the post from both posts and reports api. dismiss removes the post in reports api
 - **TODO**: still needs comment options from the frontend to delete or report the comment, in order to test report function
+## Edit posts, share, follower lists 11/06 - MM
+- Your own posts have Edit in the ⋯ menu: edit the text in place, Save sends PATCH /api/posts/<id>/ with `content` (empty posts are blocked)
+- Share button on real posts: phone share sheet if there is one, otherwise copies the post link
+- On someone's profile, their Followers/Following counts open their lists: /user/<username>/followers and /user/<username>/following (no Follow button on your own row)
+- Fixed Notifications "Follow back" (it still read the old reply format from before the ApiResult change)
+
+## Password reset pages, phone fixes, sample-data cleanup 11/06 - MM
+- /forgot "Forgot password" now sends `POST /api/password/forgot/` with `{ email }`. It always shows the same "if an account uses this email..." message so nobody can use it to check which emails have accounts.
+- New page /reset-password?token=... (the link in the reset email): new password + confirm, sends `POST /api/password/reset/` with `{ token, password }`. Shows the backend's error (like an expired link) and a Sign in button when it works.
+- Until those endpoints exist, both pages say "Password reset isn't available yet."
+- **Backend notes for password reset:**
+  - The endpoint names above are placeholders. Change `FORGOT_PASSWORD_URL` in ForgotAccount.jsx and `RESET_PASSWORD_URL` in ResetPassword.jsx if you pick different ones.
+  - Forgot password must **email** the link `https://<site>/reset-password?token=...` and must **not** return the token in the response, or anyone could reset anyone's password by typing their email.
+  - Return the same response whether or not the email has an account.
+  - Make the token single-use and short-lived (Django's `default_token_generator` + `PasswordResetTokenGenerator` does this), and run the normal password validators on reset.
+- Phone fixes: theme picker shows 3 per row on phones so names like "Midnight" aren't cut off; the selected filter tab in Mod tools was white text on the green, now dark and readable.
+- Removed the old sample data: `store.jsx` now only keeps the two themes (TODO: move to the backend). PostCard only handles real posts now. Removed the placeholder photo CSS.

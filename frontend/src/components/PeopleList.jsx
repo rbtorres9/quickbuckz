@@ -7,25 +7,26 @@ import { errorMessage } from '../utils/errorMessage.js'
 import Avatar from './Avatar.jsx'
 
 // A list of people with Follow / Following buttons. Used by the Following and Followers pages.
-// direction: "following" (people you follow) or "followers" (people who follow you)
+// direction: "following" or "followers"
+// username: whose list to show ("me" = yours)
 // children: anything to show under the title (the Following page puts the search bar here)
-export default function PeopleList({ title, direction, emptyText, children }) {
+export default function PeopleList({ title, direction, username = 'me', emptyText, children }) {
   const { fetchWithToken } = useAuthContext()
-  const { refreshUserCache } = useCache()
+  const { userCache, refreshUserCache } = useCache()
   const [people, setPeople] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(null) // username whose button is busy
 
   useEffect(() => {
-    fetchWithToken(`/api/profile/me/${direction}/`).then((result) => {
+    fetchWithToken(`/api/profile/${username}/${direction}/`).then((result) => {
       const data = result.result
 
       setLoading(false)
       if (result.isError) return setError(errorMessage(data))
       setPeople(data.results ?? data)
     })
-  }, [direction])
+  }, [direction, username])
 
   // Follow = POST, Unfollow = DELETE. The list keeps everyone so an accidental
   // Unfollow doesn't make the person vanish; tap Follow again to undo.
@@ -59,7 +60,7 @@ export default function PeopleList({ title, direction, emptyText, children }) {
         <div className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center">
           <p className="font-medium">{emptyText}</p>
           <Link
-            to="/user-page"
+            to={username === 'me' ? '/user-page' : `/user/${username}`}
             className="mt-5 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover"
           >
             Back to profile
@@ -79,6 +80,7 @@ export default function PeopleList({ title, direction, emptyText, children }) {
                     {person.bio && <p className="mt-1 line-clamp-2 text-sm">{person.bio}</p>}
                   </div>
                 </Link>
+                {person.username !== userCache?.username && ( // no button on your own row
                 <button
                   onClick={() => toggleFollow(person)}
                   disabled={pending === person.username}
@@ -94,12 +96,13 @@ export default function PeopleList({ title, direction, emptyText, children }) {
                       <span className="group-hover:hidden">Following</span>
                       <span className="hidden group-hover:inline">Unfollow</span>
                     </>
-                  ) : direction === 'followers' ? (
+                  ) : direction === 'followers' && username === 'me' ? (
                     'Follow back'
                   ) : (
                     'Follow'
                   )}
                 </button>
+                )}
               </li>
             )
           })}
