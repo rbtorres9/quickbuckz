@@ -15,6 +15,9 @@ body {
   @apply bg-page text-white font-sans antialiased;
 }
 
+/* Long words and links (like a pasted URL) wrap instead of pushing the page wider than a phone screen */
+main { overflow-wrap: anywhere; }
+
 /* Heart that pops when you double-click a photo */
 @keyframes heart-burst {
   0% { transform: scale(0.3); opacity: 0; }

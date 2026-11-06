@@ -157,3 +157,9 @@ UPDATES:
 ## Left side picture 11/06 - MM
 - Left side now shows one picture (`frontend/public/side-left.png`), as big as fits, centered. Right side keeps the repeating `side.gif`.
 - For a .jpg or .gif, change `LEFT_PICTURE` in Layout.jsx to match the file name. No picture = the GIF on both sides like before.
+
+## Phone sideways-scroll fix 11/06 - MM
+- Long words and links (like a pasted URL) pushed some pages wider than a phone, so you could scroll sideways (post page comments, Mod tools reports, someone's followers list title). Added `main { overflow-wrap: anywhere; }` in index.css so they wrap.
+- PostPage comments: added `min-w-0` to the comment text and the comment box so they can shrink and wrap.
+- Checked every page at 320, 360, 390 and 412 px wide with long names, links and big numbers: no sideways scrolling.
+- The side GIF/picture are hidden on phones on purpose (no room next to the posts).

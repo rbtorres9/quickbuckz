@@ -158,7 +158,7 @@ export default function PostPage() {
                   onChange={(e) => setText(e.target.value)}
                   maxLength={500}
                   placeholder="Add a comment…"
-                  className="flex-1 rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+                  className="min-w-0 flex-1 rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
                 />
                 <button type="submit"
                   disabled={submitting}
@@ -175,7 +175,7 @@ export default function PostPage() {
                 {comments.map((comment) => (
                   <li key={comment.id}  className="flex gap-3 py-3">
                       <Avatar name={getName(comment.author)} size="sm" accent={false} src={comment.author.profile_picture} />
-                      <div className="flex-1 text-sm">
+                      <div className="min-w-0 flex-1 text-sm">{/* min-w-0 lets long words wrap on phones */}
                           <div>
                           <b>{getName(comment.author)}</b> <span className="text-muted">@{comment.author.username} · {getTimeAgoString(comment.created_at)}</span>
                           </div>
