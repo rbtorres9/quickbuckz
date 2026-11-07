@@ -7,7 +7,7 @@ from pathlib import Path
 
 def post_path(instance, filename):
     ext = Path(filename).suffix.lower()
-    return f"posts/{uuid.uuid4().hex}{ext}"
+    return f"posts/images/{uuid.uuid4().hex}{ext}"
 
 
 class Post(models.Model):
