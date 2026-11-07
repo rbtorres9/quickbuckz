@@ -27,20 +27,17 @@ export default function EditProfileModal({ onClose }) {
   const [selectedProfilePicture, setSelectedProfilePicture] = useState(null)
   const [bannerUrl, setBannerUrl] = useState(userCache?.banner)
   const [selectedBanner, setSelectedBanner] = useState(null)
-  const [leftPictureUrl, setLeftPictureUrl] = useState(null)
+  const [leftPictureUrl, setLeftPictureUrl] = useState(userCache?.left_picture)
   const [selectedLeftPicture, setSelectedLeftPicture] = useState(null)
-  const [rightPictureUrl, setRightPictureUrl] = useState(null)
+  const [rightPictureUrl, setRightPictureUrl] = useState(userCache?.right_picture)
   const [selectedRightPicture, setSelectedRightPicture] = useState(null)
 
-  
-
-
   // Profile theme. Saved on this device for now: the backend has no theme field yet.
-  const [theme, setTheme] = useState(profile.theme)
-  const [flipLeft, setFlipLeft] = useState(false)
-  const [tileLeft, setTileLeft] = useState(false)
-  const [flipRight, setFlipRight] = useState(false)
-  const [tileRight, setTileRight] = useState(false)
+  const [theme, setTheme] = useState(userCache?.theme ?? 'classic')
+  const [flipLeft, setFlipLeft] = useState(userCache?.left_picture_flip ?? false)
+  const [tileLeft, setTileLeft] = useState(userCache?.left_picture_tile ?? false)
+  const [flipRight, setFlipRight] = useState(userCache?.right_picture_flip ?? false)
+  const [tileRight, setTileRight] = useState(userCache?.right_picture_tile ?? false)
 
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -107,11 +104,11 @@ export default function EditProfileModal({ onClose }) {
       formData.append('banner', '')
     }
 
-    formData.append('left_picture', selectedLeftPicture)
+    formData.append('left_picture', selectedLeftPicture ?? '')
     formData.append('left_picture_flip', flipLeft)
     formData.append('left_picture_tile', tileLeft)
 
-    formData.append('right_picture', selectedRightPicture)
+    formData.append('right_picture', selectedRightPicture ?? '')
     formData.append('right_picture_flip', flipRight)
     formData.append('right_picture_tile', tileRight)
 
@@ -288,15 +285,8 @@ export default function EditProfileModal({ onClose }) {
             </div>
 
             <ThemePicker label="Profile theme" value={theme} onChange={setTheme} />
-            {/* <p className="text-xs text-muted">Everyone who visits your profile sees this theme.</p>
 
-            <p className="text-xs text-muted">Your username stays <span className="text-white">@{userCache?.username ?? ""}</span>.</p> */}
-          </div>
-
-          {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-        </div>
-
-        <div className="relative grid grid-cols-2 px-5 pb-5">
+            <div className="relative grid grid-cols-2">
           <div className='relative'>
             <button
               type="button"
@@ -317,13 +307,15 @@ export default function EditProfileModal({ onClose }) {
               </span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {setLeftPictureUrl(null); setSelectedLeftPicture(null)}}
-              className="absolute right-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-xs hover:bg-black"
-            >
-              Remove
-            </button>
+            { leftPictureUrl && (
+              <button
+                type="button"
+                onClick={() => {setLeftPictureUrl(null); setSelectedLeftPicture(null)}}
+                className="absolute right-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-xs hover:bg-black"
+              >
+                Remove
+              </button>
+            )}
 
             <div className="grid grid-cols-2">
               <label className="flex items-center justify-center gap-1 rounded-lg border border-line px-4 py-2 text-sm text-center font-semibold hover:border-accent hover:text-accent">
@@ -352,63 +344,73 @@ export default function EditProfileModal({ onClose }) {
             </div>
           </div>
 
-          <div className='relative'>
-            <button
-              type="button"
-              onClick={() => {rightPictureInput.current?.click()}}
-              className="group relative block h-32 w-40% sm:h-60"
-              aria-label="Change right side image"
-            >
-              { rightPictureUrl ? (
-                <img src={rightPictureUrl} alt="" className="h-full w-full object-cover rounded-lg border border-line" />
-              ) : (
-                <img src="side-picture-placeholder.png" alt="" className="h-full w-full object-cover rounded-lg border border-line" />
+            <div className='relative'>
+              <button
+                type="button"
+                onClick={() => {rightPictureInput.current?.click()}}
+                className="group relative block h-32 w-40% sm:h-60"
+                aria-label="Change right side image"
+              >
+                { rightPictureUrl ? (
+                  <img src={rightPictureUrl} alt="" className="h-full w-full object-cover rounded-lg border border-line" />
+                ) : (
+                  <img src="side-picture-placeholder.png" alt="" className="h-full w-full object-cover rounded-lg border border-line" />
+                )}
+
+                <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-80 transition group-hover:bg-black/50 group-hover:opacity-100">
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium">
+                    <Camera size={14} /> Change right side image
+                  </span>
+                </span>
+              </button>
+              
+              { rightPictureUrl && (
+                <button
+                  type="button"
+                  onClick={() => {setRightPictureUrl(null); setSelectedRightPicture(null)}}
+                  className="absolute right-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-xs hover:bg-black"
+                >
+                  Remove
+                </button>
               )}
 
-              <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-80 transition group-hover:bg-black/50 group-hover:opacity-100">
-                <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium">
-                  <Camera size={14} /> Change right side image
-                </span>
-              </span>
-            </button>
+              <div className="grid grid-cols-2">
+                <label className="flex items-center justify-center gap-1 rounded-lg border border-line px-4 py-2 text-sm text-center font-semibold hover:border-accent hover:text-accent">
+                  <input
+                    type="checkbox"
+                    id="flip"
+                    name="flip"
+                    className="accent-accent"
+                    checked={flipRight}
+                    onChange={(e) => setFlipRight(e.target.checked)}
+                  />
+                  <span>Flip</span>
+                </label>
 
-            <button
-              type="button"
-              onClick={() => {setRightPictureUrl(null); setSelectedRightPicture(null)}}
-              className="absolute right-2 top-2 rounded-full bg-black/70 px-2.5 py-1 text-xs hover:bg-black"
-            >
-              Remove
-            </button>
-
-            <div className="grid grid-cols-2">
-              <label className="flex items-center justify-center gap-1 rounded-lg border border-line px-4 py-2 text-sm text-center font-semibold hover:border-accent hover:text-accent">
-                <input
-                  type="checkbox"
-                  id="flip"
-                  name="flip"
-                  className="accent-accent"
-                  checked={flipRight}
-                  onChange={(e) => setFlipRight(e.target.checked)}
-                />
-                <span>Flip</span>
-              </label>
-
-              <label className="flex items-center justify-center gap-1 rounded-lg border border-line px-4 py-2 text-sm text-center font-semibold hover:border-accent hover:text-accent">
-                <input
-                  type="checkbox"
-                  id="tile"
-                  name="tile"
-                  className="accent-accent"
-                  checked={tileRight}
-                  onChange={(e) => setTileRight(e.target.checked)}
-                />
-                <span>Tile</span>
-              </label>
+                <label className="flex items-center justify-center gap-1 rounded-lg border border-line px-4 py-2 text-sm text-center font-semibold hover:border-accent hover:text-accent">
+                  <input
+                    type="checkbox"
+                    id="tile"
+                    name="tile"
+                    className="accent-accent"
+                    checked={tileRight}
+                    onChange={(e) => setTileRight(e.target.checked)}
+                  />
+                  <span>Tile</span>
+                </label>
+              </div>
             </div>
+            
+            <input ref={leftPictureInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setLeftPictureUrl, setSelectedLeftPicture)} />
+            <input ref={rightPictureInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setRightPictureUrl, setSelectedRightPicture)} />
           </div>
-          
-          <input ref={leftPictureInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setLeftPictureUrl, setSelectedLeftPicture)} />
-          <input ref={rightPictureInput} type="file" accept={ALLOWED_TYPES.join(',')} className="hidden" onChange={(e) => pickImage(e, setRightPictureUrl, setSelectedRightPicture)} />
+
+          <p className="text-xs text-muted">Everyone who visits your profile sees this theme.</p>
+          <p className="text-xs text-muted">Your username stays as <span className="text-white">@{userCache?.username ?? ""}</span>.</p>
+            
+          </div>
+
+          {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
         </div>
       </form>
     </div>

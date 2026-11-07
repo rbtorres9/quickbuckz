@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { useCache } from '../context/CacheContext.jsx'
 import NavBar from './NavBar.jsx'
 
 // Fun stuff on the empty sides of the page (wide screens only).
@@ -13,6 +14,7 @@ const LEFT_PICTURE = '/side.gif'
 export default function Layout() {
   const [hasGif, setHasGif] = useState(true) // hides the sides if side.gif is missing
   const [hasLeftPicture, setHasLeftPicture] = useState(true)
+  const { userCache } = useCache()
 
   return (
     <>
@@ -21,13 +23,18 @@ export default function Layout() {
       <img src={SIDE_GIF} alt="" onError={() => setHasGif(false)} className="hidden" />
       <img src={LEFT_PICTURE} alt="" onError={() => setHasLeftPicture(false)} className="hidden" />
 
-      { false  ? (
-        <div className="side-gif single" style={{ backgroundImage: `url(${LEFT_PICTURE})` }} />
+      { userCache?.left_picture ? (
+        <div className={`side-gif ${userCache.left_picture_flip ? '-scale-x-100' : ''} ${userCache.left_picture_tile ? '' : 'single'}`} style={{ backgroundImage: `url(${userCache.left_picture})` }} />
       ) : (
         true && <div className="side-gif" style={{ backgroundImage: `url(${SIDE_GIF})` }} />
       )}
-      {/* the right side is mirrored so it faces the middle */}
-      {hasGif && <div className="side-gif flip" style={{ backgroundImage: `url(${SIDE_GIF})` }} />}
+
+
+      { userCache?.right_picture ? (
+        <div className={`side-gif flip ${userCache.right_picture_flip ? '' : '-scale-x-100'} ${userCache.right_picture_tile ? '' : 'single'}`} style={{ backgroundImage: `url(${userCache.right_picture})` }} />
+      ) : (
+        true && <div className="side-gif flip" style={{ backgroundImage: `url(${SIDE_GIF})` }} />
+      )}
 
       {/* bottom padding keeps content clear of the phone tab bar */}
       <div className="pb-20 md:pb-0">
