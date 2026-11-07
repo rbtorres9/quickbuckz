@@ -30,6 +30,13 @@ class PublicProfileSerializer(serializers.ModelSerializer):
                 'followers_count',
                 'following_count',
                 'created_at',
+                'theme',
+                'right_picture',
+                'right_picture_flip',
+                'right_picture_tile',
+                'left_picture',
+                'left_picture_flip',
+                'left_picture_tile',
                 ]
         read_only_fields = fields
 
@@ -53,6 +60,12 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
         return self._validate_image(value)
 
     def validate_banner(self, value):
+        return self._validate_image(value)
+
+    def validate_left_picture(self, value):
+        return self._validate_image(value)
+
+    def validate_right_picture(self, value):
         return self._validate_image(value)
 
     def update(self, instance, validated_data):
@@ -79,7 +92,14 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
             'visibility', 
             'followers_count',
             'following_count',
-            'created_at'
+            'created_at',
+            'theme',
+            'right_picture',
+            'right_picture_flip',
+            'right_picture_tile',
+            'left_picture',
+            'left_picture_flip',
+            'left_picture_tile',
             ]
         read_only_fields = ['user']
 

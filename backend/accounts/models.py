@@ -7,14 +7,26 @@ from .validators import *
 
 import uuid
 from pathlib import Path
-#Saves a profile picture
+
+# Saves a profile picture
 def profile_picture_path(instance, filename):
     ext = Path(filename).suffix.lower()
     return f"profiles/profile_pictures/{instance.user_id}/{uuid.uuid4().hex}{ext}"
-#saves profile banner
+
+# saves profile banner
 def banner_path(instance, filename):
     ext = Path(filename).suffix.lower()
     return f"profiles/banner/{instance.user_id}/{uuid.uuid4().hex}{ext}"
+
+# saves left picture
+def left_picture_path(instance, filename):
+    ext = Path(filename).suffix.lower()
+    return f"profiles/left_pictures/{instance.user_id}/{uuid.uuid4().hex}{ext}"
+
+# saves right picture
+def right_picture_path(instance, filename):
+    ext = Path(filename).suffix.lower()
+    return f"profiles/right_pictures/{instance.user_id}/{uuid.uuid4().hex}{ext}"
 
 #the following class makes different user values like usernames and emails unique from other users
 class User(AbstractUser):
@@ -90,6 +102,16 @@ class Profile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     birthday = models.DateField(blank=True, null=True, validators=[validate_minimum_age])
+
+    theme = models.CharField(default="classic", max_length=256)
+    right_picture = models.ImageField(upload_to=right_picture_path, blank=True, null=True)
+    right_picture_flip = models.BooleanField(default=False)
+    right_picture_tile = models.BooleanField(default=False)
+
+    left_picture = models.ImageField(upload_to=left_picture_path, blank=True, null=True)
+    left_picture_flip = models.BooleanField(default=False)
+    left_picture_tile = models.BooleanField(default=False)
+    
 
     def __str__(self):
         return self.user.username
