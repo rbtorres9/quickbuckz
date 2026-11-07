@@ -28,6 +28,7 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)*0ojj#i!sy^w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
 # Application definition
 
@@ -199,6 +200,7 @@ CORS_ALLOWED_ORIGINS = [
 
 ]
 
-if env('DEBUG', default=False) == True:
-    CORS_ALLOW_ALL_ORIGINS=True
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+
 

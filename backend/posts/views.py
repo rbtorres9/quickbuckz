@@ -1,7 +1,6 @@
 from django.db.models import Prefetch, Exists, OuterRef, Value, BooleanField
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
-from django.utils import timezone
 
  
 from rest_framework import generics, status, viewsets
@@ -26,6 +25,7 @@ from .serializers import (
     ReportCreateSerializer,
 )
 
+from .moderation import delete_content, dismiss_reports 
  
 def with_like_flag(qs, viewer):
     """Annotate each post with whether the viewer has liked it."""
@@ -44,6 +44,11 @@ class PostViewSet(viewsets.ModelViewSet):
  
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    # REPORT LOG: close reports before deleting a post
+    def perform_destroy(self, instance):
+        delete_content(instance, self.request.user)  # MOD LOG
+
  
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -116,7 +121,9 @@ class PostViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            comment.delete()
+
+            # REPORT LOG: close reports before deleting a comment
+            delete_content(comment, request.user)  # MOD LOG
             return Response(status=status.HTTP_204_NO_CONTENT)
  
         serializer = CommentSerializer(data=request.data, context=context)
@@ -176,18 +183,17 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = Report.objects.select_related(
-            "post__author", "comment__author", "reporter", "reviewed_by"
+            "post__author", "comment__author", "reporter", "target_author",
+            "resolution__moderator", 
         )
 
         status_param = self.request.query_params.get("status", Report.Status.OPEN)
         if status_param != "all":
             qs = qs.filter(status=status_param)
-
+        
         type_param = self.request.query_params.get("type")
-        if type_param == "post":
-            qs = qs.filter(comment__isnull=True)
-        elif type_param == "comment":
-            qs = qs.filter(comment__isnull=False)
+        if type_param in (Report.TargetType.POST, Report.TargetType.COMMENT):
+            qs = qs.filter(target_type=type_param)
 
         return qs
 
@@ -200,13 +206,12 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        dismissed = Report.objects.filter(
-            post_id=report.post_id,
-            comment_id=report.comment_id,
-            status=Report.Status.OPEN,
-        ).update(
-            status=Report.Status.DISMISSED,
-            reviewed_by=request.user,
-            reviewed_at=timezone.now(),
-        )
+        if report.target_author_id == request.user.id:
+            return Response(
+                {"detail": "Another moderator has to review reports on your own content."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        dismissed = dismiss_reports(report, request.user)
+
         return Response({"dismissed": dismissed}, status=status.HTTP_200_OK)

@@ -141,6 +141,8 @@ export default function ModTools() {
             const target = isComment ? group.comment : group.post
             const reasons = [...new Set(group.reports.map((r) => r.reason))]
             const reporters = group.reports.map((r) => `@${r.reporter}`).join(', ')
+            const canReview = group.reports.every((r) => r.can_review)
+
 
             return (
               <li key={group.key} className="rounded-2xl border border-line bg-card p-5">
@@ -174,20 +176,28 @@ export default function ModTools() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    onClick={() => removeContent(group)}
-                    disabled={busy === group.key}
-                    className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
-                  >
-                    Remove {group.type}
-                  </button>
-                  <button
-                    onClick={() => dismiss(group)}
-                    disabled={busy === group.key}
-                    className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50"
-                  >
-                    Dismiss
-                  </button>
+                  {canReview ? (
+                    <>
+                      <button
+                        onClick={() => removeContent(group)}
+                        disabled={busy === group.key}
+                        className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+                      >
+                        Remove {group.type}
+                      </button>
+                      <button
+                        onClick={() => dismiss(group)}
+                        disabled={busy === group.key}
+                        className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50"
+                      >
+                        Dismiss
+                      </button>
+                    </>
+                  ) : (
+                    <p className="self-center text-sm text-muted">
+                      This is your {group.type}. Another moderator has to review it.
+                    </p>
+                  )}
                   <Link to={`/post/${group.post.id}`} className="ml-auto self-center text-sm text-muted hover:text-accent">
                     View post
                   </Link>
