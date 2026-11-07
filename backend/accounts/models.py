@@ -129,6 +129,7 @@ class AccountSecurity(models.Model):
     def __str__(self):
         return f"Security for {self.user.username}"
 
+
 #tracks which accounts follow who
 class Follow(models.Model):
     follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following_set")
@@ -141,3 +142,17 @@ class Follow(models.Model):
             models.CheckConstraint(condition=~models.Q(follower=models.F("following")), name="no_self_follow"),
         ]
         #CheckConstraint line means a check to ensure a user cannot follow themselves
+
+
+# A pending request to follow a private profile. It becomes a Follow when the target accepts.
+class FollowRequest(models.Model):
+    requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sent_follow_requests")
+    target = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_follow_requests")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["requester", "target"], name="unique_follow_request"),
+            models.CheckConstraint(condition=~models.Q(requester=models.F("target")), name="no_self_follow_request"),
+        ]

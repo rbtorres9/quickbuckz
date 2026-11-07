@@ -3,11 +3,13 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotAuthenticated
-from .models import Profile, Follow
 from django.contrib.auth import get_user_model
 User = get_user_model()
+from .models import Profile, Follow, FollowRequest
+
 from .permissions import IsModerator
 
+from django.db import transaction
 from django.db.models import (
     Q, 
     Exists, 
@@ -22,34 +24,48 @@ from .serializers import (
     OwnerProfileSerializer, 
     RegisterSerializer, 
     FollowListSerializer, 
-    ProfileDetailSerializer
+    ProfileDetailSerializer, 
+    LockedProfileSerializer, 
+    FollowRequestSerializer, 
     )
 
 
 from django.shortcuts import get_object_or_404
 
-
+# PRIVATE PROFILES: followers can see (changed) 
 def visible_profiles(user):
     profiles = Profile.objects.select_related("user")
     if user.is_authenticated:
-        return profiles.filter(Q(visibility=Profile.Visibility.PUBLIC) | Q(user=user))
-     
+        followed_ids = Follow.objects.filter(follower=user).values("following")
+        return profiles.filter(
+            Q(visibility=Profile.Visibility.PUBLIC)
+            | Q(user=user)
+            | Q(user__in=followed_ids)
+        )
     return profiles.filter(visibility=Profile.Visibility.PUBLIC)
+
 
 def with_follow_flags(qs, viewer):
     """Annotate each profile with how the viewer relates to its user."""
+    # logged out/missing auth branch
     if not viewer.is_authenticated:
         return qs.annotate(
             is_self=Value(False, output_field=BooleanField()),
             is_followed=Value(False, output_field=BooleanField()),
             follows_you=Value(False, output_field=BooleanField()),
+            is_requested=Value(False, output_field=BooleanField()),
         )
+
+    # logged in branch
     return qs.annotate(
         is_self=ExpressionWrapper(Q(user=viewer), output_field=BooleanField()),
         # viewer -> profile user
         is_followed=Exists(Follow.objects.filter(follower=viewer, following=OuterRef("user"))),
         # profile user -> viewer
         follows_you=Exists(Follow.objects.filter(follower=OuterRef("user"), following=viewer)),
+        # viewer has a pending request to the profile user
+        is_requested=Exists(FollowRequest.objects.filter(requester=viewer, target=OuterRef("user"))),
+
     )
 
 class RegisterView(generics.CreateAPIView):
@@ -81,21 +97,25 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
 
 
 class ProfileByUsernameView(generics.RetrieveAPIView):
-    serializer_class = ProfileDetailSerializer
     permission_classes = [AllowAny]
 
     def get_object(self):
         viewer = self.request.user
         username = self.kwargs["username"].strip().lower()
-        qs = with_follow_flags(visible_profiles(viewer), viewer)
-        return get_object_or_404(qs, user__username=username)
+        qs = with_follow_flags(Profile.objects.select_related("user"), viewer)
+        profile = get_object_or_404(qs, user__username=username)
+        self.can_view = visible_profiles(viewer).filter(pk=profile.pk).exists()
+        return profile
 
     def get_serializer_class(self):
+        # if profile is private and current user can_view == False
+        if not getattr(self, "can_view", True):
+            return LockedProfileSerializer
         if self.request.user.is_authenticated:
             return ProfileDetailSerializer
         return PublicProfileSerializer
 
-# --- FOLLOW BLOCK ---- 
+# --- Follow Block ---
 
 class FollowView(APIView):
     permission_classes = [IsAuthenticated]
@@ -103,15 +123,20 @@ class FollowView(APIView):
     def _state(self, viewer, target, status=200):
         return Response({
             "is_followed": Follow.objects.filter(follower=viewer, following=target).exists(),
+            "is_requested": FollowRequest.objects.filter(requester=viewer, target=target).exists(),  # FOLLOW REQUESTS
             "followers_count": target.follower_set.count(),
         }, status=status)
 
     def post(self, request, username):
-        # Following still requires a visible profile
-        profile = get_object_or_404(visible_profiles(request.user), user__username=username.strip().lower())
+        profile = get_object_or_404(Profile.objects.select_related("user"), user__username=username.strip().lower())
         target = profile.user
         if target == request.user:
             return Response({"detail": "You can't follow yourself."}, status=400)
+        if Follow.objects.filter(follower=request.user, following=target).exists():
+            return self._state(request.user, target)
+        if profile.visibility == Profile.Visibility.PRIVATE:
+            _, created = FollowRequest.objects.get_or_create(requester=request.user, target=target)
+            return self._state(request.user, target, status=202 if created else 200)
         _, created = Follow.objects.get_or_create(follower=request.user, following=target)
         return self._state(request.user, target, status=201 if created else 200)
 
@@ -119,6 +144,7 @@ class FollowView(APIView):
         # Look up the user directly so you can unfollow someone who went private
         target = get_object_or_404(User, username=username.strip().lower())
         Follow.objects.filter(follower=request.user, following=target).delete()
+        FollowRequest.objects.filter(requester=request.user, target=target).delete()  # FOLLOW REQUESTS: also cancels a pending request
         return self._state(request.user, target)
 
     
@@ -180,6 +206,38 @@ class MutualFollowersView(FollowListView):
                     is_following=Value(True, output_field=BooleanField()),  # by definition
                 )
                 .order_by("-followed_at"))
+
+
+# --- Follow Requests Block ---
+class FollowRequestListView(generics.ListAPIView):
+    """Pending requests other people sent to me."""
+    serializer_class = FollowRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return (FollowRequest.objects
+                .filter(target=self.request.user)
+                .select_related("requester__profile"))
+
+
+class FollowRequestDecisionView(APIView):
+    """POST accepts <username>'s request, DELETE declines it."""
+    permission_classes = [IsAuthenticated]
+
+    def _get_request(self, request, username):
+        return get_object_or_404(FollowRequest, target=request.user,
+                                 requester__username=username.strip().lower())
+
+    def post(self, request, username):
+        follow_request = self._get_request(request, username)
+        with transaction.atomic():
+            Follow.objects.get_or_create(follower=follow_request.requester, following=request.user)
+            follow_request.delete()
+        return Response({"detail": "Request accepted."}, status=200)
+
+    def delete(self, request, username):
+        self._get_request(request, username).delete()
+        return Response({"detail": "Request declined."}, status=200)
 
 # --- User Role Block ---
 

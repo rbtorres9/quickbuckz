@@ -8,6 +8,8 @@ from .views import (
     FollowListView, 
     MutualFollowersView,
     UserRoleView,
+    FollowRequestListView,
+    FollowRequestDecisionView,
 )
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -23,5 +25,7 @@ urlpatterns = [
     path('profile/<str:username>/following/', FollowListView.as_view(direction="following"), name='profile-following'),
     path('profile/<str:username>/followers/', FollowListView.as_view(direction="followers"), name='profile-followers'),
     path('profile/<str:username>/mutuals/', MutualFollowersView.as_view(), name='profile-mutuals'),
+    path('follow-requests/', FollowRequestListView.as_view(), name='follow-requests'),
+    path('follow-requests/<str:username>/', FollowRequestDecisionView.as_view(), name='follow-request-decision'),
     path('users/me/role/', UserRoleView.as_view(), name='user-role')
 ]

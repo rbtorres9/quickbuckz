@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Profile, Follow
+from .models import Profile, Follow, FollowRequest
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.contrib.auth.password_validation import validate_password
@@ -149,8 +149,47 @@ class ProfileDetailSerializer(PublicProfileSerializer):
     is_followed = serializers.BooleanField(read_only=True)
     follows_you = serializers.BooleanField(read_only=True)
     is_self = serializers.BooleanField(read_only=True)
+    is_requested = serializers.BooleanField(read_only=True) 
 
     class Meta(PublicProfileSerializer.Meta):
-        fields = PublicProfileSerializer.Meta.fields + ["is_followed", "follows_you", "is_self"]
+        fields = PublicProfileSerializer.Meta.fields + [
+            "is_followed", 
+            "follows_you", 
+            "is_self", 
+            "is_requested", 
+            "visibility"
+            ]
         read_only_fields = fields
 
+class LockedProfileSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='user.username')
+    first_name = serializers.ReadOnlyField(source='user.first_name')
+    last_name = serializers.ReadOnlyField(source='user.last_name')
+    followers_count = serializers.IntegerField(source='user.follower_set.count', read_only=True)
+    following_count = serializers.IntegerField(source='user.following_set.count', read_only=True)
+    is_followed = serializers.BooleanField(read_only=True)
+    follows_you = serializers.BooleanField(read_only=True)
+    is_self = serializers.BooleanField(read_only=True)
+    is_requested = serializers.BooleanField(read_only=True)
+    is_locked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = ['id', 'username', 'first_name', 'last_name', 'profile_picture', 'visibility',
+                  'followers_count', 'following_count',
+                  'is_followed', 'follows_you', 'is_self', 'is_requested', 'is_locked']
+        read_only_fields = fields
+
+    def get_is_locked(self, obj):
+        return True
+
+
+class FollowRequestSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='requester.username')
+    first_name = serializers.ReadOnlyField(source='requester.first_name')
+    last_name = serializers.ReadOnlyField(source='requester.last_name')
+    profile_picture = serializers.ImageField(source='requester.profile.profile_picture', read_only=True)
+
+    class Meta:
+        model = FollowRequest
+        fields = ['id', 'username', 'first_name', 'last_name', 'profile_picture', 'created_at']

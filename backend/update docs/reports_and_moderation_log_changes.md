@@ -64,12 +64,6 @@ One user can have only one **open** report on the same post or comment. Reportin
 | `created_at` | When it happened |
 
 - `via_reports` (property) is `reports_closed > 0`, meaning the action responded to reports. It's worked out on the server, so nothing from the frontend can fake it.
-- `__str__`: `"<who>: <action label>"`.
-  - `who` is the moderator's username for mod actions.
-  - It's `system` for `content_deleted` entries, which never have a moderator.
-  - It's `deleted user` when a mod action's moderator account was later deleted (`SET_NULL`).
-  - Before this, every entry without a moderator showed "deleted user".
-- `content_deleted` entries are kept, not skipped: the report's Outcome is read from this row through `Report.resolution`. Without it, the report would close with no outcome. They're hidden from the admin's default view instead (see `posts/admin.py`).
 - "Mod page" vs. "Delete (mod) on a post page" is **not** recorded. Both use the same API request, so the server can't tell them apart reliably.
 
 #### What gets logged
@@ -134,10 +128,6 @@ The only code that closes reports, so every closed report has a log entry.
 - **ModerationLog admin**: read-only. No adding or editing, and only superusers can delete.
   - Columns: action, moderator, source, via reports (✓/✗), reports closed, author.
   - Each entry lists the reports it closed (inline), with links through to them.
-  - **Log type** filter (`LogTypeFilter`, first in `list_filter`):
-    - The options are **Mod actions** (the default), **Author deletions (system)** and **All**. The URL parameter is `?log_type=mod|system|all`.
-    - With no parameter, "Mod actions" is selected and `content_deleted` rows are excluded, so the default list shows only real moderator decisions. `choices()` is overridden so that default is highlighted instead of Django's "All".
-    - Combine it with the **Action** filter carefully: picking Action = "Content deleted" while Log type is still "Mod actions" shows an empty list. Switch Log type to "Author deletions" or "All".
 
 ### Migrations
 
@@ -149,8 +139,6 @@ The only code that closes reports, so every closed report has a log entry.
 | `0006_report_target_type` | `target_type` field (left out of 0005 because an old `@property` had the same name) |
 | `0007_moderationlog` | `ModerationLog` table |
 | `0008_remove_report_reviewed_at_remove_report_reviewed_by_and_more` | Removes `reviewed_by` / `reviewed_at`, adds `resolution` and `source`, status becomes `open` / `closed` |
-
-The `ModerationLog.__str__` change and the admin Log type filter need no migration.
 
 After `migrate`, reports closed under the old statuses were converted in the shell:
 
@@ -203,13 +191,10 @@ They keep the reporter and reason but have no linked outcome (the admin shows `-
 - In the admin, a comment report could point at a different post, and anyone could be set as the reviewer.
 - Reports were cascade-deleted along with their content, so removals left no record.
 - Mods could act on reports about their own content.
-- `ModerationLog.__str__` labeled `content_deleted` entries "deleted user". They now show "system".
-- Author self-deletes of reported content were mixed in with moderator actions in the ModerationLog admin. They're now hidden by default behind the Log type filter.
 
 ## Known issues / optional
 
-- When a mod removes a post, its comments are deleted along with it. Any of those comments with open reports gets its own `content_deleted` / `system` entry from the `pre_delete` signal, labeled "not by a mod" even though a mod caused it. The Log type filter hides these. Crediting them to the mod is not built yet.
-- `__str__` shows "system" for every `content_deleted` entry, including author deletes made through the API (source `app`). The `source` column has the exact origin.
+- **`ModerationLog.__str__`** shows "deleted user" for `content_deleted` entries, which have no moderator by design. Fix: show `get_source_display()` when the action is `content_deleted`.
 - `views.py` still imports `BasePermission` and `SAFE_METHODS`, which are unused.
 - Optional, not applied:
   - `errorMessage.js` could replace Django's HTML error page (shown on any 500) with "Server error. Please try again."
@@ -233,6 +218,3 @@ They keep the reporter and reason but have no linked outcome (the admin shows `-
 | "Dismiss selected reports" in the admin | Log source `admin` |
 | Author deletes their own reported post | Log: `content_deleted`, no moderator |
 | Delete a user who has reported posts | Log: `content_deleted` / `system` |
-| Open the ModerationLog admin | "Mod actions" selected. No `content_deleted` rows. |
-| Log type → Author deletions (system) | Only `content_deleted` rows, each labeled "system: Content deleted (not by a mod)" |
-| Report outcome after an author deletes reported content | Still "Content deleted (not by a mod)" |
