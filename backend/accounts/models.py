@@ -119,7 +119,3 @@ class Follow(models.Model):
             models.CheckConstraint(condition=~models.Q(follower=models.F("following")), name="no_self_follow"),
         ]
         #CheckConstraint line means a check to ensure a user cannot follow themselves
-
-        
-        
-

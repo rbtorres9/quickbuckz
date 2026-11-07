@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef} from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, MoreHorizontal } from 'lucide-react'
 import { useCache } from '../context/CacheContext.jsx'
 import { useIsMod } from '../utils/useIsMod.js'
 import { useAuthContext } from '../context/AuthContext.jsx'
@@ -35,6 +35,18 @@ export default function PostPage() {
   const [ comments, setComments ] = useState([])
   const [ commentStates, setCommentStates ] = useState({})
   const [ commentCount, setCommentCount ] = useState(comments.length)
+  // which comment's ⋯ menu is open
+  const [ openMenu, setOpenMenu ] = useState(null) // comment id, or null when closed
+  const menuRef = useRef(null)
+
+  // Close the ⋯ menu when clicking anywhere else
+  useEffect(() => {
+    if (openMenu === null) return
+    const close = (e) => { if (!menuRef.current?.contains(e.target)) setOpenMenu(null) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [openMenu])
+
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -76,13 +88,58 @@ export default function PostPage() {
   }
 
   function canReportComment(comment) {
-    return !(canDeleteComment(comment))
+    return comment.author?.username !== userCache?.username
   }
 
-  async function reportComment(comment) {
-    // TODO: Fill this function
-    return
+  // HELPERS
+  // what to show for each comment
+  const STATUS_LABELS = {
+    [STATE_BUSY_DELETING]: 'Deleting...',
+    [STATE_DELETED]: 'Deleted',
+    [STATE_REPORTING]: 'Reporting...',
+    [STATE_REPORTED]: 'Reported',
   }
+
+  
+  function showDeleteOption(comment) {
+    const state = getState(comment)
+    return canDeleteComment(comment) && state !== STATE_BUSY_DELETING && state !== STATE_DELETED
+  }
+
+  function showReportOption(comment) {
+    const state = getState(comment)
+    const busyOrDone = [STATE_REPORTING, STATE_REPORTED, STATE_BUSY_DELETING, STATE_DELETED]
+    return canReportComment(comment) && !busyOrDone.includes(state)
+  }
+
+  function deleteLabel(comment) {
+    const mine = comment.author?.username === userCache?.username
+    return mine || ownsPost ? 'Delete' : 'Delete (mod)'
+  }
+
+
+  async function reportComment(comment) {
+    const reason = prompt('Why are you reporting this comment?')
+    if (!reason?.trim()) return
+
+    const comment_id = comment.id
+    setCommentStates((prev) => ({ ...prev, [comment_id]: STATE_REPORTING }))
+
+    const result = await fetchWithToken(`/api/posts/${comment.post}/report/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason.trim(), comment_id }),
+    })
+
+    if (result.isError) {
+      setCommentStates((prev) => ({ ...prev, [comment_id]: STATE_NORMAL }))
+      return alert(errorMessage(result.result))
+    }
+
+    setCommentStates((prev) => ({ ...prev, [comment_id]: STATE_REPORTED }))
+    alert(result.result?.detail ?? 'Thanks, this comment was reported.')
+  }
+
 
   async function deleteComment(comment) {
     if (!confirm(`Delete comment from @${comment.author.username}? This can't be undone.`)) return
@@ -93,10 +150,10 @@ export default function PostPage() {
     setCommentStates((prev) => {return {...prev, [comment_id]: STATE_BUSY_DELETING}})
     const result = await fetchWithToken(`/api/posts/${post_id}/comment/?comment_id=${comment_id}`, { method: "DELETE" })
 
-    if (result.isError) {
-      setCommentStates((prev) => {return {...prev, [comment_id]: STATE_NORMAL}})
-      setError(result.result)
-      console.error(`Failed to delete comment id: ${comment_id}`)
+    if (result.isError) { 
+      // show the error without hiding the page
+      setCommentStates((prev) => ({ ...prev, [comment_id]: STATE_NORMAL }))
+      alert(errorMessage(result.result))
       return
     }
 
@@ -185,33 +242,44 @@ export default function PostPage() {
                           <p className={`mt-0.5 break-words ${getState(comment) === STATE_DELETED ? 'line-through text-white/50' : ''}`}>{comment.content}</p>
                       </div>
 
-                      {(canDeleteComment(comment)) && (
-                          getState(comment) === STATE_BUSY_DELETING ? (
-                              <span className="self-start text-xs text-muted">
-                                  Deleting...
-                              </span>
-                          ) : getState(comment) === STATE_DELETED ? (
-                            <span className="self-start text-xs text-muted">
-                                  Deleted
-                              </span>
-                          ) : (
-                          <button
-                              onClick={() => deleteComment(comment)}
-                              className="self-start text-xs text-red-400 hover:underline"
-                          >
-                          Delete
-                          </button>
-                          )
-                      )}
+                      <div className="flex shrink-0 items-start gap-2">
+                        {STATUS_LABELS[getState(comment)] && (
+                          <span className="pt-1 text-xs text-muted">{STATUS_LABELS[getState(comment)]}</span>
+                        )}
 
-                      {
-                        (canReportComment(comment)) && (
-                          <button
-                              onClick={() => reportComment(comment)}
-                              className="self-start text-xs text-red-400 hover:underline"
-                          >Report</button>
-                        )
-                      }
+                        {(showDeleteOption(comment) || showReportOption(comment)) && (
+                          <div className="relative" ref={openMenu === comment.id ? menuRef : null}>
+                            <button
+                              onClick={() => setOpenMenu(openMenu === comment.id ? null : comment.id)}
+                              className="rounded-md px-1.5 py-0.5 text-muted hover:bg-white/5"
+                              aria-label="Comment options"
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+
+                            {openMenu === comment.id && (
+                              <div className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
+                                {showReportOption(comment) && (
+                                  <button
+                                    onClick={() => { setOpenMenu(null); reportComment(comment) }}
+                                    className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
+                                  >
+                                    Report
+                                  </button>
+                                )}
+                                {showDeleteOption(comment) && (
+                                  <button
+                                    onClick={() => { setOpenMenu(null); deleteComment(comment) }}
+                                    className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
+                                  >
+                                    {deleteLabel(comment)}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                   </li>
                 ))}
               </ul>
