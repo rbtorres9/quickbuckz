@@ -2,13 +2,20 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
+import uuid
+from pathlib import Path
+
+def post_path(instance, filename):
+    ext = Path(filename).suffix.lower()
+    return f"posts/{uuid.uuid4().hex}{ext}"
+
 
 class Post(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts"
     )
     content = models.TextField()
-    image = models.ImageField(upload_to="posts/images/", blank=True, null=True)
+    image = models.ImageField(upload_to=post_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
