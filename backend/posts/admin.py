@@ -95,10 +95,39 @@ class ResolvedReportInline(admin.TabularInline):
         return False
 
 
+class LogTypeFilter(admin.SimpleListFilter):
+    title = "log type"
+    parameter_name = "log_type"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("mod", "Mod actions"),
+            ("system", "Author deletions (system)"),
+            ("all", "All"),
+        ]
+
+    def choices(self, changelist):
+        current = self.value() or "mod"
+        for lookup, title in self.lookup_choices:
+            yield {
+                "selected": current == lookup,
+                "query_string": changelist.get_query_string({self.parameter_name: lookup}),
+                "display": title,
+            }
+
+    def queryset(self, request, queryset):
+        current = self.value() or "mod"
+        if current == "mod":
+            return queryset.exclude(action=ModerationLog.Action.CONTENT_DELETED)
+        if current == "system":
+            return queryset.filter(action=ModerationLog.Action.CONTENT_DELETED)
+        return queryset
+
+
 @admin.register(ModerationLog)
 class ModerationLogAdmin(admin.ModelAdmin):
     list_display = ["created_at", "action", "moderator", "source", "via_reports", "reports_closed", "target_author"]
-    list_filter = ["action", "source", "created_at"]
+    list_filter = [LogTypeFilter, "action", "source", "created_at"]
     search_fields = ["moderator__username", "target_author__username", "target_content"]
     list_select_related = ["moderator", "target_author"]
     inlines = [ResolvedReportInline]

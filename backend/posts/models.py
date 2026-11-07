@@ -210,5 +210,10 @@ class ModerationLog(models.Model):
         return self.reports_closed > 0
     
     def __str__(self):
-        who = self.moderator.username if self.moderator else "deleted user"
+        if self.moderator:
+            who = self.moderator.username
+        elif self.action == self.Action.CONTENT_DELETED:
+            who = "system"
+        else:
+            who = "deleted user"
         return f"{who}: {self.get_action_display()}"
