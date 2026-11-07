@@ -1,25 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, MessageCircle, MoreHorizontal, Share2 } from 'lucide-react'
-import { useStore } from '../data/store.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { getTimeAgoString, getDateTimeString } from '../utils/DateTimeUtils.js'
 import { errorMessage } from '../utils/errorMessage.js'
+import { useIsMod } from '../utils/useIsMod.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
 
-// Shows two kinds of post:
-//  - real posts from the database (they have created_at, content, author = username)
-//  - sample posts from store.jsx (they have date, text, handle)
+// One post from the database (content, image, created_at, author = username).
 // `user` is the author's profile. If a page doesn't pass it, the card loads it itself.
 
 // Each author's profile is loaded once and shared by all their posts
 const authorProfiles = {}
 
 export default function PostCard({ post, user, full = false, onDeleted }) {
-  const { deletePost, profile } = useStore()
   const { userCache } = useCache()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -29,34 +26,33 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const clickTimer = useRef(null)
   const { fetchUserProfile } = useApiContext()
   const { fetchWithToken } = useAuthContext()
+  const isMod = useIsMod() // mods can delete anyone's post
   const [loadedAuthor, setLoadedAuthor] = useState(null)
   const [deleted, setDeleted] = useState(false) // hides the card after you delete it
   const [ isLiked, setIsLiked ] = useState(post.is_liked)
   const [ likesCount, setLikesCount ] = useState(post.likes_count)
+  const [content, setContent] = useState(post.content) // changes after you edit the post
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [editError, setEditError] = useState('')
 
-  const isReal = 'created_at' in post
-  const handle = isReal ? post.author : post.handle
+  const handle = post.author
 
   // Load the author's name and photo when the page didn't pass them in
   useEffect(() => {
-    if (!isReal || user) return
+    if (user) return
     authorProfiles[handle] ??= fetchUserProfile(handle)
     authorProfiles[handle].then((res) => { if (!res.isError) setLoadedAuthor(res.result) })
-  }, [isReal, user, handle])
+  }, [user, handle])
   user = user ?? loadedAuthor
-  const isMine = handle === (userCache?.username ?? profile.handle)
+  const isMine = handle === userCache?.username
   const profileLink = isMine ? '/user-page' : `/user/${handle}`
 
-  let authorName = post.author
-  if (isReal) authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || handle
-  else if (isMine) authorName = profile.name
-  const avatar = isReal ? user?.profile_picture : isMine ? profile.avatarUrl : null
-
-  const text = isReal ? post.content : post.text
-  const photoUrl = isReal ? post.image : post.imageUrl // real photo address, if any
-  const gradient = isReal ? null : post.image // sample posts use a color placeholder
-  const likes = isReal ? post.likes_count : post.likes
-  const comments = isReal ? post.comments_count : post.comments.length
+  const authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || handle
+  const avatar = user?.profile_picture
+  const text = content
+  const photoUrl = post.image
+  const comments = post.comments_count
 
   // Close the ⋯ menu when clicking anywhere else
   useEffect(() => {
@@ -66,17 +62,34 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     return () => document.removeEventListener('mousedown', close)
   }, [menuOpen])
 
+  // Edit your own post's text (only the author can, the backend checks too)
+  function startEditing() {
+    setMenuOpen(false)
+    setDraft(content ?? '')
+    setEditError('')
+    setEditing(true)
+  }
+  async function saveEdit() {
+    const trimmed = draft.trim()
+    if (!trimmed) return setEditError("A post can't be empty.")
+    const result = await fetchWithToken(`/api/posts/${post.id}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: trimmed }),
+    })
+    if (result.isError) return setEditError(errorMessage(result.result))
+    setContent(result.result.content)
+    setEditing(false)
+  }
+
   // Delete your own post. Real posts are deleted on the backend (only the author or a mod can).
   async function handleDelete() {
     setMenuOpen(false)
-    if (!confirm("Delete this post? This can't be undone.")) return
-    if (isReal) {
-      const result = await fetchWithToken(`/api/posts/${post.id}/`, { method: 'DELETE' })
-      if (result.isError) return alert(errorMessage(result.result))
-      setDeleted(true)
-    } else {
-      deletePost(post.id)
-    }
+    const whose = isMine ? 'this post' : `@${handle}'s post`
+    if (!confirm(`Delete ${whose}? This can't be undone.`)) return
+    const result = await fetchWithToken(`/api/posts/${post.id}/`, { method: 'DELETE' })
+    if (result.isError) return alert(errorMessage(result.result))
+    setDeleted(true)
     onDeleted?.()
   }
 
@@ -84,7 +97,6 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   // send report to the backend
   async function handleReport() {
     setMenuOpen(false)
-    if (!isReal) return alert("Sample posts can't be reported.")
 
     const reason = prompt('Why are you reporting this post?')
     if (!reason?.trim()) return
@@ -147,10 +159,8 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
 
   if (deleted) return null
 
-  const photo = photoUrl ? (
+  const photo = (
     <img src={photoUrl} alt="" className={`w-full rounded-xl bg-black/30 object-contain ${full ? 'max-h-[32rem]' : 'max-h-96'}`} />
-  ) : (
-    <div className={`${gradient} rounded-xl ${full ? 'h-72' : 'h-56'}`} />
   )
 
   return (
@@ -163,10 +173,10 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
           <Link to={profileLink} className="font-bold hover:underline">{authorName}</Link>{' '}
           <span className="text-muted">
             @{handle} ·{' '}
-            {isReal ? <span title={getDateTimeString(post.created_at)}>{getTimeAgoString(post.created_at)}</span> : post.date}
+            <span title={getDateTimeString(post.created_at)}>{getTimeAgoString(post.created_at)}</span>
           </span>
         </div>
-        {/* Your posts: Delete. Anyone else's: Report. TODO: Edit for your own real posts */}
+        {/* Your posts: Edit and Delete. Anyone else's: Report (plus Delete for mods). */}
         {(
           <div className="relative" ref={menuRef}>
             <button
@@ -179,16 +189,28 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
             {menuOpen && (
               <div className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
                 {isMine ? (
-                  <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
-                    Delete
-                  </button>
+                  <>
+                    <button onClick={startEditing} className="block w-full px-3 py-2 text-left hover:bg-white/5">
+                      Edit
+                    </button>
+                    <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                      Delete
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    onClick={handleReport}
-                    className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
-                  >
-                    Report
-                  </button>
+                  <>
+                    <button
+                      onClick={handleReport}
+                      className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
+                    >
+                      Report
+                    </button>
+                    {isMod && (
+                      <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                        Delete (mod)
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -196,8 +218,30 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
         )}
       </div>
 
-      {text && <p className="whitespace-pre-line break-words px-5 pt-3 text-sm leading-relaxed">{text}</p>}
-      {(photoUrl || gradient) && (
+      {editing ? (
+        <div className="px-5 pt-3">
+          <textarea
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); setEditError('') }}
+            rows={3}
+            autoFocus
+            aria-label="Edit post"
+            className="w-full resize-none rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm leading-relaxed text-white outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+          />
+          {editError && <p className="mt-1 text-sm text-red-400">{editError}</p>}
+          <div className="mt-2 flex justify-end gap-2">
+            <button onClick={() => setEditing(false)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-white/5">
+              Cancel
+            </button>
+            <button onClick={saveEdit} className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-page hover:bg-accent-hover">
+              Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        text && <p className="whitespace-pre-line break-words px-5 pt-3 text-sm leading-relaxed">{text}</p>
+      )}
+      {photoUrl && (
         <button
           type="button"
           onClick={handlePhotoClick}
@@ -215,7 +259,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
       )}
 
       <div className="flex items-center gap-5 px-5 py-4 text-sm text-muted">
-        {isReal ? (
+        {(
           <>
             <span className="flex items-center gap-1.5"><button
               onClick={() => toggleLike(post)}
@@ -229,18 +273,6 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
                 <MessageCircle size={18} /> {comments}
               </Link>
             </span>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => {}}
-              className={`flex items-center gap-1.5 hover:text-white ${post.liked ? 'text-accent' : ''}`}
-            >
-              <Heart size={18} fill={post.liked ? 'currentColor' : 'none'} /> {likes}
-            </button>
-            <Link to={`/post/${post.id}`} className="flex items-center gap-1.5 hover:text-white">
-              <MessageCircle size={18} /> {comments}
-            </Link>
             <button onClick={handleShare} aria-label="Share post" className="ml-auto flex items-center gap-1.5 hover:text-white">
               {copied ? <span className="text-xs text-accent">Link copied</span> : <Share2 size={18} />}
             </button>
@@ -248,7 +280,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
         )}
       </div>
 
-      {viewing && <PhotoViewer post={{ ...post, imageUrl: photoUrl, image: gradient }} onClose={() => setViewing(false)} />}
+      {viewing && <PhotoViewer post={{ imageUrl: photoUrl }} onClose={() => setViewing(false)} />}
     </article>
   )
 }

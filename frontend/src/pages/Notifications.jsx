@@ -61,11 +61,12 @@ export default function Notifications() {
   async function followBack(username) {
     if (pendingFollow) return
     setPendingFollow(username)
-    const data = await fetchWithToken(`/api/profile/${username}/follow/`, { method: 'POST' })
+    const result = await fetchWithToken(`/api/profile/${username}/follow/`, { method: 'POST' })
+    const data = result.result
     setPendingFollow(null)
 
-    if (!data || data.error) {
-      setError(errorMessage(data?.error))
+    if (result.isError) {
+      setError(errorMessage(data))
       return
     }
 

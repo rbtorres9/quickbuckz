@@ -27,10 +27,16 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Be able to like posts on the frontend~~ - Done JDN (10/30)
 - ~~Be able to follow another user on their page~~ - Done MM (10/30)
 - ~~Show a list of current followers on the follower page~~ - Done MM (10/30)
-- Create a fully working setting menu
-- Report models up. TODO: api/reports/ , test report function, import changes in frontend - In progress RT
 
+
+- Report models up. TODO: api/reports/ , test report function, import changes in frontend - In progress RT
+- Add ability to report comments and users on their profile on the backend
+- Add ability to ban users
+- Clean up the setting menu
+- Store color theme in backend
+
+
+## TODO if we have extra time
 - Implement forgot password API. User sends email, the API returns a temporary token (5-10 minutes) to reset password.
 - Implement reset password API. User sends new password with the forgot password token, API updates the new password.
 - Implement reset password page for the frontend, the frontend takes in a token as a parameter and returns an error if the token is invalid or expired. This page is where the user gets to set their new password.
-- maybe add being able to report profile as well, but for now, limit the action to sending a warning notification to the user reported when a moderator flags it

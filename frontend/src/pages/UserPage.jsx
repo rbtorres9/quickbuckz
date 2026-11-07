@@ -11,7 +11,7 @@ import { getTheme, themeVars } from '../data/themes.js'
 import { getName } from '../utils/NameHandler.js'
 
 // /user-page shows your own profile (real, from the database).
-// /user/:handle shows someone else's (sample for now).
+// /user/:handle shows someone else's.
 export default function UserPage() {
   const { handle } = useParams()
   const { fetchUserProfile, fetchWithToken, fetchUserPosts  } = useAuthContext()
@@ -235,8 +235,8 @@ export default function UserPage() {
               </>
             ) : (
               <>
-                <span><b>{person.followers_count ?? 0}</b> <span className="text-muted">Followers</span></span>
-                <span><b>{person.following_count ?? 0}</b> <span className="text-muted">Following</span></span>
+                <Link to={`/user/${person.username}/followers`} className="hover:underline"><b>{person.followers_count ?? 0}</b> <span className="text-muted">Followers</span></Link>
+                <Link to={`/user/${person.username}/following`} className="hover:underline"><b>{person.following_count ?? 0}</b> <span className="text-muted">Following</span></Link>
                 {person.follows_you && <span className="rounded bg-white/10 px-1.5 text-xs text-muted">Follows you</span>}
               </>
             )}

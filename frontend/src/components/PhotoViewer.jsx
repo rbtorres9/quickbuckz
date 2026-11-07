@@ -28,11 +28,7 @@ export default function PhotoViewer({ post, onClose }) {
       >
         <X size={22} />
       </button>
-      {post.imageUrl ? (
-        <img src={post.imageUrl} alt="" className="max-h-[90vh] max-w-full rounded-lg object-contain" />
-      ) : (
-        <div className={`${post.image} aspect-[4/3] w-full max-w-4xl rounded-lg`} />
-      )}
+      <img src={post.imageUrl} alt="" className="max-h-[90vh] max-w-full rounded-lg object-contain" />
     </div>
   )
 }

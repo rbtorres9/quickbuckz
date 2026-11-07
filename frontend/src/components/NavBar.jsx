@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Home, Flame, Users, Plus, User, Settings, Bell } from 'lucide-react'
+import { Home, Flame, Users, Plus, User, Settings, Bell, Search } from 'lucide-react'
 import Logo from './Logo.jsx'
 // import { useStore } from '../data/store.jsx'
 
@@ -96,6 +96,10 @@ export default function NavBar() {
             >
               <Plus size={16} strokeWidth={2.5} /> New post
             </Link>
+            {/* Search people and posts: next to the bell on every page, phones too */}
+            <NavLink to="/search" className={desktopLink} aria-label="Search">
+              <Search size={17} /> <span className="hidden lg:inline">Search</span>
+            </NavLink>
             <NotificationBell />
             <NavLink to="/user-account" className={desktopLink} aria-label="Account settings">
               <Settings size={17} /> <span className="hidden lg:inline">Settings</span>

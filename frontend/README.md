@@ -125,3 +125,41 @@ UPDATES:
 - reviewed regular user if they can access mod page: mod access button not visible, they cannot access the mod page through manual URL path input as well
 - so far only two functions: delete and dismiss. delete removes the post from both posts and reports api. dismiss removes the post in reports api
 - **TODO**: still needs comment options from the frontend to delete or report the comment, in order to test report function
+## Edit posts, share, follower lists 11/06 - MM
+- Your own posts have Edit in the ⋯ menu: edit the text in place, Save sends PATCH /api/posts/<id>/ with `content` (empty posts are blocked)
+- Share button on real posts: phone share sheet if there is one, otherwise copies the post link
+- On someone's profile, their Followers/Following counts open their lists: /user/<username>/followers and /user/<username>/following (no Follow button on your own row)
+- Fixed Notifications "Follow back" (it still read the old reply format from before the ApiResult change)
+
+## Password reset pages, phone fixes, sample-data cleanup 11/06 - MM
+- /forgot "Forgot password" now sends `POST /api/password/forgot/` with `{ email }`. It always shows the same "if an account uses this email..." message so nobody can use it to check which emails have accounts.
+- New page /reset-password?token=... (the link in the reset email): new password + confirm, sends `POST /api/password/reset/` with `{ token, password }`. Shows the backend's error (like an expired link) and a Sign in button when it works.
+- Until those endpoints exist, both pages say "Password reset isn't available yet."
+- **Backend notes for password reset:**
+  - The endpoint names above are placeholders. Change `FORGOT_PASSWORD_URL` in ForgotAccount.jsx and `RESET_PASSWORD_URL` in ResetPassword.jsx if you pick different ones.
+  - Forgot password must **email** the link `https://<site>/reset-password?token=...` and must **not** return the token in the response, or anyone could reset anyone's password by typing their email.
+  - Return the same response whether or not the email has an account.
+  - Make the token single-use and short-lived (Django's `default_token_generator` + `PasswordResetTokenGenerator` does this), and run the normal password validators on reset.
+- Phone fixes: theme picker shows 3 per row on phones so names like "Midnight" aren't cut off; the selected filter tab in Mod tools was white text on the green, now dark and readable.
+- Removed the old sample data: `store.jsx` now only keeps the two themes (TODO: move to the backend). PostCard only handles real posts now. Removed the placeholder photo CSS.
+
+## Search 11/06 - MM
+- Search icon in the top bar (next to the bell) on every page, phones too. Opens /search.
+- /search?q=... finds people (name or username) and posts (text or author) as you type. The search stays in the address bar, so Back and links work.
+- Loads /api/profiles/ and /api/posts once and filters in the browser. TODO: backend search endpoint if the site gets big.
+
+## Mod delete anywhere 11/06 - MM
+- Mods/admins see "Delete (mod)" in the ⋯ menu on anyone's post (next to Report). Uses DELETE /api/posts/<id>/, which the backend already allows for mods.
+- `useIsMod()` now asks GET /api/users/me/role/ once per account and shares the answer, so a page full of posts doesn't send one request per post.
+- PostPage (separate zip, `mod-comments-update.zip`): mods see Delete on every comment. Also fixed `ownsPost` (compared to `userCache.handle`, which doesn't exist, now `userCache.username`), so post owners can delete comments on their own posts.
+- The buttons are only for looks; the backend checks every delete.
+
+## Left side picture 11/06 - MM
+- Left side now shows one picture (`frontend/public/side-left.png`), as big as fits, centered. Right side keeps the repeating `side.gif`.
+- For a .jpg or .gif, change `LEFT_PICTURE` in Layout.jsx to match the file name. No picture = the GIF on both sides like before.
+
+## Phone sideways-scroll fix 11/06 - MM
+- Long words and links (like a pasted URL) pushed some pages wider than a phone, so you could scroll sideways (post page comments, Mod tools reports, someone's followers list title). Added `main { overflow-wrap: anywhere; }` in index.css so they wrap.
+- PostPage comments: added `min-w-0` to the comment text and the comment box so they can shrink and wrap.
+- Checked every page at 320, 360, 390 and 412 px wide with long names, links and big numbers: no sideways scrolling.
+- The side GIF/picture are hidden on phones on purpose (no room next to the posts).

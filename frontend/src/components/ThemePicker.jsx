@@ -5,7 +5,8 @@ export default function ThemePicker({ value, onChange, label = 'Theme' }) {
   return (
     <fieldset>
       <legend className="mb-2 text-sm font-medium">{label}</legend>
-      <div className="grid grid-cols-5 gap-2">
+      {/* 3 per row on phones so the names fit, 5 in a row on bigger screens */}
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
         {themes.map((t) => (
           <button
             key={t.id}

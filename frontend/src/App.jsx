@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login.jsx'
 import CreateAccount from './pages/CreateAccount.jsx'
 import ForgotAccount from './pages/ForgotAccount.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
+import Search from './pages/Search.jsx'
 import UserPage from './pages/UserPage.jsx'
 import PostPage from './pages/PostPage.jsx'
 import Layout from './components/Layout.jsx'
@@ -28,6 +30,7 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={publicize(<Login />)} />
       <Route path="/forgot" element={publicize(<ForgotAccount />)} />
+      <Route path="/reset-password" element={publicize(<ResetPassword />)} />
       <Route path="/create-account" element={<CreateAccount />} />
 
       {/* Logged-in pages: these all get the nav bar */}
@@ -41,8 +44,11 @@ export default function App() {
         <Route path="/user-account" element={protect(<AccountSettings />)} />
         <Route path="/user-page" element={protect(<UserPage />)} />
         <Route path="/user/:handle" element={protect(<UserPage />)} />
+        <Route path="/user/:handle/followers" element={protect(<Followers />)} />
+        <Route path="/user/:handle/following" element={protect(<Following />)} />
         <Route path="/post/:id" element={protect(<PostPage />)} />
         <Route path="/mod" element={protect(<ModTools />)} />
+        <Route path="/search" element={protect(<Search />)} />
       </Route>
 
       {/* Any address that doesn't match a page above */}
