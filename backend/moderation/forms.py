@@ -146,4 +146,37 @@ class ReportReviewForm(forms.ModelForm):
         return cleaned
 
 
-    
+class BanListForm(forms.ModelForm):
+    lift_now = forms.BooleanField(required=False, label="Lift this restriction now")
+
+    current_user = None  # set per request in BanListAdmin.get_form
+
+    class Meta:
+        model = AccountRestriction
+        fields = ["user", "kind", "reason", "expires_at"]
+
+    def clean_reason(self):
+        value = self.cleaned_data["reason"].strip()
+        if not value:
+            raise forms.ValidationError("Please give a reason.")
+        return value
+
+    def clean_expires_at(self):
+        value = self.cleaned_data.get("expires_at")
+        if "expires_at" in self.changed_data and value is not None and value <= timezone.now():
+            raise forms.ValidationError("Must be in the future. Leave empty for permanent.")
+        return value
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.instance.pk is None:
+            user = cleaned.get("user")
+            kind = cleaned.get("kind")
+            if user and self.current_user and not can_moderate_user(self.current_user, user):
+                self.add_error("user", "You can't moderate this account.")
+            elif user and kind and user.active_restriction(kind):
+                self.add_error("kind", "This user already has an active restriction of that type. "
+                                       "Change its end date or lift it instead.")
+        elif cleaned.get("lift_now") and "expires_at" in self.changed_data:
+            self.add_error("lift_now", "Either lift the restriction or change its end date, not both.")
+        return cleaned

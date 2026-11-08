@@ -140,6 +140,8 @@ class ModerationLog(models.Model):
         DEACTIVATE = "deactivate", "Deactivated account"
         RESTRICT = "restrict", "Restricted feature"
         LIFT_RESTRICTION = "lift_restriction", "Lifted restriction"
+        EXTEND_RESTRICTION = "extend_restriction", "Changed restriction end date"
+
 
     class Source(models.TextChoices):
         APP = "app", "App"
@@ -229,3 +231,10 @@ class AccountRestriction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.summary()}"
+
+
+class BanListEntry(AccountRestriction):
+    class Meta:
+        proxy = True
+        verbose_name = "ban list entry"
+        verbose_name_plural = "ban list"

@@ -12,9 +12,15 @@ from accounts.permissions import IsModerator
 from accounts.views import visible_profiles
 from posts.models import Post
 from .models import AccountRestriction, Report
-from .serializers import AccountRestrictionSerializer, ReportCreateSerializer, ReportSerializer
+from .serializers import (
+    AccountRestrictionSerializer,
+    ReportCreateSerializer,
+    ReportSerializer,
+    RestrictionEndSerializer,
+)
 from .services import (
     can_moderate_user,
+    change_restriction_end,  # BAN LIST
     dismiss_reports,
     ensure_not_restricted,
     lift_restrictions,
@@ -199,3 +205,19 @@ class LiftRestrictionView(APIView):
             return Response({"detail": "No active restriction of that type."},
                             status=status.HTTP_404_NOT_FOUND)
         return Response({"lifted": lifted}, status=status.HTTP_200_OK)
+
+
+class RestrictionDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsModerator]
+
+    def patch(self, request, username, pk):
+        target = get_moderatable_user(request, username)
+        restriction = get_object_or_404(target.restrictions.active(), pk=pk)
+
+        serializer = RestrictionEndSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        restriction = change_restriction_end(
+            restriction, request.user, expires_at=serializer.validated_data["expires_at"]
+        )
+        return Response(AccountRestrictionSerializer(restriction).data, status=status.HTTP_200_OK)

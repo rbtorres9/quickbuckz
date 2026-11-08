@@ -122,6 +122,47 @@ def lift_restrictions(target, moderator, *, kind, source=ModerationLog.Source.AP
             )
     return lifted
 
+def _until_text(value):
+    return f"{value:%Y-%m-%d %H:%M} UTC" if value else "permanent"
+
+
+def lift_restriction(restriction, moderator, *, source=ModerationLog.Source.APP):
+    """Lift one restriction and log it. Returns False if it was no longer active."""
+    with transaction.atomic():
+        lifted = (AccountRestriction.objects.active()
+                  .filter(pk=restriction.pk)
+                  .update(lifted_at=timezone.now(), lifted_by=moderator))
+        if lifted:
+            ModerationLog.objects.create(
+                moderator=moderator,
+                action=ModerationLog.Action.LIFT_RESTRICTION,
+                source=source,
+                target_author=restriction.user,
+                target_content=f"Lifted: {restriction.summary()}",
+            )
+    return bool(lifted)
+
+
+def change_restriction_end(restriction, moderator, *, expires_at, source=ModerationLog.Source.APP):
+    """Move an active restriction's end date (None = permanent) and log old -> new."""
+    with transaction.atomic():
+        current = AccountRestriction.objects.select_for_update().get(pk=restriction.pk)
+        old = current.expires_at
+        if old == expires_at:
+            return current
+        current.expires_at = expires_at
+        current.save(update_fields=["expires_at"])
+        ModerationLog.objects.create(
+            moderator=moderator,
+            action=ModerationLog.Action.EXTEND_RESTRICTION,
+            source=source,
+            target_author=current.user,
+            target_content=(f"{current.get_kind_display()}: {_until_text(old)} -> "
+                            f"{_until_text(expires_at)} ({current.reason})"),
+        )
+    return current
+
+
 def review_report(report, reviewer, *, outcome, kind=None, expires_at=None,
                   source=ModerationLog.Source.APP):
     """Close `report` with the chosen outcome using the existing helpers."""
