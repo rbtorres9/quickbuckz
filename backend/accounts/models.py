@@ -121,6 +121,8 @@ class Profile(models.Model):
     birthday = models.DateField(blank=True, null=True, validators=[validate_minimum_age])
 
     theme = models.CharField(default="classic", max_length=256)
+    site_theme = models.CharField(default="classic", max_length=256)
+
     right_picture = models.ImageField(upload_to=right_picture_path, blank=True, null=True)
     right_picture_flip = models.BooleanField(default=False)
     right_picture_tile = models.BooleanField(default=False)
