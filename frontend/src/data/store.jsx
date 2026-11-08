@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useCache } from '../context/CacheContext.jsx'
 import { themeVars } from './themes.js'
 
 // Settings the backend doesn't store yet, kept in this browser for now.
@@ -10,6 +11,8 @@ const StoreContext = createContext(null)
 export function StoreProvider({ children }) {
   // Your profile theme (picked in Create account / Edit profile). Remembered on this device.
   const [profile, setProfile] = useState({ theme: localStorage.getItem('profileTheme') || 'classic' })
+  const { userCache } = useCache()
+
   const updateProfile = (changes) => {
     if (changes.theme) localStorage.setItem('profileTheme', changes.theme)
     setProfile((current) => ({ ...current, ...changes }))
@@ -23,6 +26,12 @@ export function StoreProvider({ children }) {
       document.documentElement.style.setProperty(name, value)
     }
   }, [siteTheme])
+
+  useEffect(() => {
+    if (userCache?.site_theme)
+      setSiteTheme(userCache.site_theme)
+
+  }, [userCache])
 
   return (
     <StoreContext.Provider value={{ profile, updateProfile, siteTheme, setSiteTheme }}>
