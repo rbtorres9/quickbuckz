@@ -17,7 +17,7 @@ export default function UserPage() {
   const { fetchUserProfile, fetchWithToken, fetchUserPosts  } = useAuthContext()
   const [ followBusy, setFollowBusy ] = useState(false)
   const [ followError, setFollowError ] = useState('')
-  const { userCache, refreshUserCache } = useCache()
+  const { userCache, refreshUserCache, isViewingUser, setIsViewingUser, viewingUserCache, setViewingUserCache } = useCache()
   const [ tab, setTab ] = useState('posts')
   const [ editing, setEditing ] = useState(false)
   
@@ -42,9 +42,18 @@ export default function UserPage() {
 
   const isSelf = !handle || handle === userCache?.username
 
+  // Clean up global variables
+  useEffect(() => {
+    return () => { 
+      setIsViewingUser(false)
+      setViewingUserCache(null)
+    }
+  }, [])
+
   // Load your own posts from the database, newest first
   useEffect(() => {
     const fetchOtherUserData = async () => {
+      setIsViewingUser(true)
       setLoadingUser(true)
       setLoadingPosts(true)
       setPostsError(null)
@@ -62,6 +71,7 @@ export default function UserPage() {
       }
 
       setPerson(userData)
+      setViewingUserCache(userData)
 
       const postsResult = await fetchUserPosts(`${handle}`)
       setLoadingPosts(false)
@@ -210,8 +220,7 @@ export default function UserPage() {
   return (
     <>
       {/* The profile shows in its owner's theme, whatever your own site color is */}
-      {/* Theme support will be added later */}
-      <main className="mx-auto max-w-2xl px-4 pb-24" style={/* themeVars(person.theme) */ themeVars("classic")}>
+      <main className="mx-auto max-w-2xl px-4 pb-24" style={ themeVars(person.theme) }>
         {person.banner ? (
           <img src={person.banner} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
         ) : (
