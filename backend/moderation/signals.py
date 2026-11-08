@@ -1,10 +1,12 @@
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-from .models import Post, Comment, Report, ModerationLog
-from .moderation import resolve_reports
+from posts.models import Post, Comment
+from .models import ModerationLog, Report
+from .services import resolve_reports
 
 
+# Close a post's/comment's open reports when it is deleted by anything other than delete_content()
 @receiver(pre_delete, sender=Post)
 def close_post_reports(sender, instance, **kwargs):
     resolve_reports(

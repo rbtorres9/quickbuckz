@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'accounts',
     'posts',
     'notifications',
+    'moderation',
 ]
 
 MIDDLEWARE = [
@@ -178,7 +179,10 @@ AUTHENTICATION_BACKENDS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    #    'rest_framework_simplejwt.authentication.JWTAuthentication',
+
+        'moderation.authentication.RestrictionAwareJWTAuthentication',    # custom defined JWT Auth method
+
         'rest_framework.authentication.SessionAuthentication',  # for testing apis requiring auth
     ),
 }
@@ -188,6 +192,8 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "USER_AUTHENTICATION_RULE": "moderation.authentication.user_authentication_rule", # custom defined JWT Auth method
+
 }
 
 

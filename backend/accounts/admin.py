@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
 from .models import AccountSecurity, Profile, User, Follow
+from moderation.admin import RestrictionInline
 
 #the following classes are used for editing user accounts as an admin
 class ProfileInline(admin.StackedInline):
@@ -17,7 +18,7 @@ class SecurityInline(admin.StackedInline):
 #of counts using methods such as username and email look up
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    inlines = [ProfileInline, SecurityInline]
+    inlines = [ProfileInline, SecurityInline, RestrictionInline]
     add_fieldsets = UserAdmin.add_fieldsets + (
         (None, {"fields": ("email",)}),
     )

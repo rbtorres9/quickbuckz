@@ -59,6 +59,23 @@ class User(AbstractUser):
     def is_mod(self):
         return self.is_admin or self.role == self.Role.MODERATOR
 
+
+    # Account Restriction Status
+    def active_restriction(self, kind):
+        return (
+            self.restrictions.active()
+            .filter(kind=kind)
+            .order_by(models.F("expires_at").desc(nulls_first=True))
+            .first()
+        )
+
+    @property
+    def is_deactivated(self):
+        from moderation.models import AccountRestriction  # local import: moderation depends on accounts, not the reverse
+        return self.restrictions.active().filter(
+            kind=AccountRestriction.Kind.ACCOUNT
+        ).exists()
+
     #enforces case insensitive uniqueness to usernames and emails
     class Meta:
         constraints = [
@@ -156,3 +173,6 @@ class FollowRequest(models.Model):
             models.UniqueConstraint(fields=["requester", "target"], name="unique_follow_request"),
             models.CheckConstraint(condition=~models.Q(requester=models.F("target")), name="no_self_follow_request"),
         ]
+
+
+

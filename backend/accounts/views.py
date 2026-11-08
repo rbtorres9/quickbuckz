@@ -3,11 +3,14 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotAuthenticated
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from .models import Profile, Follow, FollowRequest
-
 from .permissions import IsModerator
+
+from moderation.models import AccountRestriction
+from moderation.services import ensure_not_restricted
 
 from django.db import transaction
 from django.db.models import (
@@ -32,9 +35,17 @@ from .serializers import (
 
 from django.shortcuts import get_object_or_404
 
-# PRIVATE PROFILES: followers can see (changed) 
+# every profile except deactivated accounts
+def active_profiles():
+    deactivated = AccountRestriction.objects.active().filter(kind=AccountRestriction.Kind.ACCOUNT)
+    return Profile.objects.select_related("user").exclude(user__in=deactivated.values("user"))
+
+
+# PRIVATE PROFILES: followers can see 
 def visible_profiles(user):
-    profiles = Profile.objects.select_related("user")
+    profiles = active_profiles()
+
+
     if user.is_authenticated:
         followed_ids = Follow.objects.filter(follower=user).values("following")
         return profiles.filter(
@@ -77,14 +88,7 @@ class ProfileListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        profiles = Profile.objects.select_related("user")
-        user = self.request.user
-        if user.is_authenticated:
-            return profiles.filter(
-                Q(visibility=Profile.Visibility.PUBLIC) | Q(user=user)
-            )
-        return profiles.filter(visibility=Profile.Visibility.PUBLIC)
-
+        return visible_profiles(self.request.user)
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
@@ -102,7 +106,7 @@ class ProfileByUsernameView(generics.RetrieveAPIView):
     def get_object(self):
         viewer = self.request.user
         username = self.kwargs["username"].strip().lower()
-        qs = with_follow_flags(Profile.objects.select_related("user"), viewer)
+        qs = with_follow_flags(active_profiles(), viewer)
         profile = get_object_or_404(qs, user__username=username)
         self.can_view = visible_profiles(viewer).filter(pk=profile.pk).exists()
         return profile
@@ -128,7 +132,10 @@ class FollowView(APIView):
         }, status=status)
 
     def post(self, request, username):
-        profile = get_object_or_404(Profile.objects.select_related("user"), user__username=username.strip().lower())
+        # Account Restriction
+        ensure_not_restricted(request.user, AccountRestriction.Kind.INTERACTING)
+
+        profile = get_object_or_404(active_profiles(), user__username=username.strip().lower())
         target = profile.user
         if target == request.user:
             return Response({"detail": "You can't follow yourself."}, status=400)

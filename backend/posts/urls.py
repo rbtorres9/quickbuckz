@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import PostViewSet, UserPostsView, ReportViewSet
+from .views import PostViewSet, UserPostsView
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -20,7 +20,6 @@ def api_root(request, format=None):
 router = DefaultRouter()
 router.include_root_view = False
 router.register("posts", PostViewSet, basename="post")
-router.register("reports", ReportViewSet, basename="report")
 
 urlpatterns = [
     path("", api_root, name="api-root"),

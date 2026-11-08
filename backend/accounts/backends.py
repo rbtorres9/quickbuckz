@@ -24,3 +24,6 @@ class EmailOrUsernameBackend(ModelBackend):
         if user.check_password(password) and self.user_can_authenticate(user):
             return user
         return None
+
+    def user_can_authenticate(self, user):
+        return super().user_can_authenticate(user) and not user.is_deactivated
