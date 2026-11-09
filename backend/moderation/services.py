@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Exists, OuterRef  # DEACTIVATED CONTENT
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 
@@ -89,6 +90,9 @@ def dismiss_reports(report, user, source=ModerationLog.Source.APP):
 def restrict_user(target, moderator, *, kind, reason, expires_at=None,
                   source=ModerationLog.Source.APP):
     """Create a restriction, close open profile reports on the user, and log it."""
+    problem = check_new_restriction(target, kind)
+    if problem:
+        raise ValueError(problem)
     with transaction.atomic():
         restriction = AccountRestriction.objects.create(
             user=target, kind=kind, reason=reason,
@@ -121,6 +125,83 @@ def lift_restrictions(target, moderator, *, kind, source=ModerationLog.Source.AP
                 target_content=f"Lifted {kind} restriction",
             )
     return lifted
+
+def deactivated_users():
+    """IDs of users with an active account restriction, as a subquery for `__in` filters."""
+    return (AccountRestriction.objects.active()
+            .filter(kind=AccountRestriction.Kind.ACCOUNT)
+            .values("user"))
+
+
+def with_author_status(comments):
+    """Annotate each comment with `author_deactivated` (True while its author is deactivated)."""
+    return comments.annotate(author_deactivated=Exists(
+        AccountRestriction.objects.active().filter(
+            kind=AccountRestriction.Kind.ACCOUNT, user=OuterRef("author"),
+        )
+    ))
+
+
+def check_new_restriction(user, kind):
+    """Why `kind` can't be added to `user` right now, or None if it can."""
+    Kind = AccountRestriction.Kind
+    if user.active_restriction(kind):
+        return ("This user already has an active restriction of that type. "
+                "Change its end date or lift it instead.")
+    if kind != Kind.ACCOUNT and user.active_restriction(Kind.ACCOUNT):
+        return "This account is deactivated. Lift the deactivation before adding feature restrictions."
+    return None
+
+def restrict_user_many(target, moderator, *, kinds, reason, expires_at=None,
+                       source=ModerationLog.Source.APP):
+    """Add several restrictions at once with a shared reason and end date (one row + log entry each)."""
+    with transaction.atomic():
+        return [
+            restrict_user(target, moderator, kind=kind, reason=reason,
+                          expires_at=expires_at, source=source)
+            for kind in kinds
+        ]
+    
+def _until_text(value):
+    return f"{value:%Y-%m-%d %H:%M} UTC" if value else "permanent"
+
+
+def lift_restriction(restriction, moderator, *, source=ModerationLog.Source.APP):
+    """Lift one restriction and log it. Returns False if it was no longer active."""
+    with transaction.atomic():
+        lifted = (AccountRestriction.objects.active()
+                  .filter(pk=restriction.pk)
+                  .update(lifted_at=timezone.now(), lifted_by=moderator))
+        if lifted:
+            ModerationLog.objects.create(
+                moderator=moderator,
+                action=ModerationLog.Action.LIFT_RESTRICTION,
+                source=source,
+                target_author=restriction.user,
+                target_content=f"Lifted: {restriction.summary()}",
+            )
+    return bool(lifted)
+
+
+def change_restriction_end(restriction, moderator, *, expires_at, source=ModerationLog.Source.APP):
+    """Move an active restriction's end date (None = permanent) and log old -> new."""
+    with transaction.atomic():
+        current = AccountRestriction.objects.select_for_update().get(pk=restriction.pk)
+        old = current.expires_at
+        if old == expires_at:
+            return current
+        current.expires_at = expires_at
+        current.save(update_fields=["expires_at"])
+        ModerationLog.objects.create(
+            moderator=moderator,
+            action=ModerationLog.Action.EXTEND_RESTRICTION,
+            source=source,
+            target_author=current.user,
+            target_content=(f"{current.get_kind_display()}: {_until_text(old)} -> "
+                            f"{_until_text(expires_at)} ({current.reason})"),
+        )
+    return current
+
 
 def review_report(report, reviewer, *, outcome, kind=None, expires_at=None,
                   source=ModerationLog.Source.APP):

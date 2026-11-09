@@ -12,13 +12,21 @@ from accounts.permissions import IsModerator
 from accounts.views import visible_profiles
 from posts.models import Post
 from .models import AccountRestriction, Report
-from .serializers import AccountRestrictionSerializer, ReportCreateSerializer, ReportSerializer
+from .serializers import (
+    AccountRestrictionSerializer,
+    ReportCreateSerializer,
+    ReportSerializer,
+    RestrictionEndSerializer,
+)
 from .services import (
     can_moderate_user,
+    change_restriction_end,  # BAN LIST
+    check_new_restriction,  # BAN LIST PER USER
     dismiss_reports,
     ensure_not_restricted,
     lift_restrictions,
     restrict_user,
+    deactivated_users,  # DEACTIVATED CONTENT
 )
 
 User = get_user_model()
@@ -40,8 +48,7 @@ class PostReportView(APIView):
         comment = None
         comment_id = request.data.get("comment_id")
         if comment_id:
-            comment = get_object_or_404(post.comments.all(), pk=comment_id)
-
+            comment = get_object_or_404(post.comments.exclude(author__in=deactivated_users()), pk=comment_id)  # DEACTIVATED CONTENT
         target_author = comment.author if comment else post.author
         if target_author == request.user:
             return Response(
@@ -170,11 +177,10 @@ class UserRestrictionView(APIView):
         serializer = AccountRestrictionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        if target.active_restriction(serializer.validated_data["kind"]):
-            return Response(
-                {"detail": "This user already has an active restriction of that type. Lift it first."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        problem = check_new_restriction(target, serializer.validated_data["kind"])
+        if problem:
+            return Response({"detail": problem}, status=status.HTTP_400_BAD_REQUEST)
+
 
         restriction = restrict_user(target, request.user, **serializer.validated_data)
         return Response(AccountRestrictionSerializer(restriction).data, status=status.HTTP_201_CREATED)
@@ -199,3 +205,19 @@ class LiftRestrictionView(APIView):
             return Response({"detail": "No active restriction of that type."},
                             status=status.HTTP_404_NOT_FOUND)
         return Response({"lifted": lifted}, status=status.HTTP_200_OK)
+
+
+class RestrictionDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsModerator]
+
+    def patch(self, request, username, pk):
+        target = get_moderatable_user(request, username)
+        restriction = get_object_or_404(target.restrictions.active(), pk=pk)
+
+        serializer = RestrictionEndSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        restriction = change_restriction_end(
+            restriction, request.user, expires_at=serializer.validated_data["expires_at"]
+        )
+        return Response(AccountRestrictionSerializer(restriction).data, status=status.HTTP_200_OK)

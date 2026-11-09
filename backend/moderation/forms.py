@@ -4,8 +4,9 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
 
-from .models import AccountRestriction, ModerationLog, Report
-from .services import can_moderate_user
+from .models import AccountRestriction, BanListUser, ModerationLog, Report
+from .services import can_moderate_user, check_new_restriction
+
 
 User = get_user_model()
 Action = ModerationLog.Action
@@ -138,12 +139,121 @@ class ReportReviewForm(forms.ModelForm):
                 self.add_error("review_outcome", "The reported user no longer exists.")
             elif not can_moderate_user(reviewer, target):
                 self.add_error("review_by", "This moderator can't act on that account.")
-            elif target.active_restriction(kind):
-                self.add_error("restriction_kind", "That restriction is already active on this user.")
+            elif (problem := check_new_restriction(target, kind)):
+                self.add_error("restriction_kind", problem)
             if until and until <= timezone.now():
                 self.add_error("restriction_until", "Must be in the future.")
 
         return cleaned
 
 
-    
+class BanUserForm(forms.ModelForm):
+    add_kinds = forms.MultipleChoiceField(
+        choices=AccountRestriction.Kind.choices,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Restrict",
+        help_text="Account deactivates the whole account, so the other boxes turn off while it is checked.",
+    )
+    add_reason = forms.CharField(required=False, max_length=200, label="Reason")
+    add_until = forms.SplitDateTimeField(
+        required=False,
+        widget=AdminSplitDateTime(),
+        label="Until",
+        help_text="Leave empty for permanent.",
+    )
+
+    current_user = None  # set per request in BanListAdmin.get_form
+
+    class Meta:
+        model = BanListUser
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = self.instance if self.instance.pk else None
+        if user is not None:
+            kinds = self.fields["add_kinds"]
+            if user.is_deactivated:
+                kinds.choices = []
+                kinds.help_text = ("This account is deactivated. Lift the deactivation in the history "
+                                   "below before adding feature restrictions.")
+            else:
+                kinds.choices = [(k, label) for k, label in AccountRestriction.Kind.choices
+                                 if not user.active_restriction(k)]
+
+
+    def target_user(self):
+        return self.instance
+
+    def clean(self):
+        cleaned = super().clean()
+        kinds = cleaned.get("add_kinds") or []
+        if not kinds:
+            if cleaned.get("add_reason") or cleaned.get("add_until"):
+                self.add_error("add_kinds", "Pick at least one thing to restrict.")
+            return cleaned
+
+        user = self.target_user()
+        if user is None:
+            return cleaned
+
+        if AccountRestriction.Kind.ACCOUNT in kinds and len(kinds) > 1:
+            self.add_error("add_kinds", "Account deactivation already blocks everything. Select it on its own.")
+
+        reason = (cleaned.get("add_reason") or "").strip()
+        if not reason:
+            self.add_error("add_reason", "Please give a reason.")
+        cleaned["add_reason"] = reason
+
+        until = cleaned.get("add_until")
+        if until and until <= timezone.now():
+            self.add_error("add_until", "Must be in the future. Leave empty for permanent.")
+
+        if self.current_user is not None and not can_moderate_user(self.current_user, user):
+            self.add_error(None, "You can't moderate this account.")
+        else:
+            for kind in kinds:
+                problem = check_new_restriction(user, kind)
+                if problem:
+                    self.add_error("add_kinds", f"{AccountRestriction.Kind(kind).label}: {problem}")
+        return cleaned
+
+
+class BanAddForm(BanUserForm):
+    user = forms.ModelChoiceField(queryset=User.objects.order_by("username"), label="User")
+
+    def target_user(self):
+        return self.cleaned_data.get("user")
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("user") and not cleaned.get("add_kinds"):
+            self.add_error("add_kinds", "Pick at least one thing to restrict.")
+        return cleaned
+
+
+class BanHistoryRowForm(forms.ModelForm):
+    lift_now = forms.BooleanField(required=False, label="Lift")
+
+    class Meta:
+        model = AccountRestriction
+        fields = ["expires_at"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.is_active:
+            self.fields["expires_at"].disabled = True
+            self.fields["lift_now"].disabled = True
+
+    def clean_expires_at(self):
+        value = self.cleaned_data.get("expires_at")
+        if "expires_at" in self.changed_data and value is not None and value <= timezone.now():
+            raise forms.ValidationError("Must be in the future. Leave empty for permanent.")
+        return value
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("lift_now") and "expires_at" in self.changed_data:
+            self.add_error("lift_now", "Either lift it or change its end date, not both.")
+        return cleaned

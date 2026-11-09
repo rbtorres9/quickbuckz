@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
+from accounts.models import User
 from posts.models import Post, Comment
 
 class Report(models.Model):
@@ -101,6 +102,19 @@ class Report(models.Model):
         if self.comment_id and self.post_id and self.comment.post_id != self.post_id:
             errors["comment"] = "This comment belongs to a different post."
 
+        if self._state.adding:
+            if self.reporter_id and self.reporter.is_deactivated:
+                errors["reporter"] = "This account is deactivated and can't file reports."
+            if target is not None:
+                author = target.author
+            elif self.target_type == self.TargetType.PROFILE and self.target_author_id:
+                author = self.target_author
+            else:
+                author = None
+            if author is not None and author.is_deactivated:
+                field = "comment" if self.comment_id else ("post" if self.post_id else "target_author")
+                errors[field] = "This account is deactivated, so it and its content can't be reported."
+
         if errors:
             raise ValidationError(errors)
 
@@ -140,6 +154,8 @@ class ModerationLog(models.Model):
         DEACTIVATE = "deactivate", "Deactivated account"
         RESTRICT = "restrict", "Restricted feature"
         LIFT_RESTRICTION = "lift_restriction", "Lifted restriction"
+        EXTEND_RESTRICTION = "extend_restriction", "Changed restriction end date"
+
 
     class Source(models.TextChoices):
         APP = "app", "App"
@@ -229,3 +245,10 @@ class AccountRestriction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.summary()}"
+
+
+class BanListUser(User):
+    class Meta:
+        proxy = True
+        verbose_name = "ban list entry"
+        verbose_name_plural = "ban list"

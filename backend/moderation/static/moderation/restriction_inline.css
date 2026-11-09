@@ -1,0 +1,8 @@
+/* Restriction tables (Users page + Ban list page): hide the bold per-row title */
+#restrictions-group td.original p {
+  display: none;
+}
+
+#restrictions-group tr.has_original td {
+  padding-top: 8px;
+}

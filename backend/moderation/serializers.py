@@ -90,3 +90,12 @@ class AccountRestrictionSerializer(serializers.ModelSerializer):
         if value is not None and value <= timezone.now():
             raise serializers.ValidationError("End date must be in the future.")
         return value
+
+
+class RestrictionEndSerializer(serializers.Serializer):
+    expires_at = serializers.DateTimeField(allow_null=True)  # null = permanent
+
+    def validate_expires_at(self, value):
+        if value is not None and value <= timezone.now():
+            raise serializers.ValidationError("End date must be in the future.")
+        return value
