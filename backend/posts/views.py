@@ -15,8 +15,7 @@ from accounts.permissions import IsAuthorOrModerator
 from accounts.views import visible_profiles
 
 from moderation.models import AccountRestriction
-from moderation.services import delete_content, ensure_not_restricted
-
+from moderation.services import delete_content, ensure_not_restricted, with_author_status  # DEACTIVATED CONTENT
 Kind = AccountRestriction.Kind
 
 from .models import Post, Like, Comment
@@ -71,7 +70,8 @@ class PostViewSet(viewsets.ModelViewSet):
 
         if self.action == "retrieve":
             qs = qs.prefetch_related(
-                Prefetch("comments", queryset=Comment.objects.select_related("author__profile"))
+                Prefetch("comments", queryset=with_author_status(
+                    Comment.objects.select_related("author__profile")))
             )
         
         return with_like_flag(qs, viewer)
@@ -106,8 +106,8 @@ class PostViewSet(viewsets.ModelViewSet):
         context = self.get_serializer_context()  # lets avatars become full URLs
  
         if request.method == "GET":
-            comments = post.comments.select_related("author__profile")
-            
+            comments = with_author_status(post.comments.select_related("author__profile"))  # DEACTIVATED CONTENT
+                        
             serializer = CommentSerializer(comments, many=True, context=context)
             return Response(serializer.data)
 
