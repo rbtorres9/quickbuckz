@@ -3,7 +3,11 @@ import { Link } from 'react-router-dom'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { useIsMod } from '../utils/useIsMod.js'
 import { errorMessage } from '../utils/errorMessage.js'
-import { getTimeAgoString } from '../utils/DateTimeUtils.js'
+import { getTimeAgoString, getDateTimeString} from '../utils/DateTimeUtils.js'
+import ModRestrictions from '../components/ModRestrictions.jsx'
+import RestrictionHistory from '../components/RestrictionHistory.jsx'
+
+
 
 
 // Mod tools: reported posts, with Remove post or Dismiss.
@@ -13,13 +17,23 @@ const FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'post', label: 'Posts' },
   { value: 'comment', label: 'Comments' },
+  { value: 'profile', label: 'Profiles' },
+]
+
+const SECTIONS = [
+  { value: 'reports', label: 'Reports' },
+  { value: 'restrictions', label: 'Account restrictions' },
 ]
 
 // One card per reported post or comment, even if several people reported it
 function groupReports(reports) {
   const groups = {}
   for (const report of reports) {
-    const key = report.type === 'comment' ? `comment-${report.comment.id}` : `post-${report.post.id}`
+      const key = 
+      report.type === 'comment' && report.comment ? `comment-${report.comment.id}`
+      : report.type === 'post' && report.post ? `post-${report.post.id}`
+      : report.type === 'profile' ? `profile-${report.target_author}`
+      : `report-${report.id}`
     if (!groups[key]) {
       groups[key] = { key, type: report.type, post: report.post, comment: report.comment, reports: [] }
     }
@@ -35,25 +49,44 @@ export default function ModTools() {
 
   const [reports, setReports] = useState(null) // null = still loading
   const [filter, setFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('open')
+  const [openCount, setOpenCount] = useState(null) // null = not loaded yet
   const [busy, setBusy] = useState(null) // report id being handled
   const [message, setMessage] = useState(null)
+  const [section, setSection] = useState('reports')
+  const [historyUser, setHistoryUser] = useState(null) // username being viewed, or null = the list
+  const [historyFrom, setHistoryFrom] = useState(null) // 'restrictions' or 'reports', for the back button
+
+  async function fetchReports(status) {
+    const params = new URLSearchParams({ status })
+    if (filter !== 'all') params.set('type', filter)
+    const result = await fetchWithToken(`/api/reports/?${params}`)
+    if (result.isError) return { error: result.result }
+    const data = result.result
+    return { list: Array.isArray(data) ? data : data?.results ?? [] }
+  }
 
   async function loadReports() {
-    const query = filter === 'all' ? '' : `?type=${filter}`
-    const result = await fetchWithToken(`/api/reports/${query}`)
-    if (result.isError) {
-      setMessage({ text: errorMessage(result.result), ok: false })
+    const { list, error } = await fetchReports(statusFilter)
+    if (error) {
+      setMessage({ text: errorMessage(error), ok: false })
       setReports([])
       return
     }
-    const data = result.result
-    setReports(Array.isArray(data) ? data : data?.results ?? [])
+    setReports(list)
+
+    if (statusFilter === 'open') {
+      setOpenCount(groupReports(list).length)
+    } else {
+      const open = await fetchReports('open')
+      if (open.list) setOpenCount(groupReports(open.list).length)
+    }
   }
 
   useEffect(() => {
     if (isMod) loadReports()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMod, filter])
+  }, [isMod, filter, statusFilter])
 
   const groups = useMemo(() => groupReports(reports ?? []), [reports])  
 
@@ -89,6 +122,7 @@ export default function ModTools() {
     loadReports() // deleting a post also clears reports on its comments
   }
 
+   // switch between open / reviewed =====
   async function dismiss(group) {
     setBusy(group.key)
     setMessage(null)
@@ -100,13 +134,72 @@ export default function ModTools() {
     loadReports()
   }
 
+  function showStatus(value) {
+    if (value === statusFilter) return
+    setStatusFilter(value)
+    setReports(null)
+  }
+
+  function openHistory(username, from) {
+    setHistoryUser(username)
+    setHistoryFrom(from)
+    setSection('restrictions')
+  }
+
+  function closeHistory() {
+    setHistoryUser(null)
+    if (historyFrom === 'reports') setSection('reports')
+  }  
+
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6">
+    <main className="mx-auto max-w-4xl px-4 py-6 md:flex md:gap-8">
+      <nav className="mb-5 flex gap-2 md:mb-0 md:w-48 md:shrink-0 md:flex-col md:gap-1">
+        {SECTIONS.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => { setSection(s.value); setHistoryUser(null) }}
+            aria-current={section === s.value ? 'page' : undefined}
+            className={`rounded-lg px-3 py-2 text-left text-sm font-semibold ${
+              section === s.value ? 'bg-white/10 text-accent' : 'text-muted hover:bg-white/5'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="min-w-0 flex-1">
+      {section === 'restrictions' ? (
+        historyUser ? (
+          <RestrictionHistory
+            username={historyUser}
+            onBack={closeHistory}
+            backLabel={historyFrom === 'reports' ? 'Reviewed reports' : 'Account restrictions'}
+          />
+        ) : (
+          <ModRestrictions onOpen={(username) => openHistory(username, 'restrictions')} />
+        )
+      ) : (<>
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Mod tools</h1>
-        {reports && (
-          <span className="text-sm text-muted">{groups.length} open {groups.length === 1 ? 'item' : 'items'}</span>
-        )}
+        <div className="flex items-baseline gap-3">
+          <button
+            onClick={() => showStatus('open')}
+            aria-pressed={statusFilter === 'open'}
+            className={`text-sm text-muted hover:text-accent ${statusFilter === 'open' ? 'underline underline-offset-4' : ''}`}
+          >
+            {openCount !== null
+              ? `${openCount} open ${openCount === 1 ? 'item' : 'items'}`
+              : 'open items'}
+          </button>
+          <button
+            onClick={() => showStatus('closed')}
+            aria-pressed={statusFilter === 'closed'}
+            className={`text-sm text-muted hover:text-accent ${statusFilter === 'closed' ? 'underline underline-offset-4' : ''}`}
+          >
+            Show reviewed reports
+          </button>
+        </div>
       </div>
 
       {/* filter tabs */}
@@ -122,7 +215,7 @@ export default function ModTools() {
             {f.label}
           </button>
         ))}
-      </div>
+      </div>     
 
       {message && <p className={`mt-3 text-sm ${message.ok ? 'text-accent' : 'text-red-400'}`}>{message.text}</p>}
 
@@ -131,38 +224,46 @@ export default function ModTools() {
       ) : groups.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center">
           <p className="font-medium">All clear</p>
-          <p className="mt-1 text-sm text-muted">Nothing reported right now.</p>
+          <p className="mt-1 text-sm text-muted">{statusFilter === 'open' ? 'Nothing reported right now.' : 'No reviewed reports yet.'}</p>
         </div>
       ) : (
         <ul className="mt-5 space-y-4">
           {/* report cards) */}
           {groups.map((group) => {
             const isComment = group.type === 'comment'
-            const target = isComment ? group.comment : group.post
+            const target = (isComment ? group.comment : group.post)
+              ?? { author: group.reports[0].target_author, content: group.reports[0].target_content }
+            const canRemove = Boolean(group.post) && (!isComment || Boolean(group.comment))
             const reasons = [...new Set(group.reports.map((r) => r.reason))]
             const reporters = group.reports.map((r) => `@${r.reporter}`).join(', ')
+            const reviewed = group.reports.find((r) => r.reviewed_at)
             const canReview = group.reports.every((r) => r.can_review)
 
 
             return (
               <li key={group.key} className="rounded-2xl border border-line bg-card p-5">
-                <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-                  <p className="flex flex-wrap items-center gap-2">
-                    <span className="rounded bg-white/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                      {group.type}
-                    </span>
-                    {reasons.map((reason) => (
-                      <span key={reason} className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-300">{reason}</span>
-                    ))}
-                  </p>
+                {/* row 1 = type + reported user */}
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="rounded bg-white/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                    {group.type}
+                  </span> of
                   <Link to={`/user/${target.author}`} className="font-semibold hover:underline">@{target.author}</Link>
                 </div>
 
+                {/* row 2 = reporters + time (unchanged) */}
                 <p className="mt-1 text-xs text-muted">
                   reported by {reporters} · {getTimeAgoString(group.reports[0].created_at)} ago
                 </p>
 
-                {isComment && (
+                {/* row 3 = reason(s) */}
+                <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-semibold text-muted">Reason:</span>
+                  {reasons.map((reason) => (
+                    <span key={reason} className="rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-300">{reason}</span>
+                  ))}
+                </p>
+
+                {isComment && group.post && (
                   <p className="mt-3 truncate text-xs text-muted">
                     On @{group.post.author}'s post: "{group.post.content}"
                   </p>
@@ -170,14 +271,29 @@ export default function ModTools() {
 
                 <div className="mt-3 rounded-lg border border-line bg-field px-4 py-3 text-sm leading-relaxed">
                   {target.content || <span className="text-muted">(photo only)</span>}
-                  {!isComment && group.post.image && (
+                  {!isComment && group.post?.image && (
                     <img src={group.post.image} alt="" className="mt-3 max-h-48 rounded-lg object-cover" />
                   )}
                 </div>
 
+                {reviewed && (
+                  <div>
+                    <p className="mt-3 text-xs text-muted">
+                      Reviewed at {getDateTimeString(reviewed.reviewed_at)}
+                      {reviewed.reviewed_by && <> by {reviewed.reviewed_source === 'admin' ? 'Admin' : `@${reviewed.reviewed_by}`}</>}
+                    </p>
+                    <p className="mt-3 text-xs text-muted">
+                      {reviewed.outcome && <> Action Taken: {reviewed.outcome}</>}
+                    </p>
+                  </div>
+                )}
+
+
+
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {canReview ? (
+                  {reviewed ? null : canReview ? (
                     <>
+                    {canRemove && (
                       <button
                         onClick={() => removeContent(group)}
                         disabled={busy === group.key}
@@ -185,6 +301,7 @@ export default function ModTools() {
                       >
                         Remove {group.type}
                       </button>
+                    )}
                       <button
                         onClick={() => dismiss(group)}
                         disabled={busy === group.key}
@@ -198,15 +315,49 @@ export default function ModTools() {
                       This is your {group.type}. Another moderator has to review it.
                     </p>
                   )}
-                  <Link to={`/post/${group.post.id}`} className="ml-auto self-center text-sm text-muted hover:text-accent">
-                    View post
-                  </Link>
+                  {reviewed ? (
+                    <div className="ml-auto flex items-center gap-4">
+                      {group.post && (
+                        <Link 
+                          to={`/post/${group.post.id}`} 
+                          className="self-center text-sm text-muted hover:text-accent hover:underline underline-offset-4" 
+                        >
+                          View post
+                        </Link>
+                      )}
+                      {target.author && (
+                        <button
+                          type="button"
+                          onClick={() => openHistory(target.author, 'reports')}
+                          className="self-center text-sm text-muted hover:text-accent hover:underline underline-offset-4" 
+                        >
+                          View @{target.author}'s account restriction status
+                        </button>
+                      )}
+                    </div>
+                  ) : group.post ? (
+                    <Link 
+                      to={`/post/${group.post.id}`} 
+                      className="ml-auto self-center text-sm text-muted hover:text-accent hover:underline underline-offset-4"
+                    >
+                      View post
+                    </Link>
+                  ) : (
+                    <Link 
+                        to={`/user/${target.author}`} 
+                      className="ml-auto self-center text-sm text-muted hover:text-accent hover:underline underline-offset-4"
+                    >
+                      View profile
+                    </Link>
+                  )}
                 </div>
               </li>
             )
           })}
         </ul>
       )}
+      </>)}
+      </div>
     </main>
   )
 }

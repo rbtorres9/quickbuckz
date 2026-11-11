@@ -199,7 +199,7 @@ export default function PostPage() {
         { loading ? (
           <p className="py-16 text-center text-sm text-muted">Loading post...</p>
         ) : error ? (
-          <p className="py-16 text-center text-sm text-muted">This post doesn't exist or was deleted.</p>
+          <p className="py-16 text-center text-sm text-muted">This post is from a private profile, doesn't exist or was deleted.</p>
         ) : (
           <>
             <div className="mt-3">

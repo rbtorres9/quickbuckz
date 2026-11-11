@@ -2,7 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from posts.models import Post, Comment
-from .models import AccountRestriction, Report
+from .models import AccountRestriction, Report, ModerationLog
 
 # --- REPORT ---
 class ReportCreateSerializer(serializers.ModelSerializer):
@@ -38,7 +38,8 @@ class ReportedCommentSerializer(serializers.ModelSerializer):
 class ReportSerializer(serializers.ModelSerializer):
     type = serializers.ReadOnlyField(source="target_type")
     reporter = serializers.ReadOnlyField(source="reporter.username")
-    reviewed_by = serializers.ReadOnlyField(source="resolution.moderator.username", default=None)
+    reviewed_by = serializers.SerializerMethodField()
+    reviewed_source = serializers.ReadOnlyField(source="resolution.source", default=None)
     reviewed_at = serializers.ReadOnlyField(source="resolution.created_at", default=None)
     outcome = serializers.ReadOnlyField(source="resolution.action", default=None)
     target_author = serializers.ReadOnlyField(source="target_author.username", default=None)
@@ -52,7 +53,7 @@ class ReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Report
         fields = ["id", "type", "reason", "status", "reporter", "created_at",
-                  "reviewed_by", "reviewed_at", "outcome",
+                  "reviewed_by", "reviewed_at", "reviewed_source", "outcome",
                   "target_author", "target_content",
                   "can_review",
                   "post", "comment"]
@@ -66,19 +67,40 @@ class ReportSerializer(serializers.ModelSerializer):
             return False
         return report.target_author_id != user.id
 
+    # RBAC: Admin actions through admin panel hides their username
+    def get_reviewed_by(self, report):
+        resolution = report.resolution
+        if resolution is None:
+            return None
+        if resolution.source == ModerationLog.Source.ADMIN:
+            return "Admin"
+        return resolution.moderator.username if resolution.moderator else None
+
+
 
 # --- ACCOUNT RESTRICTIONS  ---
 class AccountRestrictionSerializer(serializers.ModelSerializer):
-    created_by = serializers.ReadOnlyField(source="created_by.username", default=None)
-    lifted_by = serializers.ReadOnlyField(source="lifted_by.username", default=None)
+    created_by = serializers.SerializerMethodField()
+    lifted_by = serializers.SerializerMethodField()
     is_active = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = AccountRestriction
         fields = ["id", "kind", "reason", "expires_at", "is_active",
-                  "created_by", "created_at", "lifted_at", "lifted_by"]
-        read_only_fields = ["id", "is_active", "created_by", "created_at",
-                            "lifted_at", "lifted_by"]
+                  "created_by", "created_at", "source",
+                  "lifted_at", "lifted_by", "lifted_source"]
+        read_only_fields = ["id", "is_active", "created_by", "created_at", "source",
+                            "lifted_at", "lifted_by", "lifted_source"]
+
+    def get_created_by(self, obj):
+        if obj.source == ModerationLog.Source.ADMIN:
+            return "Admin"
+        return obj.created_by.username if obj.created_by else None
+
+    def get_lifted_by(self, obj):
+        if obj.lifted_source == ModerationLog.Source.ADMIN:
+            return "Admin"
+        return obj.lifted_by.username if obj.lifted_by else None
 
     def validate_reason(self, value):
         value = value.strip()

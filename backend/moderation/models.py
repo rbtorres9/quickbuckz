@@ -221,12 +221,20 @@ class AccountRestriction(models.Model):
         null=True, blank=True, related_name="restrictions_given",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(
+        max_length=10, choices=ModerationLog.Source.choices, default=ModerationLog.Source.APP,
+    )
 
     lifted_at = models.DateTimeField(null=True, blank=True)
     lifted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="restrictions_lifted",
     )
+    lifted_source = models.CharField(
+        max_length=10, choices=ModerationLog.Source.choices, blank=True, default="",
+    )
+
+
 
     objects = AccountRestrictionQuerySet.as_manager()
 

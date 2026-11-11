@@ -326,7 +326,7 @@ class BanListAdmin(admin.ModelAdmin):
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
-    list_display = ["id", "target_type", "target_author", "reporter", "reason", "status", "outcome", "reviewed_by", "created_at"]
+    list_display = ["id", "target_type", "target_author", "reporter", "reason", "status", "outcome", "created_at", "reviewed_by", "reviewed_at"]
     list_filter = ["status", "resolution__action", "created_at"]
     search_fields = ["reason", "reporter__username"]
     list_select_related = ["post__author", "comment__author", "reporter", "target_author", "resolution__moderator"]
@@ -354,7 +354,7 @@ class ReportAdmin(admin.ModelAdmin):
                      "reporter", "reason", "created_at"]
     REVIEW_FIELDS = ["review_status", "review_outcome", "review_by"]
     RESTRICTION_FIELDS = ["restriction_kind", "restriction_until"]
-    CLOSED_FIELDS = ["status", "outcome", "reviewed_by", "resolution"]
+    CLOSED_FIELDS = ["status", "outcome", "reviewed_by", "reviewed_at", "resolution"]
 
     def get_fields(self, request, obj=None):
         if obj is None:
@@ -413,6 +413,10 @@ class ReportAdmin(admin.ModelAdmin):
         if obj.resolution and obj.resolution.moderator:
             return obj.resolution.moderator.username
         return "-"
+
+    @admin.display(description="Reviewed at", ordering="resolution__created_at")
+    def reviewed_at(self, obj):
+        return obj.resolution.created_at if obj.resolution else "-"
 
     @admin.action(description="Dismiss selected reports", permissions=["change"])
     def dismiss_selected(self, request, queryset):
