@@ -6,6 +6,8 @@ from django.utils import timezone
 
 from .models import AccountRestriction, BanListUser, ModerationLog, Report
 from .services import can_moderate_user, check_new_restriction
+from accounts.views import visible_profiles
+
 
 
 User = get_user_model()
@@ -50,6 +52,32 @@ class ReportAdminForm(forms.ModelForm):
             cleaned["comment"] = None
             if not cleaned.get("target_author"):
                 self.add_error("target_author", "Pick the user being reported.")
+
+        reporter = cleaned.get("reporter")
+        if target in ("post", "comment"):
+            post = cleaned.get("post")
+            owner = post.author if post else None
+        else:
+            owner = cleaned.get("target_author")
+
+        if reporter:
+            # can't report content from a profile they can't see (private, not following)
+            if owner and not visible_profiles(reporter).filter(user=owner).exists():
+                self.add_error(
+                    "reporter",
+                    f"@{reporter.username} can't see @{owner.username}'s profile "
+                    "(it's private and they don't follow it), so they can't report this.",
+                )
+
+            # can't report while restricted from reporting
+            restriction = reporter.active_restriction(AccountRestriction.Kind.REPORTING)
+            if restriction:
+                until = (f"until {restriction.expires_at:%Y-%m-%d %H:%M} UTC"
+                         if restriction.expires_at else "until a moderator lifts it")
+                self.add_error(
+                    "reporter",
+                    f"@{reporter.username} is restricted from reporting {until}.",
+                )
 
         return cleaned
 
