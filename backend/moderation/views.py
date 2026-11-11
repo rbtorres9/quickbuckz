@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.db.models import Count, Max, Q
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -17,6 +19,7 @@ from .serializers import (
     ReportCreateSerializer,
     ReportSerializer,
     RestrictionEndSerializer,
+    RestrictedUserSerializer,
 )
 from .services import (
     can_moderate_user,
@@ -221,3 +224,28 @@ class RestrictionDetailView(APIView):
             restriction, request.user, expires_at=serializer.validated_data["expires_at"]
         )
         return Response(AccountRestrictionSerializer(restriction).data, status=status.HTTP_200_OK)
+
+
+# Users with at least one restriction in their history, newest first.
+# active (default) = only users with a restriction in force right now
+class RestrictedUserListView(APIView):
+    permission_classes = [IsAuthenticated, IsModerator]
+
+    def get(self, request):
+        active_q = Q(restrictions__lifted_at__isnull=True) & (
+            Q(restrictions__expires_at__isnull=True)
+            | Q(restrictions__expires_at__gt=timezone.now())
+        )
+        qs = (
+            User.objects
+            .annotate(
+                restriction_count=Count("restrictions", distinct=True),
+                active_count=Count("restrictions", filter=active_q, distinct=True),
+                last_restricted=Max("restrictions__created_at"),
+            )
+            .filter(restriction_count__gt=0)
+            .order_by("-last_restricted")
+        )
+        if request.query_params.get("status", "active") == "active":
+            qs = qs.filter(active_count__gt=0)
+        return Response(RestrictedUserSerializer(qs, many=True).data)

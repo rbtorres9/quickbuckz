@@ -97,6 +97,7 @@ def restrict_user(target, moderator, *, kind, reason, expires_at=None,
         restriction = AccountRestriction.objects.create(
             user=target, kind=kind, reason=reason,
             expires_at=expires_at, created_by=moderator,
+            source=source,
         )
         is_account = kind == AccountRestriction.Kind.ACCOUNT
         resolve_reports(
@@ -115,7 +116,7 @@ def lift_restrictions(target, moderator, *, kind, source=ModerationLog.Source.AP
     with transaction.atomic():
         lifted = (AccountRestriction.objects.active()
                   .filter(user=target, kind=kind)
-                  .update(lifted_at=timezone.now(), lifted_by=moderator))
+                  .update(lifted_at=timezone.now(), lifted_by=moderator, lifted_source=source))
         if lifted:
             ModerationLog.objects.create(
                 moderator=moderator,
@@ -171,7 +172,7 @@ def lift_restriction(restriction, moderator, *, source=ModerationLog.Source.APP)
     with transaction.atomic():
         lifted = (AccountRestriction.objects.active()
                   .filter(pk=restriction.pk)
-                  .update(lifted_at=timezone.now(), lifted_by=moderator))
+                  .update(lifted_at=timezone.now(), lifted_by=moderator, lifted_source=source))
         if lifted:
             ModerationLog.objects.create(
                 moderator=moderator,

@@ -7,6 +7,7 @@ from .views import (
     ProfileReportView,
     ReportViewSet,
     RestrictionDetailView,  # BAN LIST
+    RestrictedUserListView,
     UserRestrictionView,
 )
 
@@ -20,5 +21,6 @@ urlpatterns = [
     path("profile/<str:username>/report/", ProfileReportView.as_view(), name="profile-report"),
     path("profile/<str:username>/restrictions/", UserRestrictionView.as_view(), name="profile-restrictions"),
     path("profile/<str:username>/restrictions/lift/", LiftRestrictionView.as_view(), name="profile-restrictions-lift"),
+    path("restrictions/", RestrictedUserListView.as_view(), name="restricted-users"),
     path("profile/<str:username>/restrictions/<int:pk>/", RestrictionDetailView.as_view(), name="profile-restriction-detail"),
 ] + router.urls
