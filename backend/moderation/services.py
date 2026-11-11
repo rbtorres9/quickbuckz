@@ -172,7 +172,7 @@ def lift_restriction(restriction, moderator, *, source=ModerationLog.Source.APP)
     with transaction.atomic():
         lifted = (AccountRestriction.objects.active()
                   .filter(pk=restriction.pk)
-                  .update(lifted_at=timezone.now(), lifted_by=moderator, lifted_source=source))
+                  .update(lifted_at=timezone.now(), lifted_by=moderator))
         if lifted:
             ModerationLog.objects.create(
                 moderator=moderator,

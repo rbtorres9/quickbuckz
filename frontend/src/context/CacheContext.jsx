@@ -6,6 +6,9 @@ export const CacheContext = createContext(null)
 export const CacheProvider = ({children}) => {
     const [ userCache, setUserCache ] = useState(() => localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null)
 
+    const [ isViewingUser, setIsViewingUser ] = useState(false)
+    const [ viewingUserCache, setViewingUserCache ] = useState(null) // This is going to be used to pass data to the Layout component when viewing another user's profile
+
     const { fetchWithToken, accessToken } = useAuthContext()
     
     const refreshUserCache = async (access=null) => {
@@ -44,7 +47,7 @@ export const CacheProvider = ({children}) => {
     }, [accessToken]) 
 
     return (
-        <CacheContext.Provider value={{ userCache, setUserCache, refreshUserCache }}>
+        <CacheContext.Provider value={{ userCache, setUserCache, isViewingUser, setIsViewingUser, viewingUserCache, setViewingUserCache, refreshUserCache }}>
             { children }
         </CacheContext.Provider>
     )

@@ -74,6 +74,32 @@ export default function AccountSettings() {
     setPrivacyMsg('Saved.')
   }
 
+  const [ themeMsg, setThemeMsg ] = useState('')
+  async function updateSiteTheme(newTheme) {
+    const old = userCache
+    setSiteTheme(newTheme)
+    setUserCache({...userCache, site_theme: newTheme})
+    setThemeMsg('Saving…')
+
+    const result = await fetchWithToken('/api/profile/me/', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({site_theme: newTheme})
+    })
+
+    const data = result.result
+
+    if (result.isError) {
+      setUserCache(old)
+      setSiteTheme(old.site_theme)
+      return setThemeMsg(errorMessage(data))
+    }
+
+    setUserCache({ ...userCache, ...data })
+    localStorage.setItem('user', JSON.stringify({ ...userCache, ...data }))
+    setThemeMsg('Saved.')
+  }
+
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-6">
       <h1 className="text-2xl font-semibold tracking-tight">Account settings</h1>
@@ -129,8 +155,9 @@ export default function AccountSettings() {
       {/* Site color */}
       <section className="space-y-3 rounded-2xl border border-line bg-card p-6">
         <h2 className="font-semibold">Appearance</h2>
-        <ThemePicker label="How QuickBuckz looks to you" value={siteTheme} onChange={setSiteTheme} />
+        <ThemePicker label="How QuickBuckz looks to you" value={siteTheme} onChange={updateSiteTheme} />
         <p className="text-xs text-muted">Only you see this. Profiles still show in their owner's theme.</p>
+        {themeMsg && <p className={`text-sm ${themeMsg === 'Saved.' || themeMsg === 'Saving…' ? 'text-accent' : 'text-red-400'}`}>{themeMsg}</p>}
       </section>
 
       {/* Privacy */}

@@ -121,10 +121,3 @@ class RestrictionEndSerializer(serializers.Serializer):
         if value is not None and value <= timezone.now():
             raise serializers.ValidationError("End date must be in the future.")
         return value
-
-
-class RestrictedUserSerializer(serializers.Serializer):
-    username = serializers.CharField(read_only=True)
-    restriction_count = serializers.IntegerField(read_only=True)
-    active_count = serializers.IntegerField(read_only=True)
-    last_restricted = serializers.DateTimeField(read_only=True)

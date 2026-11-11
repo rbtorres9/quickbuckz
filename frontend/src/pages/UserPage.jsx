@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useCache } from '../context/CacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
@@ -9,17 +9,22 @@ import EditProfileModal from '../components/EditProfileModal.jsx'
 import Logo from '../components/Logo.jsx'
 import { getTheme, themeVars } from '../data/themes.js'
 import { getName } from '../utils/NameHandler.js'
+import { MoreHorizontal } from 'lucide-react'
+import { useIsMod } from '../utils/useIsMod.js'
 
 // /user-page shows your own profile (real, from the database).
 // /user/:handle shows someone else's.
 export default function UserPage() {
+  const isMod = useIsMod()
   const { handle } = useParams()
   const { fetchUserProfile, fetchWithToken, fetchUserPosts  } = useAuthContext()
   const [ followBusy, setFollowBusy ] = useState(false)
   const [ followError, setFollowError ] = useState('')
-  const { userCache, refreshUserCache } = useCache()
+  const { userCache, refreshUserCache, isViewingUser, setIsViewingUser, viewingUserCache, setViewingUserCache } = useCache()
   const [ tab, setTab ] = useState('posts')
   const [ editing, setEditing ] = useState(false)
+  const [ menuOpen, setMenuOpen ] = useState(false)
+  const menuRef = useRef(null)
   
   const [ loadingUser, setLoadingUser ] = useState(true)
   const [ loadingPosts, setLoadingPosts ] = useState(true)
@@ -42,9 +47,18 @@ export default function UserPage() {
 
   const isSelf = !handle || handle === userCache?.username
 
+  // Clean up global variables
+  useEffect(() => {
+    return () => { 
+      setIsViewingUser(false)
+      setViewingUserCache(null)
+    }
+  }, [])
+
   // Load your own posts from the database, newest first
   useEffect(() => {
     const fetchOtherUserData = async () => {
+      setIsViewingUser(true)
       setLoadingUser(true)
       setLoadingPosts(true)
       setPostsError(null)
@@ -62,6 +76,7 @@ export default function UserPage() {
       }
 
       setPerson(userData)
+      setViewingUserCache(userData)
 
       const postsResult = await fetchUserPosts(`${handle}`)
       setLoadingPosts(false)
@@ -123,6 +138,13 @@ export default function UserPage() {
 
     setShown(activeTab === 'top' ? [...posts].sort((a, b) => b.likes_count - a.likes_count) : posts)
   }, [posts, tab, loadingPosts])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [menuOpen])
 
   if (isSelf && !userCache) {
     return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…</main>
@@ -207,11 +229,34 @@ export default function UserPage() {
     )
   }
 
+  const handleReport = () => {
+    // Fill in code
+  }
+
+  const handleBan = () => {
+    // Fill in code
+  }
+
+  const removeProfilePicture = () => {
+    // Fill in code
+  }
+
+  const removeBanner = () => {
+    // Fill in code
+  }
+
+  const removeLeftPicture = () => {
+    // Fill in code
+  }
+
+  const removeRightPicture = () => {
+    // Fill in code
+  }
+
   return (
     <>
       {/* The profile shows in its owner's theme, whatever your own site color is */}
-      {/* Theme support will be added later */}
-      <main className="mx-auto max-w-2xl px-4 pb-24" style={/* themeVars(person.theme) */ themeVars("classic")}>
+      <main className="mx-auto max-w-2xl px-4 pb-24" style={ themeVars(person.theme) }>
         {person.banner ? (
           <img src={person.banner} alt="" className="mt-4 h-32 w-full rounded-2xl border border-line object-cover sm:h-40" />
         ) : (
@@ -221,7 +266,52 @@ export default function UserPage() {
         <div className="-mt-10 px-2 sm:px-4">
           <div className="flex items-end justify-between">
             <Avatar name={personName} src={person.profile_picture} size="lg" />
-            {button}
+
+            <div className='relative flex items-center gap-2' ref={menuRef}>
+              { !isSelf && (
+                <>
+                  <button
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    className="rounded-md px-2 py-1 text-muted hover:bg-white/5"
+                    aria-label="Post options"
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
+
+                  { menuOpen && (
+                    <div className="absolute left-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
+                      <button
+                        onClick={() => {}}
+                        className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
+                      >
+                        Report
+                      </button>
+                      {isMod && (
+                        <>
+                          <button onClick={handleBan} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                            Ban (mod)
+                          </button>
+                          <button onClick={removeProfilePicture} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                            Remove profile picture (mod)
+                          </button>
+                          <button onClick={removeBanner} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                            Remove banner (mod)
+                          </button>
+                          <button onClick={removeLeftPicture} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                            Remove left picture (mod)
+                          </button>
+                          <button onClick={removeRightPicture} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                            Remove right picture (mod)
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {button}
+            </div>
           </div>
           <h1 className="mt-3 text-2xl font-bold tracking-tight">{personName}</h1>
           <p className="text-sm text-muted">@{person.username}</p>
@@ -242,6 +332,9 @@ export default function UserPage() {
             )}
           </div>
           {followError && <p className="mt-2 text-sm text-red-400">{followError}</p>}
+
+          
+
         </div>
 
         <nav className="mt-6 flex border-b border-line text-sm font-medium">
