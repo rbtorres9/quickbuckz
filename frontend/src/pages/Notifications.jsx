@@ -17,6 +17,8 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [pendingFollow, setPendingFollow] = useState(null) // username whose Follow back is in flight
+  const [pendingDecision, setPendingDecision] = useState(null)  // follow request notification
+
 
 
   // Remember which ones were new when the page opened, so they stay highlighted,
@@ -72,9 +74,48 @@ export default function Notifications() {
 
     // Update every notification from this person, not just the one clicked
     setNotifications((list) =>
-      list.map((n) => (n.actor_username === username ? { ...n, is_following_actor: data.is_followed } : n))
+      list.map((n) => (n.actor_username === username
+        ? { ...n, is_following_actor: data.is_followed, is_requested_actor: data.is_requested }
+        : n))
     )
   }
+
+  // cancel pending request to a private account (through notifications tab)
+  async function cancelRequest(username) {
+    if (pendingFollow) return
+    setPendingFollow(username)
+    const result = await fetchWithToken(`/api/profile/me/following/requests/${username}/`, { method: 'DELETE' })
+    setPendingFollow(null)
+
+    if (result.isError) {
+      setError(errorMessage(result.result))
+      return
+    }
+
+    setNotifications((list) =>
+      list.map((n) => (n.actor_username === username ? { ...n, is_requested_actor: false } : n))
+    )
+  }
+
+
+  async function decideRequest(username, accept) {
+    if (pendingDecision) return
+    setPendingDecision(username)
+    const result = await fetchWithToken(`/api/profile/me/followers/requests/${username}/`, { method: accept ? 'POST' : 'DELETE' })
+    setPendingDecision(null)
+
+    if (result.isError) {
+      setError(errorMessage(result.result))
+      return
+    }
+
+    setNotifications((list) =>
+      accept
+        ? list.map((n) => (n.type === 'follow_request' && n.actor_username === username ? { ...n, type: 'follow' } : n))
+        : list.filter((n) => !(n.type === 'follow_request' && n.actor_username === username))
+    )
+  }
+  
 
   // A short preview of the post a like or comment was on
   // The backend sends the first 60 characters; add … when it was cut off
@@ -125,6 +166,7 @@ export default function Notifications() {
                     {n.type === 'follow' && 'followed you'}
                     {n.type === 'like' && 'liked your post'}
                     {n.type === 'comment' && 'commented on your post'}
+                    {n.type === 'follow_request' && 'requested to follow you'}
                     <span className="text-muted" title={new Date(n.created_at).toLocaleString()}>
                       {' '}· {getTimeAgoString(n.created_at)}
                     </span>
@@ -146,15 +188,46 @@ export default function Notifications() {
                 </div>
 
                 {/* Follow back uses is_following_actor and the real follow toggle */}
+                {/* pending request to a private actor shows "Requested" */}
                 {n.type === 'follow' && !n.is_following_actor && (
-                  <button
-                    onClick={() => followBack(n.actor_username)}
-                    disabled={pendingFollow === n.actor_username}
-                    className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover disabled:opacity-60"
-                  >
-                    {pendingFollow === n.actor_username ? 'Following…' : 'Follow back'}
-                  </button>
+                  n.is_requested_actor ? (
+                    <button
+                      onClick={() => cancelRequest(n.actor_username)}
+                      disabled={pendingFollow === n.actor_username}
+                      className="shrink-0 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-muted hover:border-red-400/60 hover:text-red-300 disabled:opacity-60"
+                    >
+                      {pendingFollow === n.actor_username ? 'Cancelling…' : 'Requested'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => followBack(n.actor_username)}
+                      disabled={pendingFollow === n.actor_username}
+                      className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover disabled:opacity-60"
+                    >
+                      {pendingFollow === n.actor_username ? 'Sending…' : 'Follow back'}
+                    </button>
+                  )
                 )}
+
+                {n.type === 'follow_request' && (
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      onClick={() => decideRequest(n.actor_username, true)}
+                      disabled={pendingDecision === n.actor_username}
+                      className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover disabled:opacity-60"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => decideRequest(n.actor_username, false)}
+                      disabled={pendingDecision === n.actor_username}
+                      className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300 disabled:opacity-60"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                )}
+
               </li>
             )
           })}

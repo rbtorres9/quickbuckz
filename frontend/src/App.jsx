@@ -19,6 +19,8 @@ import ModTools from './pages/ModTools.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import PublicRoute from './components/PublicRoute.jsx'
 import ModUserStatus from './pages/ModUserStatus.jsx'
+import FollowRequestsPage from './pages/FollowRequestsPage.jsx'
+
 
 
 // protect: only for signed-in people (others go to /login)
@@ -40,6 +42,7 @@ export default function App() {
         <Route path="/home" element={protect(<Home />)} />
         <Route path="/top-content" element={protect(<Top />)} />
         <Route path="/subscriptions" element={protect(<Following />)} />
+        <Route path="/subscriptions/requests" element={protect(<FollowRequestsPage />)} />
         <Route path="/followers" element={protect(<Followers />)} />
         <Route path="/notifications" element={protect(<Notifications />)} />
         <Route path="/post-creation" element={protect(<PostCreation />)} />

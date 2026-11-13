@@ -3,7 +3,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from accounts.models import Follow
+from accounts.models import Follow, FollowRequest
 from .models import Notification
 from .serializers import NotificationSerializer
 
@@ -16,7 +16,10 @@ class NotificationListView(generics.ListAPIView):
         return (Notification.objects.filter(recipient=user)
                 .select_related("actor__profile", "post", "comment")
                 .annotate(is_following_actor=Exists(
-                    Follow.objects.filter(follower=user, following=OuterRef("actor_id")))))
+                    Follow.objects.filter(follower=user, following=OuterRef("actor_id"))),
+                    # ===== NEW: I have a pending request to this actor (they're private) =====
+                    is_requested_actor=Exists(
+                    FollowRequest.objects.filter(requester=user, target=OuterRef("actor_id")))))
 
 class MarkAllReadView(APIView):
     permission_classes = [IsAuthenticated]

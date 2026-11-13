@@ -6,10 +6,11 @@ class Notification(models.Model):
         FOLLOW = "follow"
         LIKE = "like"
         COMMENT = "comment"
+        FOLLOW_REQUEST = "follow_request"
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
-    type = models.CharField(max_length=10, choices=Type.choices)
+    type = models.CharField(max_length=20, choices=Type.choices)
     post = models.ForeignKey("posts.Post", on_delete=models.CASCADE, null=True, blank=True, related_name="+")
     comment = models.ForeignKey("posts.Comment", on_delete=models.CASCADE, null=True, blank=True, related_name="+")
     read = models.BooleanField(default=False)
