@@ -28,6 +28,7 @@ from .serializers import (
     ProfileDetailSerializer, 
     LockedProfileSerializer, 
     FollowRequestSerializer, 
+    SentFollowRequestSerializer,
     )
 
 
@@ -41,7 +42,6 @@ def active_profiles():
 def visible_profiles(user):
     profiles = active_profiles()
 
-
     if user.is_authenticated:
         followed_ids = Follow.objects.filter(follower=user).values("following")
         return profiles.filter(
@@ -51,9 +51,8 @@ def visible_profiles(user):
         )
     return profiles.filter(visibility=Profile.Visibility.PUBLIC)
 
-
+# Annotate each profile with how the viewer relates to its user
 def with_follow_flags(qs, viewer):
-    """Annotate each profile with how the viewer relates to its user."""
     # logged out/missing auth branch
     if not viewer.is_authenticated:
         return qs.annotate(
@@ -84,7 +83,7 @@ class ProfileListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return visible_profiles(self.request.user)
+        return active_profiles()
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
@@ -171,7 +170,7 @@ class FollowListView(generics.ListAPIView):
         else:
             links, other_side = Follow.objects.filter(following=target), "follower"
 
-        qs = (visible_profiles(viewer)
+        qs = (active_profiles()
               .filter(user__in=links.values(other_side))
               .annotate(followed_at=Subquery(
                   links.filter(**{other_side: OuterRef("user")}).values("created_at")[:1]))
@@ -179,9 +178,13 @@ class FollowListView(generics.ListAPIView):
 
         if viewer.is_authenticated:
             qs = qs.annotate(is_following=Exists(
-                Follow.objects.filter(follower=viewer, following=OuterRef("user"))))
+                Follow.objects.filter(follower=viewer, following=OuterRef("user"))),
+                # viewer has a pending request to this person
+                is_requested=Exists(
+                FollowRequest.objects.filter(requester=viewer, target=OuterRef("user"))))
         else:
-            qs = qs.annotate(is_following=Value(False))
+            # logged-out viewers have no requests either 
+            qs = qs.annotate(is_following=Value(False), is_requested=Value(False))
         return qs
 
 class MutualFollowersView(FollowListView):
@@ -204,6 +207,8 @@ class MutualFollowersView(FollowListView):
                     followed_at=Subquery(
                         target_followers.filter(follower=OuterRef("user")).values("created_at")[:1]),
                     is_following=Value(True, output_field=BooleanField()),  # by definition
+                    is_requested=Value(False, output_field=BooleanField()),  # already follow everyone in this list, so no pending requests
+
                 )
                 .order_by("-followed_at"))
 
@@ -238,6 +243,28 @@ class FollowRequestDecisionView(APIView):
     def delete(self, request, username):
         self._get_request(request, username).delete()
         return Response({"detail": "Request declined."}, status=200)
+
+# follow requests that the current user sent
+class SentFollowRequestListView(generics.ListAPIView):
+    """Pending requests I sent to private accounts."""
+    serializer_class = SentFollowRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return (FollowRequest.objects
+                .filter(requester=self.request.user, target__is_active=True)
+                .select_related("target__profile"))
+
+
+class SentFollowRequestCancelView(APIView):
+    """DELETE cancels my pending request to <username>."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, username):
+        get_object_or_404(FollowRequest, requester=request.user,
+                          target__username=username.strip().lower()).delete()
+        return Response({"detail": "Request cancelled."}, status=200)
+
 
 # --- User Role Block ---
 

@@ -8,11 +8,14 @@ class NotificationSerializer(serializers.ModelSerializer):
     post_preview = serializers.SerializerMethodField()
     comment_text = serializers.SerializerMethodField()
     is_following_actor = serializers.BooleanField(read_only=True)  # from the view's annotation
+    is_requested_actor = serializers.BooleanField(read_only=True)  # from the view's annotation
+
 
     class Meta:
         model = Notification
         fields = ["id", "type", "actor_username", "actor_name", "actor_avatar", "post",
-                  "post_preview", "comment_text", "read", "created_at", "is_following_actor"]
+                  "post_preview", "comment_text", "read", "created_at", "is_following_actor",
+                  "is_requested_actor"]
 
     def get_actor_name(self, obj):
         return obj.actor.get_full_name() or obj.actor.username

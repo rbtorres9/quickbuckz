@@ -78,6 +78,12 @@ export default function UserPage() {
       setPerson(userData)
       setViewingUserCache(userData)
 
+      if (userData.visibility === 'private' && !userData.is_followed && !userData.is_self) {
+        setPosts([])
+        setLoadingPosts(false)
+        return
+      }
+
       const postsResult = await fetchUserPosts(`${handle}`)
       setLoadingPosts(false)
 
@@ -177,18 +183,20 @@ export default function UserPage() {
     )
   }
 
-  // Follow = POST, Unfollow = DELETE. The backend sends back the new state and count.
+  // Follow/Request = POST, Unfollow/Cancel request = DELETE. The backend sends back the new state and count.
   const followed = person.is_followed
+  const requested = person.is_requested
+  const isLocked = !isSelf && person.visibility === 'private' && !followed
   async function toggleFollow() {
     setFollowBusy(true)
     setFollowError('')
-    const result = await fetchWithToken(`/api/profile/${person.username}/follow/`, { method: followed ? 'DELETE' : 'POST' })
+    const result = await fetchWithToken(`/api/profile/${person.username}/follow/`, { method: (followed || requested) ? 'DELETE' : 'POST' })
     setFollowBusy(false)
 
     const data = result.result
     if (result.isError) return setFollowError(errorMessage(data))
     refreshUserCache() // so your own Following count stays right
-    setPerson({ ...person, is_followed: data.is_followed, followers_count: data.followers_count })
+    setPerson({ ...person, is_followed: data.is_followed, is_requested: data.is_requested, followers_count: data.followers_count })
   }
   
 
@@ -217,6 +225,16 @@ export default function UserPage() {
         { followBusy ? "Unfollowing..." : "Following"}
       </button>
     )
+  } else if (requested) {
+    button = (
+      <button
+        onClick={toggleFollow}
+        disabled={followBusy}
+        className="mb-1 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-muted hover:border-red-400/60 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        { followBusy ? "Cancelling..." : "Requested" }
+      </button>
+    )
   } else {
     button = (
       <button
@@ -224,7 +242,7 @@ export default function UserPage() {
         disabled={followBusy}
         className="mb-1 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
-        { followBusy ? "Following..." : "Follow"}
+        { followBusy ? (person.visibility === 'private' ? "Requesting..." : "Following...") : "Follow"}
       </button>
     )
   }
@@ -317,7 +335,7 @@ export default function UserPage() {
           <p className="text-sm text-muted">@{person.username}</p>
           {person.bio && <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed">{person.bio}</p>}
           <div className="mt-4 flex gap-5 text-sm">
-            <span><b>{isLoading ? '–' : posts.length}</b> <span className="text-muted">Posts</span></span>
+            <span><b>{isLoading || isLocked ? '–' : posts.length}</b> <span className="text-muted">Posts</span></span>
             {isSelf ? (
               <>
                 <Link to="/followers" className="hover:underline"><b>{person.followers_count ?? 0}</b> <span className="text-muted">Followers</span></Link>
@@ -352,7 +370,14 @@ export default function UserPage() {
         </nav>
 
         <div className="mt-4 space-y-4">
-          {isLoading ? (
+          {isLocked ? (
+            <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+              <p className="font-medium">This account is private</p>
+              <p className="mt-1 text-sm text-muted">
+                {requested ? 'Your follow request is pending.' : `Follow @${person.username} to see their posts.`}
+              </p>
+            </div>
+          ) : isLoading ? (
             <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
               <p className="font-medium">Loading posts...</p>
               <div className="relative mt-7 h-14">

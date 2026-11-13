@@ -13,7 +13,8 @@ export default function Layout() {
   const [hasLeftPicture, setHasLeftPicture] = useState(true)
   const { userCache, isViewingUser, viewingUserCache } = useCache()
 
-  const cache = (isViewingUser && viewingUserCache) ? viewingUserCache : userCache
+  const profile = (isViewingUser && viewingUserCache) ? viewingUserCache : userCache
+  const cache = profile?.background_picture ?? profile
 
   return (
     <>

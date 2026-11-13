@@ -9,6 +9,14 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 
 #main purpose of this code is profile serializers
 
+class BackgroundPictureSerializer(serializers.Serializer):
+    right_picture = serializers.ImageField(read_only=True)
+    right_picture_flip = serializers.BooleanField(read_only=True)
+    right_picture_tile = serializers.BooleanField(read_only=True)
+    left_picture = serializers.ImageField(read_only=True)
+    left_picture_flip = serializers.BooleanField(read_only=True)
+    left_picture_tile = serializers.BooleanField(read_only=True)
+
 #Public profile serializer is a read only public view of a user account
 class PublicProfileSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='user.username')
@@ -16,6 +24,8 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source='user.last_name')
     followers_count = serializers.IntegerField(source='user.follower_set.count', read_only=True)
     following_count = serializers.IntegerField(source='user.following_set.count', read_only=True)
+
+    background_picture = BackgroundPictureSerializer(source='*', read_only=True)
 
     class Meta:
         model = Profile
@@ -34,12 +44,7 @@ class PublicProfileSerializer(serializers.ModelSerializer):
                 'created_at',
                 'theme',
                 'site_theme',
-                'right_picture',
-                'right_picture_flip',
-                'right_picture_tile',
-                'left_picture',
-                'left_picture_flip',
-                'left_picture_tile',
+                'background_picture',
                 ]
         read_only_fields = fields
 
@@ -142,12 +147,24 @@ class FollowListSerializer(serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source="user.last_name")
     followed_at = serializers.DateTimeField(read_only=True)
     is_following = serializers.BooleanField(read_only=True)
+    is_requested = serializers.BooleanField(read_only=True)
+
+    bio = serializers.SerializerMethodField()
+    # hide bio of private accounts the viewer can't see
+    def get_bio(self, obj):
+        request = self.context.get("request")
+        viewer_id = request.user.id if request else None
+        if (obj.visibility == Profile.Visibility.PUBLIC
+                or obj.user_id == viewer_id
+                or getattr(obj, "is_following", False)):
+            return obj.bio
+        return None
 
     class Meta:
         model = Profile
         fields = ["username", "first_name", "last_name", "bio",
-                  "profile_picture", "followed_at", "is_following"]
-
+                  "profile_picture", "followed_at", "is_following", "is_requested"]
+        
 #this includes serialization regarding follow info as well
 class ProfileDetailSerializer(PublicProfileSerializer):
     is_followed = serializers.BooleanField(read_only=True)
@@ -175,17 +192,14 @@ class LockedProfileSerializer(serializers.ModelSerializer):
     follows_you = serializers.BooleanField(read_only=True)
     is_self = serializers.BooleanField(read_only=True)
     is_requested = serializers.BooleanField(read_only=True)
-    is_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
         fields = ['id', 'username', 'first_name', 'last_name', 'profile_picture', 'visibility',
                   'followers_count', 'following_count',
-                  'is_followed', 'follows_you', 'is_self', 'is_requested', 'is_locked']
+                  'is_followed', 'follows_you', 'is_self', 'is_requested']
         read_only_fields = fields
 
-    def get_is_locked(self, obj):
-        return True
 
 
 class FollowRequestSerializer(serializers.ModelSerializer):
@@ -193,6 +207,18 @@ class FollowRequestSerializer(serializers.ModelSerializer):
     first_name = serializers.ReadOnlyField(source='requester.first_name')
     last_name = serializers.ReadOnlyField(source='requester.last_name')
     profile_picture = serializers.ImageField(source='requester.profile.profile_picture', read_only=True)
+
+    class Meta:
+        model = FollowRequest
+        fields = ['id', 'username', 'first_name', 'last_name', 'profile_picture', 'created_at']
+
+
+# /api/profile/me/following/requests/
+class SentFollowRequestSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='target.username')
+    first_name = serializers.ReadOnlyField(source='target.first_name')
+    last_name = serializers.ReadOnlyField(source='target.last_name')
+    profile_picture = serializers.ImageField(source='target.profile.profile_picture', read_only=True)
 
     class Meta:
         model = FollowRequest
