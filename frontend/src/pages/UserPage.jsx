@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useCache } from '../context/CacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
@@ -17,6 +17,8 @@ import { useIsMod } from '../utils/useIsMod.js'
 export default function UserPage() {
   const isMod = useIsMod()
   const { handle } = useParams()
+  const navigate = useNavigate()
+
   const { fetchUserProfile, fetchWithToken, fetchUserPosts  } = useAuthContext()
   const [ followBusy, setFollowBusy ] = useState(false)
   const [ followError, setFollowError ] = useState('')
@@ -247,12 +249,37 @@ export default function UserPage() {
     )
   }
 
-  const handleReport = () => {
-    // Fill in code
+  const handleReport = async () => {
+    setMenuOpen(false)
+
+    const reason = prompt(`Why are you reporting @${person.username}?`)
+    if (!reason?.trim()) return
+
+    const result = await fetchWithToken(`/api/profile/${person.username}/report/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason.trim() }),
+    })
+    if (result.isError) return alert(errorMessage(result.result))
+    alert(result.result?.detail ?? 'Thanks, this profile was reported.')
   }
 
-  const handleBan = () => {
-    // Fill in code
+  const handleBan = async () => {
+    setMenuOpen(false)
+
+    const reason = prompt(`Why are you banning @${person.username}?`)
+    if (!reason?.trim()) return
+    if (!confirm(`Ban @${person.username}? Their profile and posts will be hidden until a moderator reactivates them.`)) return
+
+    const result = await fetchWithToken(`/api/profile/${person.username}/ban/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason.trim() }),
+    })
+    if (result.isError) return alert(errorMessage(result.result))
+
+    alert(`@${person.username} was banned.`)
+    navigate(`/mod/${person.username}/status`)
   }
 
   const removeProfilePicture = () => {
@@ -299,7 +326,7 @@ export default function UserPage() {
                   { menuOpen && (
                     <div className="absolute left-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
                       <button
-                        onClick={() => {}}
+                        onClick={handleReport}
                         className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
                       >
                         Report

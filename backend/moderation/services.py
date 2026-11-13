@@ -87,7 +87,7 @@ def dismiss_reports(report, user, source=ModerationLog.Source.APP):
     )
     return entry.reports_closed if entry else 0
 
-# Deactivate the account, close open profile reports on it, and log it.
+# Deactivate the account, close all open reports on it, and log it.
 def deactivate_user(target, moderator, *, reason, source=ModerationLog.Source.APP):
     with transaction.atomic():
         updated = User.objects.filter(pk=target.pk, is_active=True).update(is_active=False)
@@ -95,7 +95,7 @@ def deactivate_user(target, moderator, *, reason, source=ModerationLog.Source.AP
             raise ValueError("This account is already deactivated.")
         target.is_active = False
         return resolve_reports(
-            Report.objects.filter(target_type=Report.TargetType.PROFILE, target_author=target),
+            Report.objects.filter(target_author=target),
             action=ModerationLog.Action.DEACTIVATE,
             source=source,
             moderator=moderator,

@@ -163,3 +163,17 @@ UPDATES:
 - PostPage comments: added `min-w-0` to the comment text and the comment box so they can shrink and wrap.
 - Checked every page at 320, 360, 390 and 412 px wide with long names, links and big numbers: no sideways scrolling.
 - The side GIF/picture are hidden on phones on purpose (no room next to the posts).
+
+
+## Profile Reporting and Banning 11/13 - RT
+- The Report option in the `...` menu on another user's profile now works. It asks for a reason and sends it to `POST /api/profile/<username>/report/`. Reporting yourself, or reporting the same profile twice while the first report is still open, returns a message instead of creating a report.
+- The Ban (mod) option in the profile `...` menu now asks for a reason, asks the mod to confirm, then sends `POST /api/profile/<username>/ban/`. After a successful ban it opens the user's status page (`/mod/<username>/status`), which shows the ban and a Reactivate button.
+- Open profile reports that you can review now say "Click Account status or View Profile to take action." above the Dismiss and View profile buttons.
+  - `frontend/src/pages/ModTools.jsx`: added inside the `canReview` branch, with `w-full` so it gets its own line in the button row.
+- The backend still decides who can be banned. Banning yourself, an admin, or another mod when you aren't an admin returns "You can't moderate this account."
+- Account status link in Mod Tools moved inline. Each report card now has an underlined "Account status" link next to the reported username (e.g. PROFILE of @dummy  Account status). It shows on both open and reviewed cards.
+
+  ### Notes
+  - If a banned user is reactivated, their posts come back but the reports the ban closed stay closed.
+  - A profile report's snapshot only keeps text (username, name and, where allowed, bio). The profile picture and banner aren't copied, so if they change before a mod looks, the report won't show the old images. Saving image evidence is on hold.
+  - Not implemented yet: the other mod options in the profile ... menu (Remove profile picture, Remove banner, Remove left picture, Remove right picture) are still empty stubs.

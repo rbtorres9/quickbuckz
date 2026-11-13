@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsModerator
-from accounts.views import visible_profiles
+from accounts.views import visible_profiles, active_profiles
 from posts.models import Post
 from .models import ModerationLog, Report
 from .serializers import (
@@ -115,9 +115,13 @@ class ProfileReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, username):
+        # Private profiles still show their name, profile picture and banner publicly,
+        # so those can break site rules even when the reporter can't follow the account.
         profile = get_object_or_404(
-            visible_profiles(request.user), user__username=username.strip().lower()
+            active_profiles(), user__username=username.strip().lower()
         )
+        can_see_private = visible_profiles(request.user).filter(pk=profile.pk).exists()
+
         target = profile.user
         if target == request.user:
             return Response({"detail": "You can't report your own profile."},
@@ -133,9 +137,11 @@ class ProfileReportView(APIView):
         serializer = ReportCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        # snapshot the user details when the report happens
         name = target.get_full_name()
         snapshot = f"@{target.username}" + (f" ({name})" if name else "")
-        if profile.bio:
+        # only include the bio if the reporter could see it
+        if profile.bio and can_see_private:
             snapshot += f"\n{profile.bio}"
 
         try:

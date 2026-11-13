@@ -232,6 +232,16 @@ export default function ModTools() {
                     {group.type}
                   </span> of
                   <Link to={`/user/${target.author}`} className="font-semibold hover:underline">@{target.author}</Link>
+                  {/* inline account status link */}
+                  {target.author && (
+                    <button
+                      type="button"
+                      onClick={() => openStatus(target.author)}
+                      className="text-sm text-muted underline underline-offset-4 hover:text-accent"
+                    >
+                      Account status
+                    </button>
+                  )}
                 </div>
 
                 {/* row 2 = reporters + time (unchanged) */}
@@ -277,6 +287,11 @@ export default function ModTools() {
                 <div className="mt-4 flex flex-wrap gap-3">
                   {reviewed ? null : canReview ? (
                     <>
+                    {group.type === 'profile' && (
+                      <p className="w-full text-sm text-muted">
+                        Click Account status or View Profile to take action.
+                      </p>
+                    )}
                     {canRemove && (
                       <button
                         onClick={() => removeContent(group)}
@@ -293,16 +308,6 @@ export default function ModTools() {
                       >
                         Dismiss
                       </button>
-                      {target.author && (
-                        <button
-                          type="button"
-                          onClick={() => openStatus(target.author)}
-                          disabled={busy === group.key}
-                          className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50"
-                        >
-                          Account status
-                        </button>
-                      )}
                     </>
                   ) : (
                     <p className="self-center text-sm text-muted">
@@ -318,15 +323,6 @@ export default function ModTools() {
                         >
                           View post
                         </Link>
-                      )}
-                      {target.author && (
-                        <button
-                          type="button"
-                          onClick={() => openStatus(target.author)}
-                          className="self-center text-sm text-muted hover:text-accent hover:underline underline-offset-4" 
-                        >
-                          View @{target.author}'s account status
-                        </button>
                       )}
                     </div>
                   ) : group.post ? (
