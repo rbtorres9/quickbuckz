@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # => do python manage.py makemigrations/migrate to apply 
 # current schema/modified test schema
 # MODIFY/REMOVE POST PRODUCTION
-USE_SQLITE = env.bool('USE_SQLITE', default=False)
+USE_SQLITE = env.bool('USE_SQLITE', default=True)
 
 if not USE_SQLITE and env('DATABASE_HOST', default=None):
     DATABASES = {
