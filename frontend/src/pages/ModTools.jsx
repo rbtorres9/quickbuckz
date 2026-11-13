@@ -22,7 +22,7 @@ const FILTERS = [
 
 const SECTIONS = [
   { value: 'reports', label: 'Reports' },
-  { value: 'restrictions', label: 'Account restrictions' },
+  { value: 'restrictions', label: 'Ban list' },
 ]
 
 // One card per reported post or comment, even if several people reported it
@@ -57,9 +57,9 @@ export default function ModTools() {
   const [historyUser, setHistoryUser] = useState(null) // username being viewed, or null = the list
   const [historyFrom, setHistoryFrom] = useState(null) // 'restrictions' or 'reports', for the back button
 
-  async function fetchReports(status) {
+  async function fetchReports(status, type = filter) {
     const params = new URLSearchParams({ status })
-    if (filter !== 'all') params.set('type', filter)
+    if (type !== 'all') params.set('type', type)
     const result = await fetchWithToken(`/api/reports/?${params}`)
     if (result.isError) return { error: result.result }
     const data = result.result
@@ -75,10 +75,10 @@ export default function ModTools() {
     }
     setReports(list)
 
-    if (statusFilter === 'open') {
+    if (statusFilter === 'open' && filter === 'all') {
       setOpenCount(groupReports(list).length)
     } else {
-      const open = await fetchReports('open')
+      const open = await fetchReports('open', 'all')
       if (open.list) setOpenCount(groupReports(open.list).length)
     }
   }
@@ -174,8 +174,7 @@ export default function ModTools() {
           <RestrictionHistory
             username={historyUser}
             onBack={closeHistory}
-            backLabel={historyFrom === 'reports' ? 'Reviewed reports' : 'Account restrictions'}
-          />
+            backLabel={historyFrom === 'reports' ? 'Reviewed reports' : 'Ban list'}          />
         ) : (
           <ModRestrictions onOpen={(username) => openHistory(username, 'restrictions')} />
         )
@@ -189,8 +188,8 @@ export default function ModTools() {
             className={`text-sm text-muted hover:text-accent ${statusFilter === 'open' ? 'underline underline-offset-4' : ''}`}
           >
             {openCount !== null
-              ? `${openCount} open ${openCount === 1 ? 'item' : 'items'}`
-              : 'open items'}
+              ? `${openCount} active ${openCount === 1 ? 'report' : 'reports'}`
+              : 'active reports'}
           </button>
           <button
             onClick={() => showStatus('closed')}
@@ -331,7 +330,7 @@ export default function ModTools() {
                           onClick={() => openHistory(target.author, 'reports')}
                           className="self-center text-sm text-muted hover:text-accent hover:underline underline-offset-4" 
                         >
-                          View @{target.author}'s account restriction status
+                          View @{target.author}'s account status
                         </button>
                       )}
                     </div>

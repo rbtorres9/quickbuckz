@@ -14,9 +14,7 @@ from rest_framework.permissions import (
 from accounts.permissions import IsAuthorOrModerator
 from accounts.views import visible_profiles
 
-from moderation.models import AccountRestriction
-from moderation.services import delete_content, ensure_not_restricted, with_author_status  # DEACTIVATED CONTENT
-Kind = AccountRestriction.Kind
+from moderation.services import delete_content, with_author_status
 
 from .models import Post, Like, Comment
 from .serializers import PostSerializer, CommentSerializer, PostDetailSerializer
@@ -39,12 +37,7 @@ class PostViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrModerator]
  
     def perform_create(self, serializer):
-        ensure_not_restricted(self.request.user, Kind.POSTING)
         serializer.save(author=self.request.user)
-
-    def perform_update(self, serializer):
-        ensure_not_restricted(self.request.user, Kind.POSTING)
-        serializer.save()
 
     # REPORT LOG: close reports before deleting a post
     def perform_destroy(self, instance):
@@ -85,8 +78,6 @@ class PostViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post", "delete"])
     def like(self, request, pk=None):
         post = self.get_object()
-        if request.method == "POST":
-            ensure_not_restricted(request.user, Kind.INTERACTING)
 
         status_code = 200
         if request.method == "POST":
@@ -132,7 +123,6 @@ class PostViewSet(viewsets.ModelViewSet):
             delete_content(comment, request.user)  # MOD LOG
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        ensure_not_restricted(request.user, Kind.COMMENTING)
         serializer = CommentSerializer(data=request.data, context=context)
         serializer.is_valid(raise_exception=True)
         serializer.save(post=post, author=request.user)

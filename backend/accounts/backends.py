@@ -25,5 +25,3 @@ class EmailOrUsernameBackend(ModelBackend):
             return user
         return None
 
-    def user_can_authenticate(self, user):
-        return super().user_can_authenticate(user) and not user.is_deactivated

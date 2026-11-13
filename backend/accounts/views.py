@@ -9,9 +9,6 @@ User = get_user_model()
 from .models import Profile, Follow, FollowRequest
 from .permissions import IsModerator
 
-from moderation.models import AccountRestriction
-from moderation.services import ensure_not_restricted
-
 from django.db import transaction
 from django.db.models import (
     Q, 
@@ -22,6 +19,7 @@ from django.db.models import (
     BooleanField, 
     ExpressionWrapper
     )
+
 from .serializers import (
     PublicProfileSerializer, 
     OwnerProfileSerializer, 
@@ -37,9 +35,7 @@ from django.shortcuts import get_object_or_404
 
 # every profile except deactivated accounts
 def active_profiles():
-    deactivated = AccountRestriction.objects.active().filter(kind=AccountRestriction.Kind.ACCOUNT)
-    return Profile.objects.select_related("user").exclude(user__in=deactivated.values("user"))
-
+    return Profile.objects.select_related("user").filter(user__is_active=True)
 
 # PRIVATE PROFILES: followers can see 
 def visible_profiles(user):
@@ -132,9 +128,6 @@ class FollowView(APIView):
         }, status=status)
 
     def post(self, request, username):
-        # Account Restriction
-        ensure_not_restricted(request.user, AccountRestriction.Kind.INTERACTING)
-
         profile = get_object_or_404(active_profiles(), user__username=username.strip().lower())
         target = profile.user
         if target == request.user:

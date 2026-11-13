@@ -1,8 +1,7 @@
-from django.utils import timezone
 from rest_framework import serializers
 
 from posts.models import Post, Comment
-from .models import AccountRestriction, Report, ModerationLog
+from .models import Report, ModerationLog
 
 # --- REPORT ---
 class ReportCreateSerializer(serializers.ModelSerializer):
@@ -78,52 +77,28 @@ class ReportSerializer(serializers.ModelSerializer):
 
 
 
-# --- ACCOUNT RESTRICTIONS  ---
-class AccountRestrictionSerializer(serializers.ModelSerializer):
-    created_by = serializers.SerializerMethodField()
-    lifted_by = serializers.SerializerMethodField()
-    is_active = serializers.BooleanField(read_only=True)
+class DeactivateSerializer(serializers.Serializer):
+    reason = serializers.CharField(
+        max_length=200,
+        error_messages={"blank": "Please give a reason.", "required": "Please give a reason."},
+    )
+
+
+class DeactivationLogSerializer(serializers.ModelSerializer):
+    details = serializers.CharField(source="target_content", read_only=True)
+    moderator = serializers.SerializerMethodField()
 
     class Meta:
-        model = AccountRestriction
-        fields = ["id", "kind", "reason", "expires_at", "is_active",
-                  "created_by", "created_at", "source",
-                  "lifted_at", "lifted_by", "lifted_source"]
-        read_only_fields = ["id", "is_active", "created_by", "created_at", "source",
-                            "lifted_at", "lifted_by", "lifted_source"]
+        model = ModerationLog
+        fields = ["id", "action", "details", "moderator", "source", "created_at"]
 
-    def get_created_by(self, obj):
+    def get_moderator(self, obj):
         if obj.source == ModerationLog.Source.ADMIN:
             return "Admin"
-        return obj.created_by.username if obj.created_by else None
-
-    def get_lifted_by(self, obj):
-        if obj.lifted_source == ModerationLog.Source.ADMIN:
-            return "Admin"
-        return obj.lifted_by.username if obj.lifted_by else None
-
-    def validate_reason(self, value):
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("Please give a reason.")
-        return value
-
-    def validate_expires_at(self, value):
-        if value is not None and value <= timezone.now():
-            raise serializers.ValidationError("End date must be in the future.")
-        return value
+        return obj.moderator.username if obj.moderator else None
 
 
-class RestrictionEndSerializer(serializers.Serializer):
-    expires_at = serializers.DateTimeField(allow_null=True)  # null = permanent
-
-    def validate_expires_at(self, value):
-        if value is not None and value <= timezone.now():
-            raise serializers.ValidationError("End date must be in the future.")
-        return value
-
-class RestrictedUserSerializer(serializers.Serializer):
+class DeactivatedUserSerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
-    restriction_count = serializers.IntegerField(read_only=True)
-    active_count = serializers.IntegerField(read_only=True)
-    last_restricted = serializers.DateTimeField(read_only=True)
+    deactivation_count = serializers.IntegerField(read_only=True)
+    last_deactivated = serializers.DateTimeField(read_only=True, allow_null=True)

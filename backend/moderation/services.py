@@ -1,10 +1,10 @@
 from django.db import transaction
-from django.db.models import Exists, OuterRef  # DEACTIVATED CONTENT
-from django.utils import timezone
-from rest_framework.exceptions import PermissionDenied
+from django.db.models import BooleanField, ExpressionWrapper, Q
 
+from accounts.models import User
 from posts.models import Comment
-from .models import AccountRestriction, ModerationLog, Report
+from .models import ModerationLog, Report
+
 
 def is_mod_action(user, content_author):
     """A mod acting on someone else's content (not their own)."""
@@ -87,125 +87,52 @@ def dismiss_reports(report, user, source=ModerationLog.Source.APP):
     )
     return entry.reports_closed if entry else 0
 
-def restrict_user(target, moderator, *, kind, reason, expires_at=None,
-                  source=ModerationLog.Source.APP):
-    """Create a restriction, close open profile reports on the user, and log it."""
-    problem = check_new_restriction(target, kind)
-    if problem:
-        raise ValueError(problem)
+# Deactivate the account, close open profile reports on it, and log it.
+def deactivate_user(target, moderator, *, reason, source=ModerationLog.Source.APP):
     with transaction.atomic():
-        restriction = AccountRestriction.objects.create(
-            user=target, kind=kind, reason=reason,
-            expires_at=expires_at, created_by=moderator, source=source,
-        )
-        is_account = kind == AccountRestriction.Kind.ACCOUNT
-        resolve_reports(
+        updated = User.objects.filter(pk=target.pk, is_active=True).update(is_active=False)
+        if not updated:
+            raise ValueError("This account is already deactivated.")
+        target.is_active = False
+        return resolve_reports(
             Report.objects.filter(target_type=Report.TargetType.PROFILE, target_author=target),
-            action=ModerationLog.Action.DEACTIVATE if is_account else ModerationLog.Action.RESTRICT,
+            action=ModerationLog.Action.DEACTIVATE,
             source=source,
             moderator=moderator,
             target_author=target,
-            target_content=restriction.summary(),
+            target_content=f"Reason: {reason}",
             always_log=True,
         )
-    return restriction
 
-def lift_restrictions(target, moderator, *, kind, source=ModerationLog.Source.APP):
-    """Lift every active restriction of `kind` on the user. Returns how many were lifted."""
+
+# Reactivate the account and log it. Returns False if it was already active.
+def reactivate_user(target, moderator, *, source=ModerationLog.Source.APP):
     with transaction.atomic():
-        lifted = (AccountRestriction.objects.active()
-                  .filter(user=target, kind=kind)
-                  .update(lifted_at=timezone.now(), lifted_by=moderator, lifted_source=source))
-        if lifted:
+        updated = User.objects.filter(pk=target.pk, is_active=False).update(is_active=True)
+        if updated:
+            target.is_active = True
             ModerationLog.objects.create(
                 moderator=moderator,
-                action=ModerationLog.Action.LIFT_RESTRICTION,
+                action=ModerationLog.Action.REACTIVATE,
                 source=source,
                 target_author=target,
-                target_content=f"Lifted {kind} restriction",
+                target_content="Reactivated account",
             )
-    return lifted
+    return bool(updated)
 
+# IDs of deactivated users, as a subquery for `__in` filters
 def deactivated_users():
-    """IDs of users with an active account restriction, as a subquery for `__in` filters."""
-    return (AccountRestriction.objects.active()
-            .filter(kind=AccountRestriction.Kind.ACCOUNT)
-            .values("user"))
+    return User.objects.filter(is_active=False).values("pk")
 
-
+# Annotate each comment with `author_deactivated` (True while its author is deactivated)
 def with_author_status(comments):
-    """Annotate each comment with `author_deactivated` (True while its author is deactivated)."""
-    return comments.annotate(author_deactivated=Exists(
-        AccountRestriction.objects.active().filter(
-            kind=AccountRestriction.Kind.ACCOUNT, user=OuterRef("author"),
-        )
+    return comments.annotate(author_deactivated=ExpressionWrapper(
+        Q(author__is_active=False), output_field=BooleanField(),
     ))
 
 
-def check_new_restriction(user, kind):
-    """Why `kind` can't be added to `user` right now, or None if it can."""
-    Kind = AccountRestriction.Kind
-    if user.active_restriction(kind):
-        return ("This user already has an active restriction of that type. "
-                "Change its end date or lift it instead.")
-    if kind != Kind.ACCOUNT and user.active_restriction(Kind.ACCOUNT):
-        return "This account is deactivated. Lift the deactivation before adding feature restrictions."
-    return None
-
-def restrict_user_many(target, moderator, *, kinds, reason, expires_at=None,
-                       source=ModerationLog.Source.APP):
-    """Add several restrictions at once with a shared reason and end date (one row + log entry each)."""
-    with transaction.atomic():
-        return [
-            restrict_user(target, moderator, kind=kind, reason=reason,
-                          expires_at=expires_at, source=source)
-            for kind in kinds
-        ]
-    
-def _until_text(value):
-    return f"{value:%Y-%m-%d %H:%M} UTC" if value else "permanent"
-
-
-def lift_restriction(restriction, moderator, *, source=ModerationLog.Source.APP):
-    """Lift one restriction and log it. Returns False if it was no longer active."""
-    with transaction.atomic():
-        lifted = (AccountRestriction.objects.active()
-                  .filter(pk=restriction.pk)
-                  .update(lifted_at=timezone.now(), lifted_by=moderator, lifted_source=source))
-        if lifted:
-            ModerationLog.objects.create(
-                moderator=moderator,
-                action=ModerationLog.Action.LIFT_RESTRICTION,
-                source=source,
-                target_author=restriction.user,
-                target_content=f"Lifted: {restriction.summary()}",
-            )
-    return bool(lifted)
-
-
-def change_restriction_end(restriction, moderator, *, expires_at, source=ModerationLog.Source.APP):
-    """Move an active restriction's end date (None = permanent) and log old -> new."""
-    with transaction.atomic():
-        current = AccountRestriction.objects.select_for_update().get(pk=restriction.pk)
-        old = current.expires_at
-        if old == expires_at:
-            return current
-        current.expires_at = expires_at
-        current.save(update_fields=["expires_at"])
-        ModerationLog.objects.create(
-            moderator=moderator,
-            action=ModerationLog.Action.EXTEND_RESTRICTION,
-            source=source,
-            target_author=current.user,
-            target_content=(f"{current.get_kind_display()}: {_until_text(old)} -> "
-                            f"{_until_text(expires_at)} ({current.reason})"),
-        )
-    return current
-
-
-def review_report(report, reviewer, *, outcome, kind=None, expires_at=None,
-                  source=ModerationLog.Source.APP):
-    """Close `report` with the chosen outcome using the existing helpers."""
+# Close report with the chosen outcome using the existing helpers
+def review_report(report, reviewer, *, outcome, source=ModerationLog.Source.APP):
     Action = ModerationLog.Action
     if outcome == Action.DISMISS:
         dismiss_reports(report, reviewer, source=source)
@@ -213,26 +140,11 @@ def review_report(report, reviewer, *, outcome, kind=None, expires_at=None,
         delete_content(report.post, reviewer, source=source)
     elif outcome == Action.REMOVE_COMMENT:
         delete_content(report.comment, reviewer, source=source)
-    elif outcome in (Action.DEACTIVATE, Action.RESTRICT):
-        if outcome == Action.DEACTIVATE:
-            kind = AccountRestriction.Kind.ACCOUNT
-        restrict_user(report.target_author, reviewer, kind=kind, reason=report.reason,
-                      expires_at=expires_at, source=source)
+    elif outcome == Action.DEACTIVATE:
+        deactivate_user(report.target_author, reviewer, reason=report.reason, source=source)
 
 
-def ensure_not_restricted(user, kind):
-    restriction = user.active_restriction(kind)
-    if restriction is None:
-        return
-    if restriction.expires_at:
-        until = f" until {restriction.expires_at:%Y-%m-%d %H:%M} UTC"
-    else:
-        until = " until a moderator lifts it"
-    raise PermissionDenied(
-        f"{restriction.get_kind_display()} is restricted on your account{until}."
-    )
-
-
+# cannot moderate yourself or an admin if you are only a mod
 def can_moderate_user(actor, target):
     if actor == target or target.is_admin:
         return False

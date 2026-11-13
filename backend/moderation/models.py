@@ -1,8 +1,6 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
-from django.utils import timezone
 
 from accounts.models import User
 from posts.models import Post, Comment
@@ -152,10 +150,7 @@ class ModerationLog(models.Model):
         DISMISS = "dismiss", "Dismissed reports"
         CONTENT_DELETED = "content_deleted", "Content deleted (not by a mod)"
         DEACTIVATE = "deactivate", "Deactivated account"
-        RESTRICT = "restrict", "Restricted feature"
-        LIFT_RESTRICTION = "lift_restriction", "Lifted restriction"
-        EXTEND_RESTRICTION = "extend_restriction", "Changed restriction end date"
-
+        REACTIVATE = "reactivate", "Reactivated account"
 
     class Source(models.TextChoices):
         APP = "app", "App"
@@ -191,69 +186,6 @@ class ModerationLog(models.Model):
     def __str__(self):
         who = self.moderator.username if self.moderator else "deleted user"
         return f"{who}: {self.get_action_display()}"
-
-
-# Account restrictions
-class AccountRestrictionQuerySet(models.QuerySet):
-    def active(self):
-        return self.filter(lifted_at__isnull=True).filter(
-            models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())
-        )
-
-
-class AccountRestriction(models.Model):
-    class Kind(models.TextChoices):
-        ACCOUNT = "account", "Account"
-        POSTING = "posting", "Posting"
-        COMMENTING = "commenting", "Commenting"
-        INTERACTING = "interacting", "Liking and following"
-        REPORTING = "reporting", "Reporting"
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="restrictions"
-    )
-    kind = models.CharField(max_length=12, choices=Kind.choices, db_index=True)
-    reason = models.CharField(max_length=200)
-    expires_at = models.DateTimeField(null=True, blank=True)  # empty = permanent
-
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="restrictions_given",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    source = models.CharField(
-        max_length=10, choices=ModerationLog.Source.choices, default=ModerationLog.Source.APP,
-    )
-
-    lifted_at = models.DateTimeField(null=True, blank=True)
-    lifted_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="restrictions_lifted",
-    )
-    lifted_source = models.CharField(
-        max_length=10, choices=ModerationLog.Source.choices, blank=True, default="",
-    )
-
-
-
-    objects = AccountRestrictionQuerySet.as_manager()
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    @property
-    def is_active(self):
-        if self.lifted_at is not None:
-            return False
-        return self.expires_at is None or self.expires_at > timezone.now()
-
-    def summary(self):
-        until = f" until {self.expires_at:%Y-%m-%d %H:%M} UTC" if self.expires_at else " (permanent)"
-        return f"{self.get_kind_display()}{until}: {self.reason}"
-
-    def __str__(self):
-        return f"{self.user.username} - {self.summary()}"
-
 
 class BanListUser(User):
     class Meta:

@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
-from django.db.models import Count, Max, Q
-from django.utils import timezone
+from django.db.models import Count, F, Max, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -13,34 +12,29 @@ from rest_framework.views import APIView
 from accounts.permissions import IsModerator
 from accounts.views import visible_profiles
 from posts.models import Post
-from .models import AccountRestriction, Report
+from .models import ModerationLog, Report
 from .serializers import (
-    AccountRestrictionSerializer,
+    DeactivatedUserSerializer,
+    DeactivateSerializer,
+    DeactivationLogSerializer,
     ReportCreateSerializer,
     ReportSerializer,
-    RestrictionEndSerializer,
-    RestrictedUserSerializer,
 )
 from .services import (
     can_moderate_user,
-    change_restriction_end,  # BAN LIST
-    check_new_restriction,  # BAN LIST PER USER
+    deactivate_user,
     dismiss_reports,
-    ensure_not_restricted,
-    lift_restrictions,
-    restrict_user,
-    deactivated_users,  # DEACTIVATED CONTENT
+    reactivate_user,
+    deactivated_users,
 )
 
 User = get_user_model()
-Kind = AccountRestriction.Kind
 
 # POST /api/posts/<pk>/report/  (was the "report" action on PostViewSet; same URL and behavior)
 class PostReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        ensure_not_restricted(request.user, Kind.REPORTING)
 
         # same visibility rule PostViewSet.get_queryset() applied
         post = get_object_or_404(
@@ -121,7 +115,6 @@ class ProfileReportView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, username):
-        ensure_not_restricted(request.user, Kind.REPORTING)
         profile = get_object_or_404(
             visible_profiles(request.user), user__username=username.strip().lower()
         )
@@ -156,8 +149,8 @@ class ProfileReportView(APIView):
             return Response({"detail": "You already reported this profile."}, status=status.HTTP_200_OK)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-# It looks up User directly, not through visible_profiles, 
-# so mods can still find deactivated users in order to lift restrictions.
+# It looks up User directly, not through visible_profiles,
+# so mods can still find deactivated users in order to reactivate them.
 def get_moderatable_user(request, username):
     target = get_object_or_404(User, username=username.strip().lower())
     if not can_moderate_user(request.user, target):
@@ -165,85 +158,58 @@ def get_moderatable_user(request, username):
     return target
 
 
-# GET .../restrictions <- The user's full restriction history
-# POST .../restrictions <- creates a restriction
-class UserRestrictionView(APIView):
+# GET /api/profile/<username>/status/ <- current status + deactivate/reactivate history
+class UserStatusView(APIView):
     permission_classes = [IsAuthenticated, IsModerator]
 
     def get(self, request, username):
         target = get_moderatable_user(request, username)
-        qs = target.restrictions.select_related("created_by", "lifted_by")
-        return Response(AccountRestrictionSerializer(qs, many=True).data)
-
-    def post(self, request, username):
-        target = get_moderatable_user(request, username)
-        serializer = AccountRestrictionSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        problem = check_new_restriction(target, serializer.validated_data["kind"])
-        if problem:
-            return Response({"detail": problem}, status=status.HTTP_400_BAD_REQUEST)
+        history = (target.moderation_received
+                   .filter(action__in=[ModerationLog.Action.DEACTIVATE, ModerationLog.Action.REACTIVATE])
+                   .select_related("moderator"))
+        return Response({
+            "username": target.username,
+            "is_deactivated": target.is_deactivated,
+            "history": DeactivationLogSerializer(history, many=True).data,
+        })
 
 
-        restriction = restrict_user(target, request.user, **serializer.validated_data)
-        return Response(AccountRestrictionSerializer(restriction).data, status=status.HTTP_201_CREATED)
-
-
-
-# POST .../restrictions/lift <- checks that kind is valid, 
-# lifts the restriction, and returns 404 if there was nothing to lift.
-
-class LiftRestrictionView(APIView):
+# POST   /api/profile/<username>/ban/ <- deactivate, body {"reason": "..."}
+# DELETE /api/profile/<username>/ban/ <- reactivate
+class UserBanView(APIView):
     permission_classes = [IsAuthenticated, IsModerator]
 
     def post(self, request, username):
         target = get_moderatable_user(request, username)
-        kind = request.data.get("kind")
-        if kind not in Kind.values:
-            return Response({"kind": [f"Must be one of: {', '.join(Kind.values)}."]},
+        serializer = DeactivateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            entry = deactivate_user(target, request.user, reason=serializer.validated_data["reason"])
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DeactivationLogSerializer(entry).data, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, username):
+        target = get_moderatable_user(request, username)
+        if not reactivate_user(target, request.user):
+            return Response({"detail": "This account isn't deactivated."},
                             status=status.HTTP_400_BAD_REQUEST)
-
-        lifted = lift_restrictions(target, request.user, kind=kind)
-        if not lifted:
-            return Response({"detail": "No active restriction of that type."},
-                            status=status.HTTP_404_NOT_FOUND)
-        return Response({"lifted": lifted}, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class RestrictionDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsModerator]
-
-    def patch(self, request, username, pk):
-        target = get_moderatable_user(request, username)
-        restriction = get_object_or_404(target.restrictions.active(), pk=pk)
-
-        serializer = RestrictionEndSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        restriction = change_restriction_end(
-            restriction, request.user, expires_at=serializer.validated_data["expires_at"]
-        )
-        return Response(AccountRestrictionSerializer(restriction).data, status=status.HTTP_200_OK)
-
-
-class RestrictedUserListView(APIView):
+# GET /api/profiles/banlist/ <- currently deactivated accounts
+class BanListView(APIView):
     permission_classes = [IsAuthenticated, IsModerator]
 
     def get(self, request):
-        active_q = Q(restrictions__lifted_at__isnull=True) & (
-            Q(restrictions__expires_at__isnull=True)
-            | Q(restrictions__expires_at__gt=timezone.now())
-        )
+        deactivations = Q(moderation_received__action=ModerationLog.Action.DEACTIVATE)
         qs = (
-            User.objects
+            User.objects.filter(is_active=False)
             .annotate(
-                restriction_count=Count("restrictions", distinct=True),
-                active_count=Count("restrictions", filter=active_q, distinct=True),
-                last_restricted=Max("restrictions__created_at"),
+                deactivation_count=Count("moderation_received", filter=deactivations),
+                last_deactivated=Max("moderation_received__created_at", filter=deactivations),
             )
-            .filter(restriction_count__gt=0)
-            .order_by("-last_restricted")
+            .order_by(F("last_deactivated").desc(nulls_last=True))
         )
-        if request.query_params.get("status", "active") == "active":
-            qs = qs.filter(active_count__gt=0)
-        return Response(RestrictedUserSerializer(qs, many=True).data)
+        return Response(DeactivatedUserSerializer(qs, many=True).data)
+

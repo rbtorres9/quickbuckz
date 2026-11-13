@@ -60,21 +60,9 @@ class User(AbstractUser):
         return self.is_admin or self.role == self.Role.MODERATOR
 
 
-    # Account Restriction Status
-    def active_restriction(self, kind):
-        return (
-            self.restrictions.active()
-            .filter(kind=kind)
-            .order_by(models.F("expires_at").desc(nulls_first=True))
-            .first()
-        )
-
     @property
     def is_deactivated(self):
-        from moderation.models import AccountRestriction  # local import: moderation depends on accounts, not the reverse
-        return self.restrictions.active().filter(
-            kind=AccountRestriction.Kind.ACCOUNT
-        ).exists()
+        return not self.is_active
 
     #enforces case insensitive uniqueness to usernames and emails
     class Meta:

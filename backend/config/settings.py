@@ -79,7 +79,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-if env('DATABASE_HOST', default=None):
+# SWITCH FOR LOCAL SQLITE DB TESTING
+# default=True: Uses local db.sqlite3
+# => do python manage.py makemigrations/migrate to apply 
+# current schema/modified test schema
+# MODIFY/REMOVE POST PRODUCTION
+USE_SQLITE = env.bool('USE_SQLITE', default=False)
+
+if not USE_SQLITE and env('DATABASE_HOST', default=None):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -99,6 +106,7 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
 
 # Modified User Model ('user'-defined instead of django import)
 AUTH_USER_MODEL = "accounts.User"
@@ -180,9 +188,7 @@ AUTHENTICATION_BACKENDS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-    #    'rest_framework_simplejwt.authentication.JWTAuthentication',
-
-        'moderation.authentication.RestrictionAwareJWTAuthentication',    # custom defined JWT Auth method
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
 
         'rest_framework.authentication.SessionAuthentication',  # for testing apis requiring auth
     ),
@@ -193,8 +199,6 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "USER_AUTHENTICATION_RULE": "moderation.authentication.user_authentication_rule", # custom defined JWT Auth method
-
 }
 
 
