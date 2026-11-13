@@ -18,6 +18,8 @@ import Top from './pages/Top.jsx'
 import ModTools from './pages/ModTools.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import PublicRoute from './components/PublicRoute.jsx'
+import ModUserStatus from './pages/ModUserStatus.jsx'
+
 
 // protect: only for signed-in people (others go to /login)
 // publicize: only for signed-out people (others go to their profile)
@@ -48,6 +50,7 @@ export default function App() {
         <Route path="/user/:handle/following" element={protect(<Following />)} />
         <Route path="/post/:id" element={protect(<PostPage />)} />
         <Route path="/mod" element={protect(<ModTools />)} />
+        <Route path="/mod/:username/status" element={protect(<ModUserStatus />)} />
         <Route path="/search" element={protect(<Search />)} />
       </Route>
 

@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { useIsMod } from '../utils/useIsMod.js'
 import { errorMessage } from '../utils/errorMessage.js'
 import { getTimeAgoString, getDateTimeString} from '../utils/DateTimeUtils.js'
 import ModRestrictions from '../components/ModRestrictions.jsx'
-import RestrictionHistory from '../components/RestrictionHistory.jsx'
 
 
 
@@ -54,8 +53,8 @@ export default function ModTools() {
   const [busy, setBusy] = useState(null) // report id being handled
   const [message, setMessage] = useState(null)
   const [section, setSection] = useState('reports')
-  const [historyUser, setHistoryUser] = useState(null) // username being viewed, or null = the list
-  const [historyFrom, setHistoryFrom] = useState(null) // 'restrictions' or 'reports', for the back button
+
+  const navigate = useNavigate()
 
   async function fetchReports(status, type = filter) {
     const params = new URLSearchParams({ status })
@@ -140,16 +139,9 @@ export default function ModTools() {
     setReports(null)
   }
 
-  function openHistory(username, from) {
-    setHistoryUser(username)
-    setHistoryFrom(from)
-    setSection('restrictions')
+  function openStatus(username) {
+    navigate(`/mod/${username}/status`)
   }
-
-  function closeHistory() {
-    setHistoryUser(null)
-    if (historyFrom === 'reports') setSection('reports')
-  }  
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 md:flex md:gap-8">
@@ -157,7 +149,7 @@ export default function ModTools() {
         {SECTIONS.map((s) => (
           <button
             key={s.value}
-            onClick={() => { setSection(s.value); setHistoryUser(null) }}
+            onClick={() => setSection(s.value)}
             aria-current={section === s.value ? 'page' : undefined}
             className={`rounded-lg px-3 py-2 text-left text-sm font-semibold ${
               section === s.value ? 'bg-white/10 text-accent' : 'text-muted hover:bg-white/5'
@@ -170,14 +162,7 @@ export default function ModTools() {
 
       <div className="min-w-0 flex-1">
       {section === 'restrictions' ? (
-        historyUser ? (
-          <RestrictionHistory
-            username={historyUser}
-            onBack={closeHistory}
-            backLabel={historyFrom === 'reports' ? 'Reviewed reports' : 'Ban list'}          />
-        ) : (
-          <ModRestrictions onOpen={(username) => openHistory(username, 'restrictions')} />
-        )
+        <ModRestrictions onOpen={openStatus} />
       ) : (<>
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Mod tools</h1>
@@ -308,6 +293,16 @@ export default function ModTools() {
                       >
                         Dismiss
                       </button>
+                      {target.author && (
+                        <button
+                          type="button"
+                          onClick={() => openStatus(target.author)}
+                          disabled={busy === group.key}
+                          className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50"
+                        >
+                          Account status
+                        </button>
+                      )}
                     </>
                   ) : (
                     <p className="self-center text-sm text-muted">
@@ -327,7 +322,7 @@ export default function ModTools() {
                       {target.author && (
                         <button
                           type="button"
-                          onClick={() => openHistory(target.author, 'reports')}
+                          onClick={() => openStatus(target.author)}
                           className="self-center text-sm text-muted hover:text-accent hover:underline underline-offset-4" 
                         >
                           View @{target.author}'s account status
