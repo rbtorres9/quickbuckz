@@ -11,6 +11,7 @@ import { getTheme, themeVars } from '../data/themes.js'
 import { getName } from '../utils/NameHandler.js'
 import { MoreHorizontal } from 'lucide-react'
 import { useIsMod } from '../utils/useIsMod.js'
+import { askRemovalMessage } from '../utils/removalMessage.js'
 
 // /user-page shows your own profile (real, from the database).
 // /user/:handle shows someone else's.
@@ -282,20 +283,48 @@ export default function UserPage() {
     navigate(`/mod/${person.username}/status`)
   }
 
-  const removeProfilePicture = () => {
-    // Fill in code
+  // shared helper for profile picture, banner, background side pictures, bio
+  const removeProfileItem = async (item, label) => {
+    setMenuOpen(false)
+
+    // removal confirmation prompt
+    const message = askRemovalMessage(`Remove @${person.username}'s ${label}? This can't be undone.`)
+    if (!message) return
+
+    const result = await fetchWithToken(`/api/profile/${person.username}/remove-content/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: [item], message }),
+    })
+    if (result.isError) return alert(String(errorMessage(result.result)))
+
+    // clear what the backend removed, so the page and side pictures update without a reload
+    const cleared = Object.fromEntries(result.result.removed.map((name) => [name, name === 'bio' ? '' : null]))
+    setPerson((p) => ({ ...p, ...cleared }))
+    setViewingUserCache((c) => (c ? { ...c, ...cleared } : c))
+    alert(`@${person.username}'s ${label} was removed.`)
   }
 
+
+  const removeProfilePicture = () => {
+    removeProfileItem('profile_picture', 'profile picture')
+  }
+
+
   const removeBanner = () => {
-    // Fill in code
+    removeProfileItem('banner', 'banner')
   }
 
   const removeLeftPicture = () => {
-    // Fill in code
+    removeProfileItem('left_picture', 'left picture')
   }
 
   const removeRightPicture = () => {
-    // Fill in code
+    removeProfileItem('right_picture', 'right picture')
+  }
+
+  const removeBio = () => {
+    removeProfileItem('bio', 'bio')
   }
 
   return (
@@ -347,6 +376,9 @@ export default function UserPage() {
                           </button>
                           <button onClick={removeRightPicture} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
                             Remove right picture (mod)
+                          </button>
+                          <button onClick={removeBio} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                            Remove bio (mod)
                           </button>
                         </>
                       )}

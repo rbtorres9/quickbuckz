@@ -9,6 +9,7 @@ import { getName } from '../utils/NameHandler.js'
 import { getTimeAgoString } from '../utils/DateTimeUtils.js'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
+import { askRemovalMessage } from '../utils/removalMessage.js'
 
 export default function PostPage() {
   const { id } = useParams()
@@ -142,13 +143,24 @@ export default function PostPage() {
 
 
   async function deleteComment(comment) {
-    if (!confirm(`Delete comment from @${comment.author.username}? This can't be undone.`)) return
+    //  options = plain method: DELETE when author deleting their own post
+    // change this to with message body when a mod act on it
+    const options = { method: 'DELETE' }
+    const mine = comment.author?.username === userCache?.username
+    if (isMod && !mine) {
+      // deletion confirmation prompt
+      const message = askRemovalMessage(`Delete comment from @${comment.author.username}? This can't be undone.`)
+      if (!message) return
+      options.headers = { 'Content-Type': 'application/json' }
+      options.body = JSON.stringify({ message })
+    } else if (!confirm(`Delete comment from @${comment.author.username}? This can't be undone.`)) return
+
 
     const post_id = comment.post
     const comment_id = comment.id
 
     setCommentStates((prev) => {return {...prev, [comment_id]: STATE_BUSY_DELETING}})
-    const result = await fetchWithToken(`/api/posts/${post_id}/comment/?comment_id=${comment_id}`, { method: "DELETE" })
+    const result = await fetchWithToken(`/api/posts/${post_id}/comment/?comment_id=${comment_id}`, options)
 
     if (result.isError) { 
       // show the error without hiding the page

@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     BanListView,
     PostReportView,
+    ProfileContentRemoveView,
     ProfileReportView,
     ReportViewSet,
     UserBanView,
@@ -20,4 +21,5 @@ urlpatterns = [
     path("profile/<str:username>/status/", UserStatusView.as_view(), name="profile-status"),
     path("profile/<str:username>/ban/", UserBanView.as_view(), name="profile-ban"),
     path("profiles/banlist/", BanListView.as_view(), name="ban-list"),
+    path("profile/<str:username>/remove-content/", ProfileContentRemoveView.as_view(), name="profile-remove-content"),
 ] + router.urls

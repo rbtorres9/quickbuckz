@@ -5,6 +5,7 @@ import { useIsMod } from '../utils/useIsMod.js'
 import { errorMessage } from '../utils/errorMessage.js'
 import { getTimeAgoString, getDateTimeString} from '../utils/DateTimeUtils.js'
 import ModRestrictions from '../components/ModRestrictions.jsx'
+import { askRemovalMessage } from '../utils/removalMessage.js' 
 
 
 
@@ -105,7 +106,10 @@ export default function ModTools() {
   async function removeContent(group) {
     const isComment = group.type === 'comment'
     const target = isComment ? group.comment : group.post
-    if (!confirm(`Remove @${target.author}'s ${group.type}? This can't be undone.`)) return
+
+    // ask for the message to the user (replaces confirm) 
+    const message = askRemovalMessage(`Remove @${target.author}'s ${group.type}? This can't be undone.`, group.reports[0].reason)
+    if (!message) return
 
     const url = isComment
       ? `/api/posts/${group.post.id}/comment/?comment_id=${group.comment.id}`
@@ -113,7 +117,12 @@ export default function ModTools() {
 
     setBusy(group.key)
     setMessage(null)
-    const result = await fetchWithToken(url, { method: 'DELETE' })
+    // DELETE method now includes a message in body (required by backend)
+    const result = await fetchWithToken(url, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    })
     setBusy(null)
     if (result.isError) return setMessage({ text: errorMessage(result.result), ok: false })
 

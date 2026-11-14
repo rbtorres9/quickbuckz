@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import (
     AllowAny,
     BasePermission,
@@ -14,7 +15,7 @@ from rest_framework.permissions import (
 from accounts.permissions import IsAuthorOrModerator
 from accounts.views import visible_profiles
 
-from moderation.services import delete_content, with_author_status
+from moderation.services import delete_content, is_mod_action, with_author_status, can_moderate_user
 
 from .models import Post, Like, Comment
 from .serializers import PostSerializer, CommentSerializer, PostDetailSerializer
@@ -28,6 +29,23 @@ def with_like_flag(qs, viewer):
     return qs.annotate(
         is_liked=Exists(Like.objects.filter(user=viewer, post=OuterRef("pk")))
     )
+
+def mod_removal_message(request, author):
+    """A mod removing someone else's content must include a message (max 500 chars)."""
+    if not is_mod_action(request.user, author):
+        return ""
+
+    if not can_moderate_user(request.user, author):
+        raise PermissionDenied("You can't remove content from this account.")
+
+    data = request.data if isinstance(request.data, dict) else {}
+    message = str(data.get("message", "")).strip()
+    if not message:
+        raise ValidationError({"message": "Write a message to the user before removing their content."})
+    if len(message) > 500:
+        raise ValidationError({"message": "Keep the message under 500 characters."})
+    return message
+
  
  
 class PostViewSet(viewsets.ModelViewSet):
@@ -41,7 +59,8 @@ class PostViewSet(viewsets.ModelViewSet):
 
     # REPORT LOG: close reports before deleting a post
     def perform_destroy(self, instance):
-        delete_content(instance, self.request.user)  # MOD LOG
+        message = mod_removal_message(self.request, instance.author)
+        delete_content(instance, self.request.user, message=message)  # MOD LOG
 
  
     def get_serializer_class(self):
@@ -120,7 +139,8 @@ class PostViewSet(viewsets.ModelViewSet):
 
 
             # REPORT LOG: close reports before deleting a comment
-            delete_content(comment, request.user)  # MOD LOG
+            message = mod_removal_message(request, comment.author) # pass the mod's message
+            delete_content(comment, request.user, message=message)  # MOD LOG
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         serializer = CommentSerializer(data=request.data, context=context)

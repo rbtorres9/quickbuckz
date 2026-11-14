@@ -149,6 +149,7 @@ class ModerationLog(models.Model):
         REMOVE_COMMENT = "remove_comment", "Removed comment"
         DISMISS = "dismiss", "Dismissed reports"
         CONTENT_DELETED = "content_deleted", "Content deleted (not by a mod)"
+        REMOVE_IN_PROFILE = "remove_in_profile", "Removed profile content"
         DEACTIVATE = "deactivate", "Deactivated account"
         REACTIVATE = "reactivate", "Reactivated account"
 

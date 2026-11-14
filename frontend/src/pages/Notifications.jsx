@@ -124,6 +124,16 @@ export default function Notifications() {
     return n.post_preview.length >= 60 ? n.post_preview + '…' : n.post_preview
   }
 
+  // text for a mod action notification
+  function removalText(n) {
+    switch (n.mod_action) {
+      case 'remove_post': return 'removed your post'
+      case 'remove_comment': return 'removed your comment'
+      case 'remove_in_profile': return 'removed content from your profile'
+      default: return 'removed your content'
+    }
+  }
+
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6">
@@ -149,24 +159,35 @@ export default function Notifications() {
           {notifications.map((n) => {
             // fields come straight from the API 
             const isNew = newIds.includes(n.id)
-            const profileUrl = `/user/${n.actor_username}`
-
+            // mod notices have no actor profile
+            const isModNotice = n.type === 'content_removed'
+            const profileUrl = isModNotice ? null : `/user/${n.actor_username}`
 
             return (
               <li key={n.id} className={`flex items-start gap-3 px-5 py-4 ${isNew ? 'bg-accent/5' : ''}`}>
-                {/* real name and profile picture */}
-                <Link to={profileUrl} className="shrink-0">
-                  <Avatar name={n.actor_name} src={n.actor_avatar} />
-                </Link>
+                {/* plain avatar for mod notifications */}
+                {/* else, display real name and profile picture with link to their profile URL */}
+                {isModNotice ? (
+                  <span className="shrink-0"><Avatar name="Moderators" /></span>
+                ) : (
+                  <Link to={profileUrl} className="shrink-0">
+                    <Avatar name={n.actor_name} src={n.actor_avatar} />
+                  </Link>
+                )}
 
                 <div className="min-w-0 flex-1 text-sm">
                   <p>
-                    {/* actor_name and created_at */}
-                    <Link to={profileUrl} className="font-semibold hover:underline">{n.actor_name}</Link>{' '}
+                    {/* text section of the notification card */}
+                    {/* unlinked name for mod notifications */}
+                    {/* otherwise, actor_name and created_at, with link to profile URL */}
+                    {isModNotice
+                      ? <span className="font-semibold">{n.actor_name}</span>
+                      : <Link to={profileUrl} className="font-semibold hover:underline">{n.actor_name}</Link>}{' '}
                     {n.type === 'follow' && 'followed you'}
                     {n.type === 'like' && 'liked your post'}
                     {n.type === 'comment' && 'commented on your post'}
                     {n.type === 'follow_request' && 'requested to follow you'}
+                    {isModNotice && removalText(n)} {/* "Moderators" <mod_actions> e.g. "Moderators removed your post" */}
                     <span className="text-muted" title={new Date(n.created_at).toLocaleString()}>
                       {' '}· {getTimeAgoString(n.created_at)}
                     </span>
@@ -185,6 +206,18 @@ export default function Notifications() {
                       <p className="mt-1 truncate text-muted">{postPreview(n)}</p>
                     )
                   )}
+                  {/* mod message + what was removed */}
+                  {isModNotice && (
+                    <>
+                      <p className="mt-2 whitespace-pre-line break-words rounded-lg border border-line bg-field px-3 py-2">
+                        {n.message}
+                      </p>
+                      {n.content_preview && (
+                        <p className="mt-1 truncate text-muted">Removed: {n.content_preview}</p>
+                      )}
+                    </>
+                  )}
+
                 </div>
 
                 {/* Follow back uses is_following_actor and the real follow toggle */}

@@ -17,6 +17,7 @@ from .serializers import (
     DeactivatedUserSerializer,
     DeactivateSerializer,
     DeactivationLogSerializer,
+    RemoveProfileContentSerializer,
     ReportCreateSerializer,
     ReportSerializer,
 )
@@ -26,7 +27,9 @@ from .services import (
     dismiss_reports,
     reactivate_user,
     deactivated_users,
+    remove_profile_content,
 )
+
 
 User = get_user_model()
 
@@ -219,3 +222,21 @@ class BanListView(APIView):
         )
         return Response(DeactivatedUserSerializer(qs, many=True).data)
 
+
+# POST /api/profile/<username>/remove-content/ 
+class ProfileContentRemoveView(APIView):
+    permission_classes = [IsAuthenticated, IsModerator]
+
+    def post(self, request, username):
+        target = get_moderatable_user(request, username)
+        serializer = RemoveProfileContentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            removed = remove_profile_content(
+                target, request.user,
+                items=serializer.validated_data["items"],
+                message=serializer.validated_data["message"],
+            )
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"removed": removed}, status=status.HTTP_200_OK)

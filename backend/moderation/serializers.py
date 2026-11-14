@@ -2,6 +2,8 @@ from rest_framework import serializers
 
 from posts.models import Post, Comment
 from .models import Report, ModerationLog
+from .services import PROFILE_FIELDS
+
 
 # --- REPORT ---
 class ReportCreateSerializer(serializers.ModelSerializer):
@@ -102,3 +104,19 @@ class DeactivatedUserSerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
     deactivation_count = serializers.IntegerField(read_only=True)
     last_deactivated = serializers.DateTimeField(read_only=True, allow_null=True)
+
+
+
+class RemoveProfileContentSerializer(serializers.Serializer):
+    items = serializers.MultipleChoiceField(
+        choices=list(PROFILE_FIELDS.items()),
+        allow_empty=False,
+        error_messages={"empty": "Pick at least one item to remove."},
+    )
+    message = serializers.CharField(
+        max_length=500,
+        error_messages={"blank": "Write a message to the user.", "required": "Write a message to the user."},
+    )
+
+    def validate_items(self, value):
+        return [name for name in PROFILE_FIELDS if name in value]  # set -> list in a fixed order

@@ -177,3 +177,22 @@ UPDATES:
   - If a banned user is reactivated, their posts come back but the reports the ban closed stay closed.
   - A profile report's snapshot only keeps text (username, name and, where allowed, bio). The profile picture and banner aren't copied, so if they change before a mod looks, the report won't show the old images. Saving image evidence is on hold.
   - Not implemented yet: the other mod options in the profile ... menu (Remove profile picture, Remove banner, Remove left picture, Remove right picture) are still empty stubs.
+
+  ## Notification sent to the reported user upon a Mod action
+  - Mod removals from Mod Tools, PostCard, PostPage, and UserPage now prompt for a message to the user, prefilled with a shared template.
+  - The reason is optional. If left blank, the message is sent as-is, ending in Reason:. Clearing the whole message or pressing Cancel aborts the removal.
+  - UserPage mod menu: Remove profile picture, banner, left picture, right picture, and bio are now wired to the backend.
+  - Notifications page renders the new content_removed notice: "Moderators removed your post", the message, and a "Removed: …" preview, with no profile link.
+  - Authors deleting their own content keep the original confirm() dialog.
+  - `utils/removalMessage.js`: 
+    - REMOVAL_TEMPLATE: the single source for the prefilled message: "We have removed your content. Excessive violations will lead to account termination. Reason: "
+    - askRemovalMessage(question, reason = ''): Shows a prompt() with the warning (question), a label noting that the reason is optional, and the template plus any prefilled reason.
+  - `pages/UserPage.jsx`: `removeProfileItem(item, label)` shared helper
+    - Closes the ⋯ menu and prompts with askRemovalMessage(...)
+    - POST /api/profile/<username>/remove-content/ with { items: [item], message }
+    - On success, clears the removed fields locally (setPerson, setViewingUserCache), so the avatar, banner, bio, and side pictures update without a reload
+    - Shows errors with alert(String(errorMessage(...)))
+  - `pages/Notifications.jsx` : Added removalText(n), which maps mod_action to text:
+    - remove_post : "removed your post", remove_comment : "removed your comment, etc
+    - Example notification of mod action type: 
+      - "Moderators removed your comment · 2m New We have removed your content. Excessive violations will lead to account termination. Reason: spam Removed: the comment text"

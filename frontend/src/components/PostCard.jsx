@@ -9,6 +9,7 @@ import { errorMessage } from '../utils/errorMessage.js'
 import { useIsMod } from '../utils/useIsMod.js'
 import Avatar from './Avatar.jsx'
 import PhotoViewer from './PhotoViewer.jsx'
+import { askRemovalMessage } from '../utils/removalMessage.js'
 
 // One post from the database (content, image, created_at, author = username).
 // `user` is the author's profile. If a page doesn't pass it, the card loads it itself.
@@ -86,8 +87,19 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   async function handleDelete() {
     setMenuOpen(false)
     const whose = isMine ? 'this post' : `@${handle}'s post`
-    if (!confirm(`Delete ${whose}? This can't be undone.`)) return
-    const result = await fetchWithToken(`/api/posts/${post.id}/`, { method: 'DELETE' })
+    //  options = plain method: DELETE when author deleting their own post
+    // change this to with message body when a mod act on it
+    const options = { method: 'DELETE' }
+    if (!isMine && isMod) {
+      // deletion confirmation prompt
+      const message = askRemovalMessage(`Delete ${whose}? This can't be undone.`)
+      if (!message) return
+      options.headers = { 'Content-Type': 'application/json' }
+      options.body = JSON.stringify({ message })
+    } 
+    else if (!confirm(`Delete ${whose}? This can't be undone.`)) return
+
+    const result = await fetchWithToken(`/api/posts/${post.id}/`, options)
     if (result.isError) return alert(errorMessage(result.result))
     setDeleted(true)
     onDeleted?.()
