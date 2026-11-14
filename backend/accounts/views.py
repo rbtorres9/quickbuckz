@@ -3,7 +3,9 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotAuthenticated
+from rest_framework import status
 
+from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from .models import Profile, Follow, FollowRequest
@@ -29,6 +31,7 @@ from .serializers import (
     LockedProfileSerializer, 
     FollowRequestSerializer, 
     SentFollowRequestSerializer,
+    ForgotSerializer
     )
 
 
@@ -274,3 +277,28 @@ class UserRoleView(APIView):
 
     def get(self, request):
         return Response(status=204)
+
+
+class ForgotUsernameView(generics.GenericAPIView):
+    serializer_class = ForgotSerializer
+
+    def post(self, request):
+        serializer = ForgotSerializer(data=request.data)
+
+        if serializer.is_valid():
+            email = serializer.data["email"]
+            user = get_object_or_404(User, email=email)
+
+            send_mail(
+                "Forgot Username",
+                (
+                    "We received a request to recover your username for QuickBuckz\n"
+                    f"Username: {user.username}\n\n"
+                    "If you did not send a request, you can safely ignore this.\n"
+                ),
+                None,
+                [email]
+            )
+
+            return Response({"detail": "Sent email"}, status=status.HTTP_200_OK)
+        return Response({"detail": "Bad request"}, status=status.HTTP_400_BAD_REQUEST)

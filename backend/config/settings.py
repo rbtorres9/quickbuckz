@@ -176,7 +176,19 @@ STORAGES = {
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": "smtp.gmail.com",
+            "use_tls": True,
+            "username": env("EMAIL_USERNAME"),
+            "password": env("EMAIL_PASSWORD"),
+        },
+    },
+}
+
+DEFAULT_FROM_EMAIL = f"QuickBuckz (Do not reply) <{env("EMAIL_USERNAME")}>"
 
 
 AUTHENTICATION_BACKENDS = [
