@@ -225,6 +225,19 @@ class SentFollowRequestSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'first_name', 'last_name', 'profile_picture', 'created_at']
 
 
-# /api/forgot/username/
+# /api/forgot/username/ + /api/forgot/password
 class ForgotSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+
+# /api/forgot/password/verify
+class ForgotPasswordVerifyTokenSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    uid = serializers.CharField()
+
+
+# /api/forgot/password/confirm
+class ForgotPasswordConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    uid = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])

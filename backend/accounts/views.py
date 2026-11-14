@@ -5,7 +5,10 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework import status
 
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from .models import Profile, Follow, FollowRequest
@@ -31,7 +34,9 @@ from .serializers import (
     LockedProfileSerializer, 
     FollowRequestSerializer, 
     SentFollowRequestSerializer,
-    ForgotSerializer
+    ForgotSerializer,
+    ForgotPasswordVerifyTokenSerializer,
+    ForgotPasswordConfirmSerializer
     )
 
 
@@ -302,3 +307,73 @@ class ForgotUsernameView(generics.GenericAPIView):
 
             return Response({"detail": "Sent email"}, status=status.HTTP_200_OK)
         return Response({"detail": "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ForgotPasswordView(generics.GenericAPIView):
+    serializer_class = ForgotSerializer
+
+    def post(self, request):
+        serializer = ForgotSerializer(data=request.data)
+
+        if serializer.is_valid():
+            email = serializer.data["email"]
+            user = get_object_or_404(User, email=email)
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            return Response({"uid": uid, "token": token}, status=status.HTTP_200_OK)
+        return Response({"detail": "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ForgotPasswordTokenVerifyView(generics.GenericAPIView):
+    serializer_class = ForgotPasswordVerifyTokenSerializer
+
+    def post(self, request):
+        serializer = ForgotPasswordVerifyTokenSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            uid = serializer.data["uid"]
+            token = serializer.data["token"]
+
+            try:
+                decoded_uid = force_str(urlsafe_base64_decode(uid))
+                user = get_object_or_404(User, pk=decoded_uid)
+            except:
+                return Response({"detail": "Invalid uid"}, status=status.HTTP_400_BAD_REQUEST)
+
+            is_valid = default_token_generator.check_token(user, token)
+
+            if is_valid:
+                return Response(status=status.HTTP_200_OK)
+            else:
+                return Response({"detail": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"detail": "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ForgotPasswordConfirmView(generics.GenericAPIView):
+    serializer_class = ForgotPasswordConfirmSerializer
+
+    def post(self, request):
+        serializer = ForgotPasswordConfirmSerializer(data=request.data)
+
+        serializer.is_valid(raise_exception=True) # Shows errors from password validator
+
+        uid = serializer.validated_data["uid"]
+
+        try:
+            decoded_uid = force_str(urlsafe_base64_decode(uid))
+            user = get_object_or_404(User, pk=decoded_uid)
+        except:
+            return Response({"detail": "Invalid uid"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        token = serializer.validated_data["token"]
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"detail": "Invalid or expired token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        new_password = serializer.validated_data["new_password"]
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
