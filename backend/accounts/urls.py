@@ -12,6 +12,7 @@ from .views import (
     FollowRequestDecisionView,
     SentFollowRequestListView,
     SentFollowRequestCancelView,
+    ForgotUsernameView,
 )
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -31,5 +32,6 @@ urlpatterns = [
     path('profile/me/followers/requests/<str:username>/', FollowRequestDecisionView.as_view(), name='follow-request-decision'),
     path('profile/me/following/requests/', SentFollowRequestListView.as_view(), name='sent-follow-requests'),
     path('profile/me/following/requests/<str:username>/', SentFollowRequestCancelView.as_view(), name='sent-follow-request-cancel'),
-    path('users/me/role/', UserRoleView.as_view(), name='user-role')
+    path('users/me/role/', UserRoleView.as_view(), name='user-role'),
+    path('forgot/username', ForgotUsernameView.as_view(), name='forgot-username')
 ]

@@ -223,3 +223,8 @@ class SentFollowRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = FollowRequest
         fields = ['id', 'username', 'first_name', 'last_name', 'profile_picture', 'created_at']
+
+
+# /api/forgot/username/
+class ForgotSerializer(serializers.Serializer):
+    email = serializers.EmailField()
