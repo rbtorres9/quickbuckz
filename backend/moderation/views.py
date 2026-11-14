@@ -8,6 +8,9 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
+
 
 from accounts.permissions import IsModerator
 from accounts.views import visible_profiles, active_profiles
@@ -20,6 +23,8 @@ from .serializers import (
     RemoveProfileContentSerializer,
     ReportCreateSerializer,
     ReportSerializer,
+    ModerationLogSerializer,
+
 )
 from .services import (
     can_moderate_user,
@@ -240,3 +245,42 @@ class ProfileContentRemoveView(APIView):
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"removed": removed}, status=status.HTTP_200_OK)
+
+
+
+class ModerationLogPagination(PageNumberPagination):
+    page_size = 50
+
+
+# GET /api/mod-log/  <- read-only moderation log, newest first, 50 per page (?page=2 ...)
+#   ?action=remove_post,remove_comment   one or more actions, comma-separated
+#   ?moderator=<username>                actions by one moderator (app actions only)
+#   ?target=<username>                   actions about one user
+#   ?source=app|admin|system             where the action came from
+class ModerationLogView(ListAPIView):
+    serializer_class = ModerationLogSerializer
+    permission_classes = [IsAuthenticated, IsModerator]
+    pagination_class = ModerationLogPagination
+
+    def get_queryset(self):
+        qs = ModerationLog.objects.select_related("moderator", "target_author").order_by("-created_at", "-id")
+        params = self.request.query_params
+
+        actions = [a for a in params.get("action", "").split(",") if a in ModerationLog.Action.values]
+        if actions:
+            qs = qs.filter(action__in=actions)
+
+        moderator = params.get("moderator", "").strip().lower().lstrip("@")
+        if moderator:
+            # admin-site entries are shown as "Admin", so they must not match a username search
+            qs = qs.filter(moderator__username=moderator).exclude(source=ModerationLog.Source.ADMIN)
+
+        target = params.get("target", "").strip().lower().lstrip("@")
+        if target:
+            qs = qs.filter(target_author__username=target)
+
+        source = params.get("source")
+        if source in ModerationLog.Source.values:
+            qs = qs.filter(source=source)
+
+        return qs

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useCache } from '../context/CacheContext.jsx'
 import NavBar from './NavBar.jsx'
 
@@ -15,22 +15,27 @@ export default function Layout() {
 
   const profile = (isViewingUser && viewingUserCache) ? viewingUserCache : userCache
   const cache = profile?.background_picture ?? profile
+  // pages whose <main> is max-w-4xl instead of max-w-2xl 
+  const { pathname } = useLocation()
+  const wide = pathname === '/mod' ? 'wide' : ''
+
 
   return (
     <>
       <NavBar />
 
+      {/* CHANGED: add the `wide` class to all four side pictures */}
       { cache?.left_picture ? (
-        <div className={`side-gif ${cache.left_picture_flip ? '-scale-x-100' : ''} ${cache.left_picture_tile ? '' : 'single'}`} style={{ backgroundImage: `url(${cache.left_picture})` }} />
+        <div className={`side-gif ${wide} ${cache.left_picture_flip ? '-scale-x-100' : ''} ${cache.left_picture_tile ? '' : 'single'}`} style={{ backgroundImage: `url(${cache.left_picture})` }} />
       ) : (
-        true && <div className="side-gif" style={{ backgroundImage: `url(${SIDE_GIF})` }} />
+        true && <div className={`side-gif ${wide}`} style={{ backgroundImage: `url(${SIDE_GIF})` }} />
       )}
 
 
       { cache?.right_picture ? (
-        <div className={`side-gif flip ${cache.right_picture_flip ? '' : '-scale-x-100'} ${cache.right_picture_tile ? '' : 'single'}`} style={{ backgroundImage: `url(${cache.right_picture})` }} />
+        <div className={`side-gif flip ${wide} ${cache.right_picture_flip ? '' : '-scale-x-100'} ${cache.right_picture_tile ? '' : 'single'}`} style={{ backgroundImage: `url(${cache.right_picture})` }} />
       ) : (
-        true && <div className="side-gif flip" style={{ backgroundImage: `url(${SIDE_GIF})` }} />
+        true && <div className={`side-gif flip ${wide}`} style={{ backgroundImage: `url(${SIDE_GIF})` }} />
       )}
 
       {/* bottom padding keeps content clear of the phone tab bar */}

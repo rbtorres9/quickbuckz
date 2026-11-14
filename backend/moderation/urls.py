@@ -9,6 +9,7 @@ from .views import (
     ReportViewSet,
     UserBanView,
     UserStatusView,
+    ModerationLogView
 )
 
 router = DefaultRouter()
@@ -22,4 +23,5 @@ urlpatterns = [
     path("profile/<str:username>/ban/", UserBanView.as_view(), name="profile-ban"),
     path("profiles/banlist/", BanListView.as_view(), name="ban-list"),
     path("profile/<str:username>/remove-content/", ProfileContentRemoveView.as_view(), name="profile-remove-content"),
+    path("mod-log/", ModerationLogView.as_view(), name="mod-log"),
 ] + router.urls

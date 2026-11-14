@@ -5,6 +5,7 @@ import { useIsMod } from '../utils/useIsMod.js'
 import { errorMessage } from '../utils/errorMessage.js'
 import { getTimeAgoString, getDateTimeString} from '../utils/DateTimeUtils.js'
 import ModRestrictions from '../components/ModRestrictions.jsx'
+import ModLog from '../components/ModLog.jsx'
 import { askRemovalMessage } from '../utils/removalMessage.js' 
 
 
@@ -23,6 +24,7 @@ const FILTERS = [
 const SECTIONS = [
   { value: 'reports', label: 'Reports' },
   { value: 'restrictions', label: 'Ban list' },
+  { value: 'log', label: 'Mod log' },
 ]
 
 // One card per reported post or comment, even if several people reported it
@@ -172,6 +174,8 @@ export default function ModTools() {
       <div className="min-w-0 flex-1">
       {section === 'restrictions' ? (
         <ModRestrictions onOpen={openStatus} />
+      ) : section === 'log' ? (
+        <ModLog onOpen={openStatus} />
       ) : (<>
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Mod tools</h1>

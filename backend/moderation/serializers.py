@@ -120,3 +120,23 @@ class RemoveProfileContentSerializer(serializers.Serializer):
 
     def validate_items(self, value):
         return [name for name in PROFILE_FIELDS if name in value]  # set -> list in a fixed order
+
+
+class ModerationLogSerializer(serializers.ModelSerializer):
+    action_label = serializers.CharField(source="get_action_display", read_only=True)
+    moderator = serializers.SerializerMethodField()
+    target_author = serializers.ReadOnlyField(source="target_author.username", default=None)
+    via_reports = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = ModerationLog
+        fields = ["id", "action", "action_label", "source", "moderator",
+                  "target_author", "target_content", "post_ref", "comment_ref",
+                  "reports_closed", "via_reports", "created_at"]
+        read_only_fields = fields
+
+    # same RBAC rule as ReportSerializer: admin-site actions hide the admin's username
+    def get_moderator(self, obj):
+        if obj.source == ModerationLog.Source.ADMIN:
+            return "Admin"
+        return obj.moderator.username if obj.moderator else None
