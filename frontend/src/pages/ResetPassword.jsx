@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { useApiContext } from '../context/ApiContext.jsx'
@@ -6,7 +6,8 @@ import { errorMessage } from '../utils/errorMessage.js'
 
 // The page the reset email links to: /reset-password?token=...
 // TODO: confirm this address with the backend once the reset-password API is built.
-const RESET_PASSWORD_URL = '/api/password/reset/'
+const RESET_PASSWORD_URL = '/api/forgot/password/confirm/'
+const RESET_PASSWORD_VERIFY_URL = '/api/forgot/password/verify/'
 
 const inputClass =
   'w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20'
@@ -21,6 +22,31 @@ export default function ResetPassword() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
+  const [verifying, setVerifying] = useState(true)
+  const [valid, setValid] = useState(false)
+
+  useEffect(() => {
+    const verifyToken = async() => {
+      if (!token || !uid) return false
+
+      const result = await fetchBaseUrl(RESET_PASSWORD_VERIFY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, uid }),
+      })
+
+      if (result.isError) {
+        setError(errorMessage(result.result))
+      }
+      else {
+        setValid(true)
+      }
+
+      setVerifying(false)
+    }
+
+    verifyToken()
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -32,7 +58,7 @@ export default function ResetPassword() {
     const result = await fetchBaseUrl(RESET_PASSWORD_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, password }),
+      body: JSON.stringify({ uid, token, new_password: password }),
     })
     setSaving(false)
     if (result.response?.status === 404) return setError("Password reset isn't available yet. Check back soon.")
@@ -46,8 +72,24 @@ export default function ResetPassword() {
     content = (
       <p className="mt-6 text-center text-sm text-muted">
         This reset link is missing its parameters.{' '}
+        <br></br>
         <Link to="/forgot" className="font-semibold text-accent hover:underline">Request a new link</Link>
       </p>
+    )
+  } else if (verifying) {
+    content = (
+      <p className="mt-6 text-center text-sm text-muted">
+        Verifying your password reset...
+      </p>
+    )
+  } else if (!valid) {
+    content = (
+      <>
+        <p className="mt-6 text-center text-sm text-muted">
+          Something went wrong your link.
+        </p>
+        {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+      </>
     )
   } else if (done) {
     content = (

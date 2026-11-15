@@ -6,7 +6,8 @@ import { errorMessage } from '../utils/errorMessage.js'
 
 // TODO: confirm this address with the backend once the forgot-password API is built.
 // The backend should EMAIL the reset link (with the token) and never send the token back here.
-const FORGOT_PASSWORD_URL = '/api/password/forgot/'
+const FORGOT_PASSWORD_URL = '/api/forgot/password/'
+const FORGOT_USERNAME_URL = '/api/forgot/username/'
 
 // One page for both "forgot password" and "forgot username".
 // /forgot?type=username opens on the username tab.
@@ -22,8 +23,8 @@ export default function ForgotAccount() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    // TODO: "Forgot username" has no backend yet, so it just shows the message
-    if (type === 'username') return setSent(true)
+
+    const url = type === 'username' ? FORGOT_USERNAME_URL : FORGOT_PASSWORD_URL
 
     setSending(true)
     const result = await fetchBaseUrl(FORGOT_PASSWORD_URL, {
@@ -32,7 +33,8 @@ export default function ForgotAccount() {
       body: JSON.stringify({ email: email.trim() }),
     })
     setSending(false)
-    if (result.response?.status === 404) return setError("Password reset isn't available yet. Check back soon.")
+
+    if (result.response?.status === 404) return setError("Password/username reset isn't available.")
     if (result.isError) return setError(errorMessage(result.result))
     // Same message whether or not the email has an account, so no one can use this to check emails
     setSent(true)
