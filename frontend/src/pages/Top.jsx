@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import PostCard from '../components/PostCard.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { getTimeDiffSecs } from '../utils/DateTimeUtils.js'
 import Logo from '../components/Logo.jsx'
+import WakingUpNote from '../components/WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 const DAY = 24 * 60 * 60
 
@@ -48,6 +50,7 @@ function Pills({ label, options, value, onChange }) {
 }
 
 export default function Top() {
+  usePageTitle('Top posts')
   const { fetchPosts } = useAuthContext()
 
   const [time, setTime] = useState('week')
@@ -113,6 +116,7 @@ export default function Top() {
         filtering || loading ? (
           <>
             <p className="font-medium text-center mt-3">Loading posts...</p>
+            <WakingUpNote />
             <div className="relative mt-7 h-14">
               <div className='dog-run'>
                 <Logo size={56} className={`text-accent ${'animate-bounce'}`} />

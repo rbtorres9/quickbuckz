@@ -1,5 +1,6 @@
 import { useState, useContext, useRef } from 'react'
-import { Link, useNavigate, Navigate } from 'react-router-dom'
+import { Link, useNavigate, Navigate, useLocation } from 'react-router-dom'
+import { afterLoginPath } from '../utils/afterLogin.js'
 import { AuthContext } from '../context/AuthContext'
 import { useCache } from '../context/CacheContext.jsx'
 import { useStore } from '../data/store.jsx'
@@ -7,6 +8,7 @@ import ThemePicker from '../components/ThemePicker.jsx'
 import { themeVars } from '../data/themes.js'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 const fields = [
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
@@ -18,6 +20,7 @@ const fields = [
 ]
 
 export default function CreateAccount() {
+  usePageTitle('Create account')
   const [form, setForm] = useState(
     Object.fromEntries(fields.map((f) => [f.name, '']))
   )
@@ -28,6 +31,7 @@ export default function CreateAccount() {
   // Profile theme, saved on this device for now (see the TODO below)
   const [theme, setTheme] = useState('classic')
   const navigate = useNavigate()
+  const location = useLocation() // may carry a shared link to go back to
   const { accessToken, login } = useContext(AuthContext)
   const { refreshUserCache } = useCache()
   const { updateProfile } = useStore()
@@ -97,7 +101,7 @@ export default function CreateAccount() {
 
       if (tokenResult.isError) {
         // account exists but auto-login failed, so fall back to the login page
-        navigate("/login", { replace: true })
+        navigate("/login", { replace: true, state: location.state })
         return
       }
 
@@ -107,7 +111,7 @@ export default function CreateAccount() {
       login(tokens.access, tokens.refresh)
       await refreshUserCache(tokens.access)
       updateProfile({ theme }) // TODO: send the theme to the backend once the profile has a theme field
-      navigate("/user-page")
+      navigate(afterLoginPath(location), { replace: true }) // back to a shared post, or your profile
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -162,7 +166,7 @@ export default function CreateAccount() {
 
         <p className="mt-5 text-center text-sm text-muted">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-accent hover:underline">
+          <Link to="/login" state={location.state} className="font-semibold text-accent hover:underline">
             Sign in
           </Link>
         </p>

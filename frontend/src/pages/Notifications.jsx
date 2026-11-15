@@ -5,9 +5,12 @@ import { useAuthContext } from '../context/AuthContext.jsx'
 import { useNotifications } from '../context/NotificationsContext.jsx'
 import { getTimeAgoString } from '../utils/DateTimeUtils.js'
 import { errorMessage } from '../utils/errorMessage.js'
+import WakingUpNote from '../components/WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 
 export default function Notifications() {
+  usePageTitle('Notifications')
   // page state loaded from GET /api/notifications/ 
   const { fetchWithToken } = useAuthContext()
   const { refreshUnread } = useNotifications()
@@ -146,9 +149,10 @@ export default function Notifications() {
       )}
 
       {loading ? (
-        <p className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center text-sm text-muted">
+        <div className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center text-sm text-muted">
           Loading…
-        </p>
+          <WakingUpNote />
+        </div>
       ) : notifications.length === 0 ? (
       
         <p className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center text-sm text-muted">
@@ -170,7 +174,7 @@ export default function Notifications() {
                 {isModNotice ? (
                   <span className="shrink-0"><Avatar name="Moderators" /></span>
                 ) : (
-                  <Link to={profileUrl} className="shrink-0">
+                  <Link to={profileUrl} className="shrink-0" tabIndex={-1} aria-hidden="true">
                     <Avatar name={n.actor_name} src={n.actor_avatar} />
                   </Link>
                 )}

@@ -8,8 +8,11 @@ import Logo from '../components/Logo.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { getName } from '../utils/NameHandler.js'
+import WakingUpNote from '../components/WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 export default function Home() {
+  usePageTitle('Home')
   const { fetchWithToken, fetchPosts } = useAuthContext()
   const { userCache } = useCache()
   const [ posts, setPosts ] = useState([])
@@ -69,6 +72,7 @@ export default function Home() {
           loading ? (
             <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
               <p className="font-medium">Loading posts...</p>
+              <WakingUpNote />
               <div className="relative mt-7 h-14">
                 <div className='dog-run'>
                   <Logo size={56} className={`text-accent ${'animate-bounce'}`} />

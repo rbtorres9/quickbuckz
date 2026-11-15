@@ -49,6 +49,10 @@ export default function EditProfileModal({ onClose }) {
   const created = useRef([]) // preview URLs made while this editor was open
 
   // Close with the Escape key, and stop the page behind from scrolling
+  // Move keyboard focus into the pop-up when it opens, so Tab starts inside it
+  const dialogRef = useRef(null)
+  useEffect(() => { dialogRef.current?.focus() }, [])
+
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && cancel()
     document.addEventListener('keydown', onKey)
@@ -157,12 +161,14 @@ export default function EditProfileModal({ onClose }) {
       onMouseDown={(e) => e.target === e.currentTarget && cancel()}
     >
       <form
+        ref={dialogRef}
+        tabIndex={-1}
         onSubmit={save}
         role="dialog"
         aria-modal="true"
         aria-label="Edit profile"
         style={themeVars(theme)}
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-card shadow-2xl shadow-black/60"
+        className="w-full max-w-lg overflow-hidden rounded-2xl border border-line bg-card shadow-2xl shadow-black/60 outline-none"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
@@ -265,20 +271,6 @@ export default function EditProfileModal({ onClose }) {
                 />
               </div>
             </div>
-
-            {/* <div className="space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <label htmlFor="displayName" className="font-medium">Display name</label>
-                <span className="text-xs text-muted">{name.length}/{MAX_NAME}</span>
-              </div>
-              <input
-                id="displayName"
-                value={name}
-                onChange={(e) => { setName(e.target.value); setError('') }}
-                maxLength={MAX_NAME}
-                className="w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
-              />
-            </div> */}
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-sm">

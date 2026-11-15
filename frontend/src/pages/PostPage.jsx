@@ -10,6 +10,8 @@ import { getTimeAgoString } from '../utils/DateTimeUtils.js'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
 import { askRemovalMessage } from '../utils/removalMessage.js'
+import WakingUpNote from '../components/WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 export default function PostPage() {
   const { id } = useParams()
@@ -21,6 +23,7 @@ export default function PostPage() {
   const [ submitting, setSubmitting ] = useState(false)
 
   const [ post, setPost ] = useState(null)
+  usePageTitle(post ? `@${post.author}'s post` : 'Post')
   const [ user, setUser ] = useState(null)
   const [ text, setText ] = useState('')
 
@@ -209,7 +212,7 @@ export default function PostPage() {
         </button>
 
         { loading ? (
-          <p className="py-16 text-center text-sm text-muted">Loading post...</p>
+          <div className="py-16 text-center text-sm text-muted">Loading post...<WakingUpNote /></div>
         ) : error ? (
           <p className="py-16 text-center text-sm text-muted">This post is from a private profile, doesn't exist or was deleted.</p>
         ) : (
@@ -229,6 +232,7 @@ export default function PostPage() {
                   onChange={(e) => setText(e.target.value)}
                   maxLength={500}
                   placeholder="Add a comment…"
+                  aria-label="Add a comment"
                   className="min-w-0 flex-1 rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
                 />
                 <button type="submit"

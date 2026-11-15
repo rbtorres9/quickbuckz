@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 export default function NotFound() {
+  usePageTitle('Page not found')
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
       <Logo size={72} className="text-accent" />

@@ -5,12 +5,15 @@ import { useCache } from '../context/CacheContext.jsx'
 import { getName } from '../utils/NameHandler.js'
 import { errorMessage } from '../utils/errorMessage.js'
 import Avatar from './Avatar.jsx'
+import WakingUpNote from './WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 // A list of people with Follow / Following buttons. Used by the Following and Followers pages.
 // direction: "following" or "followers"
 // username: whose list to show ("me" = yours)
 // children: anything to show under the title (the Following page puts the search bar here)
 export default function PeopleList({ title, direction, username = 'me', emptyText, titleAction, children }) {
+  usePageTitle(title)
   const { fetchWithToken } = useAuthContext()
   const { userCache, refreshUserCache } = useCache()
   const [people, setPeople] = useState([])
@@ -60,7 +63,7 @@ export default function PeopleList({ title, direction, username = 'me', emptyTex
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
       {loading ? (
-        <p className="mt-6 py-10 text-center text-sm text-muted">Loading…</p>
+        <div className="mt-6 py-10 text-center text-sm text-muted">Loading…<WakingUpNote /></div>
       ) : people.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center">
           <p className="font-medium">{emptyText}</p>

@@ -32,6 +32,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const [deleted, setDeleted] = useState(false) // hides the card after you delete it
   const [ isLiked, setIsLiked ] = useState(post.is_liked)
   const [ likesCount, setLikesCount ] = useState(post.likes_count)
+  const likeBusy = useRef(false) // ignore extra clicks while a like is saving
   const [content, setContent] = useState(post.content) // changes after you edit the post
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -55,12 +56,17 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const photoUrl = post.image
   const comments = post.comments_count
 
-  // Close the ⋯ menu when clicking anywhere else
+  // Close the ⋯ menu when clicking anywhere else, or pressing Esc
   useEffect(() => {
     if (!menuOpen) return
     const close = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
     document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [menuOpen])
 
   // Edit your own post's text (only the author can, the backend checks too)
@@ -129,21 +135,22 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     clickTimer.current = setTimeout(() => setViewing(true), 250)
   }
 
+  // Like = POST, Unlike = DELETE. The heart changes right away; if saving fails it goes back.
   async function toggleLike(post) {
-    let options = {
-      method: "POST"
-    }
+    if (likeBusy.current) return
+    likeBusy.current = true
+    const wasLiked = isLiked
+    const oldCount = likesCount
 
-    if (isLiked) {
-      options.method = "DELETE"
-      setLikesCount(likesCount - 1)
-    }
-    else {
-      setLikesCount(likesCount + 1)
-    }
+    setIsLiked(!wasLiked)
+    setLikesCount(oldCount + (wasLiked ? -1 : 1))
 
-    setIsLiked(!isLiked)
-    fetchWithToken(`/api/posts/${post.id}/like`, options)
+    const result = await fetchWithToken(`/api/posts/${post.id}/like`, { method: wasLiked ? "DELETE" : "POST" })
+    likeBusy.current = false
+    if (result.isError) {
+      setIsLiked(wasLiked)
+      setLikesCount(oldCount)
+    }
   }
 
   function handlePhotoDoubleClick() {
@@ -178,7 +185,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-card">
       <div className="flex items-center gap-3 px-5 pt-4">
-        <Link to={profileLink} className="shrink-0">
+        <Link to={profileLink} className="shrink-0" tabIndex={-1} aria-hidden="true">
           <Avatar name={authorName} src={avatar} />
         </Link>
         <div className="flex-1 text-sm">
@@ -275,13 +282,19 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
           <>
             <span className="flex items-center gap-1.5"><button
               onClick={() => toggleLike(post)}
+              aria-label={`${isLiked ? 'Unlike' : 'Like'} post, ${likesCount} ${likesCount === 1 ? 'like' : 'likes'}`}
+              aria-pressed={isLiked}
               className={`flex items-center gap-1.5 hover:text-white ${isLiked ? 'text-accent' : ''}`}
             >
               <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} /> {likesCount}
             </button>
             </span>
             <span className="flex items-center gap-1.5">
-              <Link to={`/post/${post.id}`} className="flex items-center gap-1.5 hover:text-white">
+              <Link
+                to={`/post/${post.id}`}
+                aria-label={`${comments} ${comments === 1 ? 'comment' : 'comments'}, open post`}
+                className="flex items-center gap-1.5 hover:text-white"
+              >
                 <MessageCircle size={18} /> {comments}
               </Link>
             </span>

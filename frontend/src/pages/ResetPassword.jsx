@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 // The page the reset email links to: /reset-password?token=...
 // TODO: confirm this address with the backend once the reset-password API is built.
@@ -13,6 +14,7 @@ const inputClass =
   'w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20'
 
 export default function ResetPassword() {
+  usePageTitle('Set a new password')
   const [params] = useSearchParams()
   const token = params.get('token')
   const uid = params.get('uid')

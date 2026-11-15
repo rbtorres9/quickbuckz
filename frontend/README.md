@@ -206,3 +206,22 @@ UPDATES:
   - loadMore() skips entries already on screen (by id). If another mod acts while you read, entries shift down and page 2 would otherwise repeat a row. It also clears an old error once a load works.
   - Tabs and Search are disabled while Load more is running, so results from two filters can't mix.
 - Background side pictures overlap detected when viewing mod page. Modified index.css and Layout.jsx to apply resize behaviour of these spaces specifically for /mod page.
+## Login redirect, Settings cleanup, like undo 11/15 - MM
+- Opening a logged-in page while logged out (like a shared post link) now sends you back to that page after you log in or sign up, instead of always to your profile. `ProtectedRoute` remembers the page; `src/utils/afterLogin.js` only allows paths inside this site.
+- Settings: removed the fake "Save email" and "Change password" forms (they said "saved" but did nothing). They're now "coming soon" notes, and the password note links to the working reset-by-email. TODO: real forms once the backend has change-password/change-email endpoints (and sends the email with /api/profile/me/).
+- Like button: if saving fails, the heart and count go back; extra clicks while a like is saving are ignored.
+- Fixed: someone else's side pictures/theme stayed after going from their profile to yours (the "viewing another user" flag only cleared when the profile page fully closed). Now it clears whenever you switch profiles, and a profile that finishes loading after you've left is ignored. Going from one person's profile straight to another's now reloads too.
+
+## Server wake-up note + cleanup 11/15 - MM
+- `WakingUpNote` shows "Waking up the server… after a break this can take up to a minute" under a loading message if it takes over 4 seconds (Render's free plan sleeps). Added to Home, Top, profiles, post page, Notifications, Following/Followers, Search and Mod tools.
+- Cleanup: deleted unused `pages/Welcome.jsx` and `pages/ComingSoon.jsx`; removed old commented-out code (sample-user block in UserPage, old "Display name" box in EditProfileModal), unused imports (Top, ForgotAccount) and unused state in Layout. AuthContext left alone on purpose (cookie work in progress).
+
+## Accessibility + page titles 11/15 - MM
+- Checked every page for screen-reader and keyboard problems and fixed what came up:
+  - Like and comment buttons read as just "1"; now "Like post, 1 like" / "1 comment, open post" (the like button also says if it's pressed)
+  - Profile-picture links next to a name were duplicate tab stops that read as initials ("AK"); now skipped (the name link goes to the same place)
+  - Logo link read "QuickBuckz QuickBuckz"; now once
+  - Post ⋯ menu closes with Esc
+  - Edit profile moves keyboard focus into the pop-up when it opens
+  - Comment box and new-post box have labels
+- Browser tab titles per page via `src/utils/usePageTitle.js`, like "Home · QuickBuckz", "@ava · QuickBuckz", "Search: denali · QuickBuckz"
