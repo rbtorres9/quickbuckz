@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { MailCheck } from 'lucide-react'
 import { useApiContext } from '../context/ApiContext.jsx'
@@ -27,7 +27,7 @@ export default function ForgotAccount() {
     const url = type === 'username' ? FORGOT_USERNAME_URL : FORGOT_PASSWORD_URL
 
     setSending(true)
-    const result = await fetchBaseUrl(FORGOT_PASSWORD_URL, {
+    const result = await fetchBaseUrl(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim() }),
