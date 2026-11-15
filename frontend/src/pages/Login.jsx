@@ -1,11 +1,13 @@
 import { useState, useContext } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { afterLoginPath } from '../utils/afterLogin.js'
 import { Lock } from 'lucide-react'
 import Logo from '../components/Logo.jsx'
 import { AuthContext } from '../context/AuthContext.jsx'
 import { useCache } from '../context/CacheContext.jsx'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 
 function Field({ id, label, ...props }) {
@@ -24,12 +26,14 @@ function Field({ id, label, ...props }) {
 }
 
 export default function Login() {
+  usePageTitle('Sign in')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [slow, setSlow] = useState(false) // taking a while? (the server may be waking up)
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useContext(AuthContext)
   const { refreshUserCache } = useCache()
   const { fetchBaseUrl } = useApiContext()
@@ -56,7 +60,7 @@ export default function Login() {
       if (Object.hasOwn(data, "access") && Object.hasOwn(data, "refresh")) {
         login(data.access, data.refresh)
         await refreshUserCache(data.access) // load your profile before showing it
-        navigate("/user-page")
+        navigate(afterLoginPath(location), { replace: true }) // back to a shared post, or your profile
       }
     } catch (err) {
       setError(errorMessage(err));
@@ -133,7 +137,7 @@ export default function Login() {
 
         <p className="mt-6 text-center text-sm text-muted">
           New here?{' '}
-          <Link to="/create-account" className="font-semibold text-accent hover:underline">
+          <Link to="/create-account" state={location.state} className="font-semibold text-accent hover:underline">
             Create an account
           </Link>
         </p>

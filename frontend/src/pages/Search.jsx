@@ -7,6 +7,8 @@ import { getName } from '../utils/NameHandler.js'
 import { errorMessage } from '../utils/errorMessage.js'
 import Avatar from '../components/Avatar.jsx'
 import PostCard from '../components/PostCard.jsx'
+import WakingUpNote from '../components/WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 // /search?q=... finds people (name or username) and posts (text or author).
 // Loads everyone and all posts once, then filters as you type.
@@ -16,6 +18,7 @@ export default function Search() {
   const { userCache } = useCache()
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
+  usePageTitle(query.trim() ? `Search: ${query.trim()}` : 'Search')
   const [people, setPeople] = useState(null) // null = still loading
   const [posts, setPosts] = useState(null)
   const [error, setError] = useState('')
@@ -70,7 +73,7 @@ export default function Search() {
       {!q ? (
         <p className="mt-10 text-center text-sm text-muted">Find people by name or username, or posts by what they say.</p>
       ) : loading ? (
-        <p className="mt-10 text-center text-sm text-muted">Searching…</p>
+        <div className="mt-10 text-center text-sm text-muted">Searching…<WakingUpNote /></div>
       ) : peopleFound.length === 0 && postsFound.length === 0 ? (
         <p className="mt-10 text-center text-sm text-muted">Nothing matches "{query.trim()}".</p>
       ) : (

@@ -78,7 +78,7 @@ export default function NavBar() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link to="/home" className="flex items-center gap-2 font-semibold">
             <Logo size={34} className="text-accent" />
-            <span className="hidden sm:inline">QuickBuckz</span>
+            <span className="hidden sm:inline" aria-hidden="true">QuickBuckz</span>{/* the logo already says "QuickBuckz" */}
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">

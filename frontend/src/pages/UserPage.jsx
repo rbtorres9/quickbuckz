@@ -12,18 +12,21 @@ import { getName } from '../utils/NameHandler.js'
 import { MoreHorizontal } from 'lucide-react'
 import { useIsMod } from '../utils/useIsMod.js'
 import { askRemovalMessage } from '../utils/removalMessage.js'
+import WakingUpNote from '../components/WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 // /user-page shows your own profile (real, from the database).
 // /user/:handle shows someone else's.
 export default function UserPage() {
   const isMod = useIsMod()
   const { handle } = useParams()
+  usePageTitle(handle ? `@${handle}` : 'Your profile')
   const navigate = useNavigate()
 
   const { fetchUserProfile, fetchWithToken, fetchUserPosts  } = useAuthContext()
   const [ followBusy, setFollowBusy ] = useState(false)
   const [ followError, setFollowError ] = useState('')
-  const { userCache, refreshUserCache, isViewingUser, setIsViewingUser, viewingUserCache, setViewingUserCache } = useCache()
+  const { userCache, refreshUserCache, setIsViewingUser, setViewingUserCache } = useCache()
   const [ tab, setTab ] = useState('posts')
   const [ editing, setEditing ] = useState(false)
   const [ menuOpen, setMenuOpen ] = useState(false)
@@ -37,16 +40,6 @@ export default function UserPage() {
   const [ person, setPerson ] = useState(null)
   const [ posts, setPosts ] = useState([])
   const [ shown, setShown ] = useState([])
-  // const person = isSelf
-  //   ? {
-  //       name: [userCache.first_name, userCache.last_name].filter(Boolean).join(' ') || userCache.username,
-  //       handle: userCache.username,
-  //       bio: userCache.bio,
-  //       avatarUrl: userCache.profile_picture,
-  //       bannerUrl: userCache.banner,
-  //       theme: profile.theme, // TODO: save theme in the database
-  //     }
-  //   : sampleUsers[handle]
 
   const isSelf = !handle || handle === userCache?.username
 
@@ -69,6 +62,7 @@ export default function UserPage() {
 
       // Sent with your login so the backend can say whether you follow them (is_followed)
       const userResult = await fetchUserProfile(`${handle}`)
+      if (stale) return // you already left this profile while it was loading
       const userData = userResult.result
 
       setLoadingUser(false)
@@ -88,6 +82,7 @@ export default function UserPage() {
       }
 
       const postsResult = await fetchUserPosts(`${handle}`)
+      if (stale) return
       setLoadingPosts(false)
 
       if (postsResult.isError) {
@@ -99,6 +94,9 @@ export default function UserPage() {
     }
 
     const fetchMyData = async() => {
+      // Back on your own profile: stop showing the last person's side pictures and theme
+      setIsViewingUser(false)
+      setViewingUserCache(null)
       setLoadingUser(true)
       setLoadingPosts(true)
       setPostsError(null)
@@ -119,13 +117,19 @@ export default function UserPage() {
       setLoadingPosts(false)
     }
 
+    let stale = false // set when you leave this profile, so a slow load can't apply their pictures afterwards
     if (isSelf) {
       if (userCache) fetchMyData() // wait until your account has loaded
     }
     else {
       fetchOtherUserData()
     }
-  }, [isSelf, userCache?.username])
+    return () => {
+      stale = true
+      setIsViewingUser(false)
+      setViewingUserCache(null)
+    }
+  }, [isSelf, handle, userCache?.username]) // handle: reload when going from one profile to another
 
   // Update own profile when edited
   useEffect(() => {
@@ -156,7 +160,7 @@ export default function UserPage() {
   }, [menuOpen])
 
   if (isSelf && !userCache) {
-    return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…</main>
+    return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…<WakingUpNote /></main>
   }
 
   // TODO: load other users' profiles and posts from the backend database
@@ -165,6 +169,7 @@ export default function UserPage() {
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
           <p className="font-medium">Loading data about @{handle}.</p>
+          <WakingUpNote />
           <div className="relative mt-7 h-14">
             <div className="dog-run">
               <Logo size={56} className="text-accent animate-bounce" />
@@ -439,6 +444,7 @@ export default function UserPage() {
           ) : isLoading ? (
             <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
               <p className="font-medium">Loading posts...</p>
+              <WakingUpNote />
               <div className="relative mt-7 h-14">
                 <div className="dog-run">
                   <Logo size={56} className="text-accent animate-bounce" />

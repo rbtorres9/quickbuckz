@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { MailCheck } from 'lucide-react'
 import { useApiContext } from '../context/ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 // TODO: confirm this address with the backend once the forgot-password API is built.
 // The backend should EMAIL the reset link (with the token) and never send the token back here.
@@ -12,6 +13,7 @@ const FORGOT_USERNAME_URL = '/api/forgot/username/'
 // One page for both "forgot password" and "forgot username".
 // /forgot?type=username opens on the username tab.
 export default function ForgotAccount() {
+  usePageTitle('Account help')
   const [params] = useSearchParams()
   const [type, setType] = useState(params.get('type') === 'username' ? 'username' : 'password')
   const [email, setEmail] = useState('')

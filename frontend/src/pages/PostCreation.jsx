@@ -5,12 +5,14 @@ import { useCache } from '../context/CacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from '../components/Avatar.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 const MAX_CHARS = 500
 const MAX_IMAGE_MB = 5
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export default function PostCreation() {
+  usePageTitle('New post')
   const navigate = useNavigate()
   const fileInput = useRef(null)
   const { userCache } = useCache()
@@ -90,6 +92,7 @@ export default function PostCreation() {
         <div className="flex gap-3">
           <Avatar name={userFullName} src={userCache?.profile_picture} />
           <textarea
+            aria-label="Post text"
             value={text}
             onChange={(e) => { setText(e.target.value); setError('') }}
             maxLength={MAX_CHARS}

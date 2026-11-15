@@ -1,12 +1,14 @@
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom'
 import { useIsMod } from '../utils/useIsMod.js'
 import RestrictionHistory from '../components/RestrictionHistory.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 // /mod/<username>/status: one account's status and ban history, with Ban / Reactivate.
 // Mods and admins only (the backend checks every request too).
 export default function ModUserStatus() {
   const isMod = useIsMod()
   const { username } = useParams()
+  usePageTitle(`@${username} status`)
   const navigate = useNavigate()
   const location = useLocation()
 

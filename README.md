@@ -17,7 +17,7 @@ This is a list of items that we should implement into our project that anyone ca
 - Work on preserving login session by using cookies (adding more on token refresh mechanism) - in progress RT
 - ~~Add more functionalities to Follow model: Current user viewing another profile can show “Follows you” (check login session/auth while viewing /api/profile/<username>/, then add field for 'follows_you' flag), shows if current user is following the profile being viewed, with follow/unfollow toggle (same logic, /api/profile/<username>/ would have field like 'is_followed'), mutual follows “followed by <users on your follow list>” (something like "/api/profile/<username>/mutuals")~~ - done backend
 - Implement share post functionality: most likely will be a Share model to follow the current backend design
-- Implement fields or models for any additional personalized features from frontend (currently has ThemePicker)
+- ~~Implement fields or models for any additional personalized features from frontend (currently has ThemePicker)~~ - Done (theme + site_theme fields, 11/07)
 - Touch on AccountSecurity backend design when a frontend design for account settings is drafted.
 - ~~I think /api/posts should return more details about the author~~
     ~~- For example, the author field can return an object containing data about the user's username, first name, last name, and profile picture to display on each post.~~ Done
@@ -29,14 +29,18 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Show a list of current followers on the follower page~~ - Done MM (10/30)
 
 
-- Report models up. TODO: api/reports/ , test report function, import changes in frontend - In progress RT
-- Add ability to report comments and users on their profile on the backend
-- Add ability to ban users
-- Clean up the setting menu
-- Store color theme in backend
+- ~~Report models up. TODO: api/reports/ , test report function, import changes in frontend~~ - Done (api/reports/ + Mod tools)
+- ~~Add ability to report comments and users on their profile on the backend~~ - Done (11/13)
+- ~~Add ability to ban users~~ - Done (ban list, ban/unban, status page, 11/09-11/13)
+- Clean up the setting menu - Mostly done MM (11/15): fake email/password forms replaced with "coming soon" notes until the backend endpoints exist
+- ~~Store color theme in backend~~ - Done (11/07)
 
+- Security fixes (added MM 11/15):
+    - Remove the hardcoded fallback `SECRET_KEY` in settings.py (it should only come from the environment on Render)
+    - Forgot password/username: return the same response whether or not the email has an account (right now 404 vs "Sent email" tells people which emails are registered)
+    - Use `https://` (not `http://`) in the reset password email link, since the token is in the link
 
 ## TODO if we have extra time
-- Implement forgot password API. User sends email, the API returns a temporary token (5-10 minutes) to reset password.
-- Implement reset password API. User sends new password with the forgot password token, API updates the new password.
-- Implement reset password page for the frontend, the frontend takes in a token as a parameter and returns an error if the token is invalid or expired. This page is where the user gets to set their new password.
+- ~~Implement forgot password API. User sends email, the API returns a temporary token (5-10 minutes) to reset password.~~ - Done (emails the reset link, 11/14)
+- ~~Implement reset password API. User sends new password with the forgot password token, API updates the new password.~~ - Done (11/14)
+- ~~Implement reset password page for the frontend, the frontend takes in a token as a parameter and returns an error if the token is invalid or expired. This page is where the user gets to set their new password.~~ - Done

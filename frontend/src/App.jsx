@@ -33,7 +33,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={publicize(<Login />)} />
-      <Route path="/forgot" element={publicize(<ForgotAccount />)} />
+      {/* Not publicize(): logged-in people can reach it too, from Settings > reset password by email */}
+      <Route path="/forgot" element={<ForgotAccount />} />
       <Route path="/reset-password" element={publicize(<ResetPassword />)} />
       <Route path="/create-account" element={<CreateAccount />} />
 

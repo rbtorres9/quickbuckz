@@ -7,6 +7,8 @@ import { getTimeAgoString, getDateTimeString} from '../utils/DateTimeUtils.js'
 import ModRestrictions from '../components/ModRestrictions.jsx'
 import ModLog from '../components/ModLog.jsx'
 import { askRemovalMessage } from '../utils/removalMessage.js' 
+import WakingUpNote from '../components/WakingUpNote.jsx'
+import { usePageTitle } from '../utils/usePageTitle.js'
 
 
 
@@ -46,6 +48,7 @@ function groupReports(reports) {
 
 
 export default function ModTools() { 
+  usePageTitle('Mod tools')
   const isMod = useIsMod()
   const { fetchWithToken } = useAuthContext()
 
@@ -217,7 +220,7 @@ export default function ModTools() {
       {message && <p className={`mt-3 text-sm ${message.ok ? 'text-accent' : 'text-red-400'}`}>{message.text}</p>}
 
       {reports === null ? (
-        <p className="mt-6 text-sm text-muted">Loading reports…</p>
+        <div className="mt-6 text-sm text-muted">Loading reports…<WakingUpNote /></div>
       ) : groups.length === 0 ? (
         <div className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center">
           <p className="font-medium">All clear</p>
