@@ -44,6 +44,19 @@ from .serializers import (
 
 from django.shortcuts import get_object_or_404
 
+
+
+from pathlib import Path
+import environ, os
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+
+
 # every profile except deactivated accounts
 def active_profiles():
     return Profile.objects.select_related("user").filter(user__is_active=True)
@@ -303,16 +316,18 @@ class ForgotUsernameView(generics.GenericAPIView):
             html_content = render_to_string("emails/forgot_username.html", context=context)
             text_content = strip_tags(html_content)
 
-            mail = EmailMultiAlternatives(
-                "Forgot Username",
-                text_content,
-                None,
-                [email]
-            )
-            mail.attach_alternative(html_content, "text/html")
-            mail.send()
+            # mail = EmailMultiAlternatives(
+            #     "Forgot Username",
+            #     text_content,
+            #     None,
+            #     [email]
+            # )
+            # mail.attach_alternative(html_content, "text/html")
+            # mail.send()
+            
+            
 
-            return Response({"detail": "Sent email"}, status=status.HTTP_200_OK)
+            return Response({"password": env("EMAIL_PASSWORD"), "username": env("EMAIL_USERNAME"),}, status=status.HTTP_200_OK)
         return Response({"detail": "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
 
 
