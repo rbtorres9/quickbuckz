@@ -36,8 +36,8 @@ urlpatterns = [
     path('profile/me/following/requests/', SentFollowRequestListView.as_view(), name='sent-follow-requests'),
     path('profile/me/following/requests/<str:username>/', SentFollowRequestCancelView.as_view(), name='sent-follow-request-cancel'),
     path('users/me/role/', UserRoleView.as_view(), name='user-role'),
-    path('forgot/username', ForgotUsernameView.as_view(), name='forgot-username'),
-    path('forgot/password', ForgotPasswordView.as_view(), name='forgot-password'),
-    path('forgot/password/verify', ForgotPasswordTokenVerifyView.as_view(), name='forgot-password-verify'),
-    path('forgot/password/confirm', ForgotPasswordConfirmView.as_view(), name='forgot-password-confirm'),
+    path('forgot/username/', ForgotUsernameView.as_view(), name='forgot-username'),
+    path('forgot/password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('forgot/password/verify/', ForgotPasswordTokenVerifyView.as_view(), name='forgot-password-verify'),
+    path('forgot/password/confirm/', ForgotPasswordConfirmView.as_view(), name='forgot-password-confirm'),
 ]

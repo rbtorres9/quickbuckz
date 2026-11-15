@@ -14,6 +14,7 @@ const inputClass =
 export default function ResetPassword() {
   const [params] = useSearchParams()
   const token = params.get('token')
+  const uid = params.get('uid')
   const { fetchBaseUrl } = useApiContext()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -41,10 +42,10 @@ export default function ResetPassword() {
   }
 
   let content
-  if (!token) {
+  if (!token || !uid) {
     content = (
       <p className="mt-6 text-center text-sm text-muted">
-        This reset link is missing its code.{' '}
+        This reset link is missing its parameters.{' '}
         <Link to="/forgot" className="font-semibold text-accent hover:underline">Request a new link</Link>
       </p>
     )

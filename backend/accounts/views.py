@@ -5,9 +5,11 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework import status
 
+from django.utils.html import strip_tags
+from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -294,16 +296,21 @@ class ForgotUsernameView(generics.GenericAPIView):
             email = serializer.data["email"]
             user = get_object_or_404(User, email=email)
 
-            send_mail(
+            context = {
+                "username": user.username,
+            }
+
+            html_content = render_to_string("emails/forgot_username.html", context=context)
+            text_content = strip_tags(html_content)
+
+            mail = EmailMultiAlternatives(
                 "Forgot Username",
-                (
-                    "We received a request to recover your username for QuickBuckz\n"
-                    f"Username: {user.username}\n\n"
-                    "If you did not send a request, you can safely ignore this.\n"
-                ),
+                text_content,
                 None,
                 [email]
             )
+            mail.attach_alternative(html_content, "text/html")
+            mail.send()
 
             return Response({"detail": "Sent email"}, status=status.HTTP_200_OK)
         return Response({"detail": "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
@@ -322,7 +329,24 @@ class ForgotPasswordView(generics.GenericAPIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
 
-            return Response({"uid": uid, "token": token}, status=status.HTTP_200_OK)
+            context = {
+                "username": user.username,
+                "action_url": f"http://quickbuckz.onrender.com/reset-password?uid={uid}&token={token}"
+            }
+
+            html_content = render_to_string("emails/forgot_password.html", context=context)
+            text_content = strip_tags(html_content)
+
+            mail = EmailMultiAlternatives(
+                "Forgot Password",
+                text_content,
+                None,
+                [email]
+            )
+            mail.attach_alternative(html_content, "text/html")
+            mail.send()
+
+            return Response({"detail": "Sent email"}, status=status.HTTP_200_OK)
         return Response({"detail": "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
 
 
