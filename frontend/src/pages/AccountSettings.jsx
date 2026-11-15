@@ -128,6 +128,7 @@ export default function AccountSettings() {
           ))}
         </fieldset>
         {privacyMsg && <p className={`text-sm ${privacyMsg === 'Saved.' || privacyMsg === 'Saving…' ? 'text-accent' : 'text-red-400'}`}>{privacyMsg}</p>}
+        <Link to="/blocked" className="inline-block text-sm font-semibold text-accent hover:underline">Blocked users</Link>
       </section>
 
       {/* Moderator: only shows for mods and admins (set in the Django admin site) */}

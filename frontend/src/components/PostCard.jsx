@@ -128,6 +128,25 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
     alert(result.result?.detail ?? 'Thanks, this post was reported.')
   }
 
+  // Block the author. Every post of theirs on this page hides (see the listener below).
+  // TODO (backend): POST /api/profile/<username>/block/ (same as the profile page)
+  async function handleBlock() {
+    setMenuOpen(false)
+    if (!confirm(`Block @${handle}? They won't be able to see your profile or posts, and you'll stop following each other.`)) return
+
+    const result = await fetchWithToken(`/api/profile/${handle}/block/`, { method: 'POST' })
+    if (result.isError) return alert(errorMessage(result.result))
+    window.dispatchEvent(new CustomEvent('user-blocked', { detail: handle }))
+    onDeleted?.() // the post page leaves; profile lists drop it
+  }
+
+  // Someone was blocked: hide this card if it's theirs
+  useEffect(() => {
+    const hide = (e) => { if (e.detail === handle) setDeleted(true) }
+    window.addEventListener('user-blocked', hide)
+    return () => window.removeEventListener('user-blocked', hide)
+  }, [handle])
+
   // Click a photo: open it full-screen. Double-click: like it with a heart burst.
   // (A double-click also fires a click, so we wait a moment to see which it was.)
   function handlePhotoClick() {
@@ -195,7 +214,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
             <span title={getDateTimeString(post.created_at)}>{getTimeAgoString(post.created_at)}</span>
           </span>
         </div>
-        {/* Your posts: Edit and Delete. Anyone else's: Report (plus Delete for mods). */}
+        {/* Your posts: Edit and Delete. Anyone else's: Report, Block (plus Delete for mods). */}
         {(
           <div className="relative" ref={menuRef}>
             <button
@@ -206,7 +225,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
               <MoreHorizontal size={18} />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 z-10 mt-1 w-32 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
+              <div className="absolute right-0 z-10 mt-1 w-44 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
                 {isMine ? (
                   <>
                     <button onClick={startEditing} className="block w-full px-3 py-2 text-left hover:bg-white/5">
@@ -223,6 +242,9 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
                       className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
                     >
                       Report
+                    </button>
+                    <button onClick={handleBlock} className="block w-full truncate px-3 py-2 text-left text-red-400 hover:bg-white/5">
+                      Block @{handle}
                     </button>
                     {isMod && (
                       <button onClick={handleDelete} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">

@@ -20,6 +20,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import PublicRoute from './components/PublicRoute.jsx'
 import ModUserStatus from './pages/ModUserStatus.jsx'
 import FollowRequestsPage from './pages/FollowRequestsPage.jsx'
+import BlockedUsers from './pages/BlockedUsers.jsx'
 
 
 
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/mod" element={protect(<ModTools />)} />
         <Route path="/mod/:username/status" element={protect(<ModUserStatus />)} />
         <Route path="/search" element={protect(<Search />)} />
+        <Route path="/blocked" element={protect(<BlockedUsers />)} />
       </Route>
 
       {/* Any address that doesn't match a page above */}
