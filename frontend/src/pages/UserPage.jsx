@@ -73,9 +73,10 @@ export default function UserPage() {
       }
 
       setPerson(userData)
-      setViewingUserCache(userData)
+      setViewingUserCache(userData.is_blocked ? null : userData) // no side pictures from people you blocked
 
-      if (userData.visibility === 'private' && !userData.is_followed && !userData.is_self) {
+      // Blocked or private: don't load their posts
+      if (userData.is_blocked || (userData.visibility === 'private' && !userData.is_followed && !userData.is_self)) {
         setPosts([])
         setLoadingPosts(false)
         return
@@ -195,6 +196,8 @@ export default function UserPage() {
   const followed = person.is_followed
   const requested = person.is_requested
   const isLocked = !isSelf && person.visibility === 'private' && !followed
+  // TODO (backend): profile needs an is_blocked field, and POST/DELETE /api/profile/<username>/block/
+  const blocked = !isSelf && person.is_blocked
   async function toggleFollow() {
     setFollowBusy(true)
     setFollowError('')
@@ -208,13 +211,37 @@ export default function UserPage() {
   }
   
 
+  // Block = POST, Unblock = DELETE. Blocking also unfollows both ways (backend does that).
+  async function toggleBlock() {
+    setMenuOpen(false)
+    if (!blocked && !confirm(`Block @${person.username}? They won't be able to see your profile or posts, and you'll stop following each other.`)) return
+
+    const result = await fetchWithToken(`/api/profile/${person.username}/block/`, { method: blocked ? 'DELETE' : 'POST' })
+    if (result.isError) return alert(errorMessage(result.result))
+
+    refreshUserCache() // your Following/Followers counts may change
+    setPerson({ ...person, is_blocked: !blocked, is_followed: false, is_requested: false, follows_you: false })
+    setPosts([])
+    setViewingUserCache(null)
+    if (blocked) navigate(0) // unblocked: reload the page to get their posts back
+  }
+
   const isLoading = loadingUser || loadingPosts
   const hasError = userError || postsError
   // Falls back to the username when someone has no first/last name
   const personName = getName(person) || person.username || ''
 
   let button
-  if (isSelf) {
+  if (blocked) {
+    button = (
+      <button
+        onClick={toggleBlock}
+        className="mb-1 rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-white/5"
+      >
+        Unblock
+      </button>
+    )
+  } else if (isSelf) {
     button = (
       <button
         onClick={() => setEditing(true)}
@@ -352,13 +379,19 @@ export default function UserPage() {
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
                     className="rounded-md px-2 py-1 text-muted hover:bg-white/5"
-                    aria-label="Post options"
+                    aria-label="Profile options"
                   >
                     <MoreHorizontal size={18} />
                   </button>
 
                   { menuOpen && (
                     <div className="absolute left-0 top-full z-10 mt-1 w-48 overflow-hidden rounded-lg border border-line bg-field text-sm shadow-xl">
+                      <button
+                        onClick={toggleBlock}
+                        className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
+                      >
+                        {blocked ? 'Unblock' : 'Block'}
+                      </button>
                       <button
                         onClick={handleReport}
                         className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5"
@@ -434,7 +467,12 @@ export default function UserPage() {
         </nav>
 
         <div className="mt-4 space-y-4">
-          {isLocked ? (
+          {blocked ? (
+            <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
+              <p className="font-medium">You blocked @{person.username}</p>
+              <p className="mt-1 text-sm text-muted">Unblock them to see their posts again.</p>
+            </div>
+          ) : isLocked ? (
             <div className="rounded-2xl border border-line bg-card px-6 py-12 text-center">
               <p className="font-medium">This account is private</p>
               <p className="mt-1 text-sm text-muted">

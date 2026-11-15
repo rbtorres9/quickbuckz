@@ -225,3 +225,14 @@ UPDATES:
   - Edit profile moves keyboard focus into the pop-up when it opens
   - Comment box and new-post box have labels
 - Browser tab titles per page via `src/utils/usePageTitle.js`, like "Home · QuickBuckz", "@ava · QuickBuckz", "Search: denali · QuickBuckz"
+
+## Block users (frontend only, needs backend) 11/15 - MM
+- Post ⋯ menu has **Block @name** under Report (anyone's post but yours). It hides all their posts on the page right away.
+- Profile ⋯ menu has **Block** / **Unblock**. A blocked profile shows "You blocked @name" with an Unblock button instead of Follow, no posts, and none of their side pictures.
+- New **Blocked users** page at `/blocked` (link under Settings > Privacy) with Unblock buttons. File: `src/pages/BlockedUsers.jsx`.
+- **Backend still to do** (frontend calls these; rename here if you pick different URLs):
+  - `POST /api/profile/<username>/block/` to block, `DELETE` to unblock
+  - `GET /api/profile/me/blocked/` returns a list of profiles (username, first_name, last_name, profile_picture)
+  - Add `is_blocked` (true if you blocked them) to the profile response
+  - Blocking should remove follows/follow requests both ways, and hide each other's posts, comments and notifications
+  - If they blocked you, returning 404 for their profile is fine (shows "User not found")
