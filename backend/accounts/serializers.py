@@ -1,11 +1,25 @@
 from rest_framework import serializers
 
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken
+
 from .models import Profile, Follow, FollowRequest
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+
+
+class CookieTokenRefreshSerializer(TokenRefreshSerializer):
+    refresh = None
+
+    def validate(self, attrs):
+        attrs["refresh"] = self.context["request"].COOKIES.get("refresh_token")
+        if attrs['refresh']:
+            return super().validate(attrs)
+        raise InvalidToken('No valid refresh token found in cookie.')
+
 
 #main purpose of this code is profile serializers
 

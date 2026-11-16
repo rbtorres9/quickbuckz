@@ -1,5 +1,8 @@
 from django.urls import path
 from .views import ( 
+    CookieTokenObtainPairView,
+    CookieTokenRefreshView,
+    CookieTokenClear,
     ProfileListView, 
     RegisterView, 
     MyProfileView, 
@@ -20,14 +23,13 @@ from .views import (
     ChangePasswordView,
 )
 
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
 urlpatterns = [
     path('profiles/', ProfileListView.as_view(), name='profile-list'),
     path('profile/me/', MyProfileView.as_view(), name='my-profile'),
     path('profile/<str:username>/', ProfileByUsernameView.as_view(), name='profile-detail'),
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/', CookieTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
+    path('token/clear/', CookieTokenClear.as_view(), name='token_clear'),
     path('signup/', RegisterView.as_view(), name='signup'),
     path('profile/<str:username>/follow/', FollowView.as_view(), name='follow'),
     path('profile/<str:username>/following/', FollowListView.as_view(direction="following"), name='profile-following'),

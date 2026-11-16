@@ -39,6 +39,7 @@ export const ApiProvider = ({children}) => {
             setFetching(true)
 
             const response = await fetch(url, {
+                credentials: 'include',
                 ...options,
             })
 

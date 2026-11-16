@@ -55,13 +55,9 @@ export default function Login() {
         throw new Error("Invalid credentials");
       }
 
-      const data = result.result;
-
-      if (Object.hasOwn(data, "access") && Object.hasOwn(data, "refresh")) {
-        login(data.access, data.refresh)
-        await refreshUserCache(data.access) // load your profile before showing it
-        navigate(afterLoginPath(location), { replace: true }) // back to a shared post, or your profile
-      }
+      login()
+      await refreshUserCache()
+      navigate(afterLoginPath(location), { replace: true }) // back to a shared post, or your profile
     } catch (err) {
       setError(errorMessage(err));
     } finally {

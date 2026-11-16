@@ -198,7 +198,7 @@ AUTHENTICATION_BACKENDS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'accounts.authentication.CookieJWTAuthentication',
 
         'rest_framework.authentication.SessionAuthentication',  # for testing apis requiring auth
     ),
@@ -215,11 +215,11 @@ SIMPLE_JWT = {
 # CORS
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  
+    "http://localhost:5173",
     "https://quickbuckz.onrender.com",
-
-
 ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True

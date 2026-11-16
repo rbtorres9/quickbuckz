@@ -4,10 +4,10 @@ import { AuthContext } from '../context/AuthContext'
 import { afterLoginPath } from '../utils/afterLogin.js'
 
 const PublicRoute = ({ children }) => {
-    const { accessToken } = useContext(AuthContext)
+    const { loggedIn } = useContext(AuthContext)
     const location = useLocation()
 
-    if (accessToken) {
+    if (loggedIn) {
         return <Navigate to={afterLoginPath(location)} replace />
     }
 
