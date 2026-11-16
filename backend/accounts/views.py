@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework import status
 
 from django.utils.html import strip_tags
@@ -38,7 +38,9 @@ from .serializers import (
     SentFollowRequestSerializer,
     ForgotSerializer,
     ForgotPasswordVerifyTokenSerializer,
-    ForgotPasswordConfirmSerializer
+    ForgotPasswordConfirmSerializer,
+    ChangeEmailSerializer,
+    ChangePasswordSerializer
     )
 
 
@@ -401,3 +403,46 @@ class ForgotPasswordConfirmView(generics.GenericAPIView):
         user.set_password(new_password)
         user.save()
         return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+
+
+class ChangeEmailView(generics.UpdateAPIView):
+    serializer_class = ChangeEmailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def get_queryset(self):
+        return self.get_object()
+
+    def perform_update(self, serializer):
+        if self.request.user.email == serializer.validated_data.get("email"):
+            raise ValidationError({"detail": "Cannot change your email to the same one"})
+
+        if not self.request.user.check_password(serializer.validated_data.get("password")):
+            raise ValidationError({"detail": "Password does not match"})
+            
+        serializer.save()
+
+
+class ChangePasswordView(generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def get_queryset(self):
+        return self.get_object()
+
+    def perform_update(self, serializer):
+        old_password = serializer.validated_data.get("old_password")
+        new_password = serializer.validated_data.get("new_password")
+
+        if not self.request.user.check_password(old_password):
+            raise ValidationError({"detail": "Password does not match"})
+
+        if old_password == new_password:
+            raise ValidationError({"detail": "Cannot set new password to the same one"})
+            
+        serializer.save()

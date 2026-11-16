@@ -16,6 +16,8 @@ from .views import (
     ForgotPasswordView,
     ForgotPasswordTokenVerifyView,
     ForgotPasswordConfirmView,
+    ChangeEmailView,
+    ChangePasswordView,
 )
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -40,4 +42,6 @@ urlpatterns = [
     path('forgot/password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('forgot/password/verify/', ForgotPasswordTokenVerifyView.as_view(), name='forgot-password-verify'),
     path('forgot/password/confirm/', ForgotPasswordConfirmView.as_view(), name='forgot-password-confirm'),
+    path('profile/me/change-email/', ChangeEmailView.as_view(), name='change-email'),
+    path('profile/me/change-password/', ChangePasswordView.as_view(), name='change-password'),
 ]

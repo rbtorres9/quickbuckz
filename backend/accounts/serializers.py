@@ -241,3 +241,31 @@ class ForgotPasswordConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     uid = serializers.CharField()
     new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+
+class ChangeEmailSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    email = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["email", "password"]
+
+    def update(self, instance, validated_data):
+        validated_data.pop('password', None)
+        return super().update(instance, validated_data)
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    class Meta:
+        model = User
+        fields = ["old_password", "new_password"]
+
+    def update(self, instance, validated_data):
+        validated_data.pop('old_password', None)
+        new_password = validated_data.pop('new_password')
+        instance.set_password(new_password)
+        return super().update(instance, validated_data)
