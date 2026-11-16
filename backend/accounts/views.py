@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import NotAuthenticated, ValidationError
+from rest_framework.exceptions import NotAuthenticated, ValidationError 
 from rest_framework import status
 
 from django.utils.html import strip_tags
@@ -416,11 +416,15 @@ class ChangeEmailView(generics.UpdateAPIView):
         return self.get_object()
 
     def perform_update(self, serializer):
-        if self.request.user.email == serializer.validated_data.get("email"):
+        email = serializer.validated_data.get("email")
+        if self.request.user.email == email:
             raise ValidationError({"detail": "Cannot change your email to the same one"})
 
+        if User.objects.filter(email=email).exists():
+            raise ValidationError({"detail": "Another user is already using this email"})
+
         if not self.request.user.check_password(serializer.validated_data.get("password")):
-            raise ValidationError({"detail": "Password does not match"})
+            raise NotAuthenticated({"detail": "Password does not match"})
             
         serializer.save()
 
@@ -440,7 +444,7 @@ class ChangePasswordView(generics.UpdateAPIView):
         new_password = serializer.validated_data.get("new_password")
 
         if not self.request.user.check_password(old_password):
-            raise ValidationError({"detail": "Password does not match"})
+            raise NotAuthenticated({"detail": "Password does not match"})
 
         if old_password == new_password:
             raise ValidationError({"detail": "Cannot set new password to the same one"})

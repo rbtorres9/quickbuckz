@@ -8,7 +8,9 @@ import { useStore } from '../data/store.jsx'
 import ThemePicker from '../components/ThemePicker.jsx'
 import { usePageTitle } from '../utils/usePageTitle.js'
 
-const saveClass = 'rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover'
+const saveClass = 'rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-page hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40'
+const inputClass =
+  'w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/20'
 
 export default function AccountSettings() {
   usePageTitle('Settings')
@@ -67,6 +69,77 @@ export default function AccountSettings() {
     setThemeMsg('Saved.')
   }
 
+  // Email
+  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState(userCache?.email ?? '')
+  const [emailMsg, setEmailMsg] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [fetchingEmail, setFetchingEmail] = useState(false)
+
+  async function saveEmail(e) {
+    e.preventDefault()
+
+    setEmailError('')
+    setEmailMsg('')
+    
+    const clean = email.trim().toLowerCase()
+    setEmail(clean)
+
+    setFetchingEmail(true)
+    const result = await fetchWithToken('/api/profile/me/change-email/', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, email })
+    })
+    setFetchingEmail(false)
+
+    if (result.isError) {
+      setEmailError(result.result?.detail ?? "An error occurred")
+      return
+    }
+
+    setEmail('')
+    setPassword('')
+    setEmailMsg('Email saved.')
+  }
+
+  // Password
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [passwordMsg, setPasswordMsg] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [fetchingPassword, setFetchingPassword] = useState(false)
+
+  async function savePassword(e) {
+    e.preventDefault()
+
+    setPasswordError('')
+    setPasswordMsg('')
+
+    if (next.length < 8) return setPasswordError('New password must be at least 8 characters.')
+    if (next !== confirm) return setPasswordError('New passwords do not match.')
+    if (next === current) return setPasswordError('New password must be different from your current one.')
+    
+    setFetchingPassword(true)
+    const result = await fetchWithToken('/api/profile/me/change-password/', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ old_password: current, new_password: next })
+    })
+    setFetchingPassword(false)
+
+    if (result.isError) {
+      setPasswordError(result.result?.detail ?? "An error occurred")
+      return
+    }
+    
+    setCurrent('')
+    setNext('')
+    setConfirm('')
+    setPasswordMsg('Password updated.')
+  }
+
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-6">
       <h1 className="text-2xl font-semibold tracking-tight">Account settings</h1>
@@ -78,21 +151,64 @@ export default function AccountSettings() {
           <p className="text-sm font-medium">Username</p>
           <p className="text-sm text-muted">@{userCache?.username} · usernames can't be changed</p>
         </div>
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Email</p>
-          {/* TODO: show and change the email once the backend sends it and has a change-email endpoint */}
-          <p className="text-sm text-muted">Changing your email is coming soon.</p>
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Password</p>
-          {/* TODO: a change-password form here once the backend has a change-password endpoint.
-              For now, the forgot-password email (which works) is the way to set a new one. */}
-          <p className="text-sm text-muted">
-            Changing your password from here is coming soon. For now you can{' '}
-            <Link to="/forgot" className="font-semibold text-accent hover:underline">reset it by email</Link>.
-          </p>
-        </div>
       </section>
+
+      {/* Email */}
+      <form onSubmit={saveEmail} className="space-y-4 rounded-2xl border border-line bg-card p-6">
+        <h2 className="font-semibold">Change email</h2>
+        <div className="space-y-1.5">
+          <label htmlFor="password" className="block text-sm font-medium">Password</label>
+          <input
+            id="password"
+            type="password"
+            required
+            autoComplete="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setEmailMsg('') }}
+            className={inputClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="email" className="block text-sm font-medium">Email</label>
+          <input
+            id="email"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setEmailMsg('') }}
+            className={inputClass}
+          />
+        </div>
+        {emailError && <p className="text-sm text-red-400">{emailError}</p>}
+        <div className="flex items-center gap-3">
+          <button type="submit" className={saveClass} disabled={fetchingEmail}>Save email</button>
+          {emailMsg && <span className="text-sm text-accent">{emailMsg}</span>}
+        </div>
+      </form>
+      
+      {/* Password */}
+      <form onSubmit={savePassword} className="space-y-4 rounded-2xl border border-line bg-card p-6">
+        <h2 className="font-semibold">Change password</h2>
+        <div className="space-y-1.5">
+          <label htmlFor="current" className="block text-sm font-medium">Current password</label>
+          <input id="current" type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputClass} />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="next" className="block text-sm font-medium">New password</label>
+          <input id="next" type="password" required autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputClass} />
+          <p className="text-xs text-muted">At least 8 characters. Avoid common passwords.</p>
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="confirm" className="block text-sm font-medium">Confirm new password</label>
+          <input id="confirm" type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
+        </div>
+        {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
+        <div className="flex items-center gap-3">
+          <button type="submit" className={saveClass} disabled={fetchingPassword}>Update password</button>
+          {passwordMsg && <span className="text-sm text-accent">{passwordMsg}</span>}
+        </div>
+      </form>
 
       {/* Site color */}
       <section className="space-y-3 rounded-2xl border border-line bg-card p-6">
