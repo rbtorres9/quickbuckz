@@ -178,17 +178,15 @@ STORAGES = {
 
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
-        "OPTIONS": {
-            "host": "smtp.gmail.com",
-            "use_tls": True,
-            "username": env("EMAIL_USERNAME"),
-            "password": env("EMAIL_PASSWORD"),
-        },
+        "BACKEND": "anymail.backends.brevo.EmailBackend",
     },
 }
 
-DEFAULT_FROM_EMAIL = f"QuickBuckz (Do not reply) <{env("EMAIL_USERNAME")}>"
+ANYMAIL = {
+    "BREVO_API_KEY": env("BREVO_API_KEY"),
+}
+
+DEFAULT_FROM_EMAIL = "QuickBuckz <support.quickbuckz@gmail.com>"
 
 
 AUTHENTICATION_BACKENDS = [
