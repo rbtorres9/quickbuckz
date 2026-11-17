@@ -69,6 +69,14 @@ export default function AccountSettings() {
     setThemeMsg('Saved.')
   }
 
+  const [ loggingOut, setLoggingOut ] = useState(false)
+  async function logoutAccount() {
+    setLoggingOut(true)
+    await logout()
+    setLoggingOut(false)
+    navigate('/login')
+  }
+
   // Email
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState(userCache?.email ?? '')
@@ -265,10 +273,11 @@ export default function AccountSettings() {
           <p className="text-sm text-muted">Sign out of QuickBuckz on this device.</p>
         </div>
         <button
-          onClick={() => { logout(); navigate('/login') }}
-          className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300"
+          onClick={logoutAccount}
+          disabled={loggingOut}
+          className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Log out
+          {loggingOut ? "Logging out..." : "Log out"}
         </button>
       </section>
     </main>

@@ -14,6 +14,7 @@ def enforce_csrf(request):
         raise PermissionDenied(f"CSRF Failed: {reason}")
 
 
+# This function is used for authenticate HttpOnly cookies
 class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
         header = self.get_header(request)
@@ -22,7 +23,7 @@ class CookieJWTAuthentication(JWTAuthentication):
         if header:
             raw_token = self.get_raw_token(header)
         elif request.COOKIES.get("access_token"):
-            raw_token = self.get_raw_token(request.COOKIES.get("access_token"))
+            raw_token = request.COOKIES.get("access_token")
 
         if raw_token is None:
             return None

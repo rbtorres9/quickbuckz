@@ -8,7 +8,7 @@ export const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
     const readLoggedIn = () => localStorage.getItem('loggedIn') === 'true'
-    const [loggedIn, setLoggedInState] = useState(readLoggedIn)
+    const [loggedIn, setLoggedInState] = useState(readLoggedIn)    
 
     const setLoggedIn = (value) => {
         const next = Boolean(value)
@@ -24,9 +24,9 @@ export const AuthProvider = ({ children }) => {
 
     const refresh = async () => {
         try {
-            const result = await fetchBaseUrl('/api/token/refresh/', {
+            const result = await fetchBaseUrl('/api/token/refresh/', ({
                 method: 'POST',
-            })
+            }))
 
             if (result.isError) {
                 throw result

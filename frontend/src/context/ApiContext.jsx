@@ -38,9 +38,18 @@ export const ApiProvider = ({children}) => {
         try {
             setFetching(true)
 
+            const csrf = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+
             const response = await fetch(url, {
-                credentials: 'include',
                 ...options,
+                credentials: 'include',
+                headers: {
+                    ...options.headers,
+                    'X-CSRFToken': csrf
+                },
             })
 
             const contentType = response.headers.get('content-type') || ''

@@ -28,7 +28,10 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)*0ojj#i!sy^w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    "http://localhost:5173",
+    "https://quickbuckz.onrender.com",
+])
 
 # Application definition
 
@@ -213,7 +216,6 @@ SIMPLE_JWT = {
 
 
 # CORS
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://quickbuckz.onrender.com",

@@ -104,6 +104,8 @@ class CookieTokenRefreshView(TokenRefreshView):
             data = request.data.copy()
             data["refresh"] = refresh_token
             request._full_data = data
+        else:
+            return Response({"detail": "No refresh token."}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             response = super().post(request, *args, **kwargs)
@@ -121,8 +123,6 @@ class CookieTokenRefreshView(TokenRefreshView):
 
 
 class CookieTokenClear(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request, *args, **kwargs):
         response = Response({"detail": "Clearing tokens"}, status=status.HTTP_200_OK)
         response.delete_cookie("access_token")
@@ -508,7 +508,7 @@ class ChangeEmailView(generics.UpdateAPIView):
             raise ValidationError({"detail": "Another user is already using this email"})
 
         if not self.request.user.check_password(serializer.validated_data.get("password")):
-            raise NotAuthenticated({"detail": "Password does not match"})
+            raise ValidationError({"detail": "Password does not match"})
             
         serializer.save()
 
@@ -528,7 +528,7 @@ class ChangePasswordView(generics.UpdateAPIView):
         new_password = serializer.validated_data.get("new_password")
 
         if not self.request.user.check_password(old_password):
-            raise NotAuthenticated({"detail": "Password does not match"})
+            raise ValidationError({"detail": "Password does not match"})
 
         if old_password == new_password:
             raise ValidationError({"detail": "Cannot set new password to the same one"})
