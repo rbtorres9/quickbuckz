@@ -57,7 +57,7 @@ def set_refresh_token_cookie(response, refresh_token=None):
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
-        samesite="Lax",
+        samesite=None,
         httponly=True,
         secure=not settings.DEBUG,
         path='/',
@@ -72,7 +72,7 @@ def set_access_token_cookie(response, access_token=None):
     response.set_cookie(
         key="access_token",
         value=access_token,
-        samesite="Lax",
+        samesite=None,
         httponly=True,
         secure=not settings.DEBUG,
         path='/',
