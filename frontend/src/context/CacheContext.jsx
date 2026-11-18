@@ -9,15 +9,19 @@ export const CacheProvider = ({children}) => {
     const [ isViewingUser, setIsViewingUser ] = useState(false)
     const [ viewingUserCache, setViewingUserCache ] = useState(null) // This is going to be used to pass data to the Layout component when viewing another user's profile
 
-    const { fetchWithToken, loggedIn } = useAuthContext()
+    const { fetchWithToken, accessToken } = useAuthContext()
     
-    const refreshUserCache = async () => {
+    const refreshUserCache = async (access=null) => {
+        if (!access) {
+            access = accessToken
+        }
+
         const result = await fetchWithToken('/api/profile/me/', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             }
-        })
+        }, access)
 
         // fetchWithToken returns { error } on failure; keep the old cache in that case
         if (result.isError) return
@@ -34,13 +38,13 @@ export const CacheProvider = ({children}) => {
     // so re-fetch the profile on app load instead of trusting the stored copy
     
     useEffect(() => {
-        if (loggedIn) {
-            refreshUserCache()
+        if (accessToken) { 
+                refreshUserCache()
         } else {
             localStorage.removeItem('user')
             setUserCache(null)
         }
-    }, [loggedIn]) 
+    }, [accessToken]) 
 
     return (
         <CacheContext.Provider value={{ userCache, setUserCache, isViewingUser, setIsViewingUser, viewingUserCache, setViewingUserCache, refreshUserCache }}>

@@ -2,10 +2,9 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import NotAuthenticated, ValidationError
+from rest_framework.exceptions import NotAuthenticated, ValidationError 
 from rest_framework import status
 
-from django.conf import settings
 from django.utils.html import strip_tags
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
@@ -29,7 +28,6 @@ from django.db.models import (
     )
 
 from .serializers import (
-    CookieTokenRefreshSerializer,
     PublicProfileSerializer, 
     OwnerProfileSerializer, 
     RegisterSerializer, 
@@ -45,90 +43,8 @@ from .serializers import (
     ChangePasswordSerializer
     )
 
+
 from django.shortcuts import get_object_or_404
-
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-
-def set_refresh_token_cookie(response, refresh_token=None):
-    if not refresh_token:
-        return
-    
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        samesite=None,
-        httponly=True,
-        secure=not settings.DEBUG,
-        path='/',
-        expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
-    )
-
-
-def set_access_token_cookie(response, access_token=None):
-    if not access_token:
-        return
-
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        samesite=None,
-        httponly=True,
-        secure=not settings.DEBUG,
-        path='/',
-        expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
-    )
-
-
-class CookieTokenObtainPairView(TokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-
-        if response.status_code == 200:
-            refresh_token = response.data.pop("refresh", None)
-            access_token = response.data.pop("access", None)
-            
-            set_refresh_token_cookie(response, refresh_token)
-            set_access_token_cookie(response, access_token)
-
-        return response
-
-
-class CookieTokenRefreshView(TokenRefreshView):
-    serializer_class = CookieTokenRefreshSerializer
-    
-    def post(self, request, *args, **kwargs):
-        refresh_token = request.COOKIES.get("refresh_token")
-
-        if refresh_token:
-            data = request.data.copy()
-            data["refresh"] = refresh_token
-            request._full_data = data
-        else:
-            return Response({"detail": "No refresh token."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        try:
-            response = super().post(request, *args, **kwargs)
-
-            if response.status_code == 200:
-                access_token = response.data.pop("access", None)
-                refresh_token = response.data.pop("refresh", None)
-
-                set_access_token_cookie(response, access_token)
-                set_refresh_token_cookie(response, refresh_token)
-
-            return response
-        except (InvalidToken, TokenError):
-            return Response({"detail": "Invalid refresh token."}, status=status.HTTP_401_UNAUTHORIZED)
-
-
-class CookieTokenClear(APIView):
-    def post(self, request, *args, **kwargs):
-        response = Response({"detail": "Clearing tokens"}, status=status.HTTP_200_OK)
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
-        return response
-
 
 # every profile except deactivated accounts
 def active_profiles():
@@ -508,7 +424,7 @@ class ChangeEmailView(generics.UpdateAPIView):
             raise ValidationError({"detail": "Another user is already using this email"})
 
         if not self.request.user.check_password(serializer.validated_data.get("password")):
-            raise ValidationError({"detail": "Password does not match"})
+            raise NotAuthenticated({"detail": "Password does not match"})
             
         serializer.save()
 
@@ -528,7 +444,7 @@ class ChangePasswordView(generics.UpdateAPIView):
         new_password = serializer.validated_data.get("new_password")
 
         if not self.request.user.check_password(old_password):
-            raise ValidationError({"detail": "Password does not match"})
+            raise NotAuthenticated({"detail": "Password does not match"})
 
         if old_password == new_password:
             raise ValidationError({"detail": "Cannot set new password to the same one"})

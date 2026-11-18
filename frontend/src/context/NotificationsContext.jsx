@@ -7,11 +7,11 @@ const POLL_MS = 60 * 1000
 export const NotificationsContext = createContext(null)
 
 export function NotificationsProvider({ children }) {
-  const { loggedIn, fetchWithToken } = useAuthContext()
+  const { accessToken, fetchWithToken } = useAuthContext()
   const [unread, setUnread] = useState(0)
 
   const refreshUnread = async () => {
-    if (!loggedIn) return
+    if (!localStorage.getItem('access_token')) return
     const result = await fetchWithToken('/api/notifications/unread-count/')
     const data = result.result
     // fetchWithToken returns { error } on failure; keep the old count in that case
@@ -19,7 +19,7 @@ export function NotificationsProvider({ children }) {
   }
 
   useEffect(() => {
-    if (!loggedIn) {
+    if (!accessToken) {
       setUnread(0)
       return
     }
@@ -39,7 +39,7 @@ export function NotificationsProvider({ children }) {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [loggedIn])
+  }, [accessToken])
 
   return (
     <NotificationsContext.Provider value={{ unread, refreshUnread }}>

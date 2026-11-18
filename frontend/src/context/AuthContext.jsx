@@ -1,77 +1,95 @@
-import React, { useContext, createContext, useMemo, useState } from 'react'
+import React, {useContext, createContext, useState} from 'react'
 
+// easy api url reference
 import { useApiContext } from './ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
 import ApiResult from '../utils/ApiResult'
 
 export const AuthContext = createContext(null)
 
-export const AuthProvider = ({ children }) => {
-    const readLoggedIn = () => localStorage.getItem('loggedIn') === 'true'
-    const [loggedIn, setLoggedInState] = useState(readLoggedIn)    
-
-    const setLoggedIn = (value) => {
-        const next = Boolean(value)
-        setLoggedInState(next)
-        if (next) {
-            localStorage.setItem('loggedIn', 'true')
-        } else {
-            localStorage.removeItem('loggedIn')
-        }
-    }
+export const AuthProvider = ({children}) => {
+    const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token'))
+    const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token')) // might be unused state
 
     const { fetchBaseUrl } = useApiContext()
 
     const refresh = async () => {
         try {
-            const result = await fetchBaseUrl('/api/token/refresh/', ({
+            const stored = localStorage.getItem('refresh_token')
+            if (!stored) { logout(); return null}
+
+            const result = await fetchBaseUrl(`/api/token/refresh/`, {
                 method: 'POST',
-            }))
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    'refresh': stored
+                })
+            })
 
             if (result.isError) {
                 throw result
             }
 
-            setLoggedIn(true)
-            return true
+            const newAccess = result.result?.access
+            if (newAccess) {
+                localStorage.setItem('access_token', newAccess)
+                setAccessToken(newAccess)
+
+                const newRefresh = result.result?.refresh
+                if (newRefresh) {
+                    localStorage.setItem('refresh_token', newRefresh)
+                    setRefreshToken(newRefresh)
+                }
+
+                return newAccess
+            }
+
+            logout()
+            return null
         }
         catch (err) {
             const failed = new ApiResult(
-                err?.result ?? 'Refresh request failed',
+                err?.result ?? "Refresh request failed",
                 err?.response
             )
 
-            console.error('Error refreshing token:', errorMessage(failed.result))
-            await logout()
-            return null
+            console.error(`Error refreshing token:`, errorMessage(failed.result))
+            logout()
         }
+        
+        return null
     }
-
-    const login = () => {
-        setLoggedIn(true)
+    const login = (access, refresh) => {
+        localStorage.setItem('access_token', access)
+        localStorage.setItem('refresh_token', refresh)
+        setAccessToken((_) => access)
+        setRefreshToken((_) => refresh) // might be unused state
     }
-
-    const logout = async () => {
-        try {
-            await fetchBaseUrl('/api/token/clear/', {
-                method: 'POST',
-            })
-        }
-        catch (err) {
-            console.warn('Logout request failed:', err)
-        }
-
-        setLoggedIn(false)
+    const logout = () => {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        setAccessToken((_) => null)
+        setRefreshToken((_) => null) //  might be unused state
     }
 
     const fetchWithToken = async (url, options = {}) => {
         try {
-            let result = await fetchBaseUrl(url, options)
+            const withToken = (token) => ({
+                ...options,
+                headers: {
+                    ...options.headers,
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+            })
+
+            let result = await fetchBaseUrl(url, withToken(localStorage.getItem('access_token')))
 
             if (result.response?.status === 401) {
-                const refreshSuccessful = await refresh()
-                if (refreshSuccessful) {
-                    result = await fetchBaseUrl(url, options)
+                const newToken = await refresh()
+                if (newToken) {
+                    result = await fetchBaseUrl(url, withToken(newToken))
                 }
             }
 
@@ -82,49 +100,44 @@ export const AuthProvider = ({ children }) => {
             return result
         }
         catch (err) {
-            const result = new ApiResult(
+            let result = new ApiResult(
                 err?.result ?? err ?? `Failed to fetch ${url}`,
                 err?.response
             )
 
-            console.error('Error fetching with cookie auth:', errorMessage(result.result))
-
-            if (err?.response?.status === 401) {
-                await logout()
-            }
+            console.error(`Error fetching with token:`, errorMessage(result.result))
 
             return result
         }
     }
 
-    const fetchPosts = async () => fetchWithToken('/api/posts/')
-    const fetchUserProfile = async (username) => fetchWithToken(`/api/profile/${username}/`)
-    const fetchUserPosts = async (username) => fetchWithToken(`/api/profile/${username}/posts/`)
-    const fetchPostById = async (id) => fetchWithToken(`/api/posts/${id}/`)
+    const fetchPosts = async () => {
+        return fetchWithToken('/api/posts/')
+    }
 
-    const value = useMemo(() => ({
-        login,
-        logout,
-        loggedIn,
-        refresh,
-        fetchWithToken,
-        fetchPosts,
-        fetchUserProfile,
-        fetchUserPosts,
-        fetchPostById,
-    }), [loggedIn])
+    const fetchUserProfile = async (username) => {
+        return fetchWithToken(`/api/profile/${username}/`)
+    }
+
+    const fetchUserPosts = async (username) => {
+        return fetchWithToken(`/api/profile/${username}/posts/`)
+    }
+
+    const fetchPostById = async (id) => {
+        return fetchWithToken(`/api/posts/${id}/`)
+    }
 
     return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
+    <AuthContext.Provider value={{ accessToken, login, logout, refresh, fetchWithToken, fetchPosts, fetchUserProfile, fetchUserPosts, fetchPostById }}>
+        { children }
+    </AuthContext.Provider>
     )
 }
 
 export const useAuthContext = () => {
     const context = useContext(AuthContext)
     if (!context) {
-        throw new Error('useAuthContext must be used within an AuthProvider')
+        throw new Error("useAuthContext must be used within a AuthProvider")
     }
     return context
 }

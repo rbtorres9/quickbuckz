@@ -32,14 +32,14 @@ export default function CreateAccount() {
   const [theme, setTheme] = useState('classic')
   const navigate = useNavigate()
   const location = useLocation() // may carry a shared link to go back to
-  const { loggedIn, login } = useContext(AuthContext)
+  const { accessToken, login } = useContext(AuthContext)
   const { refreshUserCache } = useCache()
   const { updateProfile } = useStore()
   const { fetchBaseUrl } = useApiContext()
   const justSignedUp = useRef(false)
 
   // Already signed in? Go to your profile (unless you just made this account)
-  if (loggedIn && !justSignedUp.current) {
+  if (accessToken && !justSignedUp.current) {
     return <Navigate to="/user-page" replace />
   }
 
@@ -105,9 +105,11 @@ export default function CreateAccount() {
         return
       }
 
+      const tokens = tokenResult.result
+
       justSignedUp.current = true
-      login()
-      await refreshUserCache()
+      login(tokens.access, tokens.refresh)
+      await refreshUserCache(tokens.access)
       updateProfile({ theme }) // TODO: send the theme to the backend once the profile has a theme field
       navigate(afterLoginPath(location), { replace: true }) // back to a shared post, or your profile
     } catch (err) {

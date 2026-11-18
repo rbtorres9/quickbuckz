@@ -28,10 +28,7 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)*0ojj#i!sy^w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
-    "http://localhost:5173",
-    "https://quickbuckz.onrender.com",
-])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
 # Application definition
 
@@ -201,7 +198,7 @@ AUTHENTICATION_BACKENDS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'accounts.authentication.CookieJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
 
         'rest_framework.authentication.SessionAuthentication',  # for testing apis requiring auth
     ),
@@ -216,12 +213,13 @@ SIMPLE_JWT = {
 
 
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://quickbuckz.onrender.com",
-]
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  
+    "https://quickbuckz.onrender.com",
+
+
+]
 
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
