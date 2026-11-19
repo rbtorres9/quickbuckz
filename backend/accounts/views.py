@@ -296,7 +296,10 @@ class ForgotUsernameView(generics.GenericAPIView):
 
         if serializer.is_valid():
             email = serializer.data["email"]
-            user = get_object_or_404(User, email=email)
+            user = User.objects.filter(email=email).first()
+            
+            if user is None:
+                return Response({"detail": "Sent email"}, status=status.HTTP_200_OK)
 
             context = {
                 "username": user.username,
@@ -326,14 +329,17 @@ class ForgotPasswordView(generics.GenericAPIView):
 
         if serializer.is_valid():
             email = serializer.data["email"]
-            user = get_object_or_404(User, email=email)
+            user = User.objects.filter(email=email).first()
+
+            if user is None:
+                return Response({"detail": "Sent email"}, status=status.HTTP_200_OK)
 
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
 
             context = {
                 "username": user.username,
-                "action_url": f"http://quickbuckz.onrender.com/reset-password?uid={uid}&token={token}"
+                "action_url": f"https://quickbuckz.onrender.com/reset-password?uid={uid}&token={token}"
             }
 
             html_content = render_to_string("emails/forgot_password.html", context=context)
@@ -424,7 +430,7 @@ class ChangeEmailView(generics.UpdateAPIView):
             raise ValidationError({"detail": "Another user is already using this email"})
 
         if not self.request.user.check_password(serializer.validated_data.get("password")):
-            raise NotAuthenticated({"detail": "Password does not match"})
+            raise NotAuthenticated({"detail": "Password does not match user's credentials"})
             
         serializer.save()
 
@@ -444,7 +450,7 @@ class ChangePasswordView(generics.UpdateAPIView):
         new_password = serializer.validated_data.get("new_password")
 
         if not self.request.user.check_password(old_password):
-            raise NotAuthenticated({"detail": "Password does not match"})
+            raise NotAuthenticated({"detail": "Password does not match user's credentials"})
 
         if old_password == new_password:
             raise ValidationError({"detail": "Cannot set new password to the same one"})

@@ -32,13 +32,13 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Report models up. TODO: api/reports/ , test report function, import changes in frontend~~ - Done (api/reports/ + Mod tools)
 - ~~Add ability to report comments and users on their profile on the backend~~ - Done (11/13)
 - ~~Add ability to ban users~~ - Done (ban list, ban/unban, status page, 11/09-11/13)
-- Clean up the setting menu - Mostly done MM (11/15): fake email/password forms replaced with "coming soon" notes until the backend endpoints exist
+- ~~Clean up the setting menu - Mostly done MM (11/15): fake email/password forms replaced with "coming soon" notes until the backend endpoints exist~~ Changing emails and passwords is available in settings - Done JDN (11/18)
 - ~~Store color theme in backend~~ - Done (11/07)
 
 - Security fixes (added MM 11/15):
     - Remove the hardcoded fallback `SECRET_KEY` in settings.py (it should only come from the environment on Render)
-    - Forgot password/username: return the same response whether or not the email has an account (right now 404 vs "Sent email" tells people which emails are registered)
-    - Use `https://` (not `http://`) in the reset password email link, since the token is in the link
+    - ~~Forgot password/username: return the same response whether or not the email has an account (right now 404 vs "Sent email" tells people which emails are registered)~~ - Done JDN (11/18)
+    - ~~Use `https://` (not `http://`) in the reset password email link, since the token is in the link~~ - Done JDN (11/18)
 
 ## TODO if we have extra time
 - ~~Implement forgot password API. User sends email, the API returns a temporary token (5-10 minutes) to reset password.~~ - Done (emails the reset link, 11/14)

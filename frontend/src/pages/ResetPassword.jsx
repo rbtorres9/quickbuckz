@@ -29,7 +29,10 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const verifyToken = async() => {
-      if (!token || !uid) return false
+      if (!token || !uid) {
+        setVerifying(false)
+        return
+      }
 
       const result = await fetchBaseUrl(RESET_PASSWORD_VERIFY_URL, {
         method: 'POST',
@@ -45,13 +48,16 @@ export default function ResetPassword() {
       }
 
       setVerifying(false)
+      setError('')
     }
 
     verifyToken()
-  }, [])
+  }, [token, uid])
 
   async function handleSubmit(e) {
     e.preventDefault()
+    setError('')
+
     // Quick checks here; the backend checks the real password rules too
     if (password.length < 8) return setError('Use at least 8 characters.')
     if (password !== confirm) return setError('Passwords do not match.')
@@ -63,7 +69,7 @@ export default function ResetPassword() {
       body: JSON.stringify({ uid, token, new_password: password }),
     })
     setSaving(false)
-    if (result.response?.status === 404) return setError("Password reset isn't available yet. Check back soon.")
+    if (result.response?.status === 404) return setError("Something went wrong with your link.")
     // e.g. the link expired, or the password is too common
     if (result.isError) return setError(errorMessage(result.result))
     setDone(true)
@@ -74,7 +80,7 @@ export default function ResetPassword() {
     content = (
       <p className="mt-6 text-center text-sm text-muted">
         This reset link is missing its parameters.{' '}
-        <br></br>
+        <br />
         <Link to="/forgot" className="font-semibold text-accent hover:underline">Request a new link</Link>
       </p>
     )
@@ -109,15 +115,15 @@ export default function ResetPassword() {
         <div className="space-y-1.5">
           <label htmlFor="newPassword" className="block text-sm font-medium">New password</label>
           <input id="newPassword" type="password" autoComplete="new-password" required value={password}
-            onChange={(e) => { setPassword(e.target.value); setError('') }} className={inputClass} />
+            onChange={(e) => { setPassword(e.target.value); setError('') }} className={inputClass} minLength={8} />
           <p className="text-xs text-muted">At least 8 characters. Avoid common passwords.</p>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="confirmPassword" className="block text-sm font-medium">Confirm new password</label>
           <input id="confirmPassword" type="password" autoComplete="new-password" required value={confirm}
-            onChange={(e) => { setConfirm(e.target.value); setError('') }} className={inputClass} />
+            onChange={(e) => { setConfirm(e.target.value); setError('') }} className={inputClass} minLength={8} />
         </div>
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-400 whitespace-pre-line">{error}</p>}
         <button type="submit" disabled={saving}
           className="w-full rounded-lg bg-accent py-3 text-sm font-semibold text-page transition hover:bg-accent-hover disabled:opacity-60">
           {saving ? 'Saving…' : 'Set new password'}

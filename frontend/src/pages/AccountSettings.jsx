@@ -89,12 +89,12 @@ export default function AccountSettings() {
     const result = await fetchWithToken('/api/profile/me/change-email/', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, email })
+      body: JSON.stringify({ password, email: clean })
     })
     setFetchingEmail(false)
 
     if (result.isError) {
-      setEmailError(result.result?.detail ?? "An error occurred")
+      setEmailError(errorMessage(result.result))
       return
     }
 
@@ -130,7 +130,7 @@ export default function AccountSettings() {
     setFetchingPassword(false)
 
     if (result.isError) {
-      setPasswordError(result.result?.detail ?? "An error occurred")
+      setPasswordError(errorMessage(result.result))
       return
     }
     
@@ -162,10 +162,11 @@ export default function AccountSettings() {
             id="password"
             type="password"
             required
-            autoComplete="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => { setPassword(e.target.value); setEmailMsg('') }}
             className={inputClass}
+            minLength={8}
           />
         </div>
         <div className="space-y-1.5">
@@ -180,7 +181,7 @@ export default function AccountSettings() {
             className={inputClass}
           />
         </div>
-        {emailError && <p className="text-sm text-red-400">{emailError}</p>}
+        {emailError && <p className="text-sm text-red-400 whitespace-pre-line">{emailError}</p>}
         <div className="flex items-center gap-3">
           <button type="submit" className={saveClass} disabled={fetchingEmail}>Save email</button>
           {emailMsg && <span className="text-sm text-accent">{emailMsg}</span>}
@@ -192,18 +193,18 @@ export default function AccountSettings() {
         <h2 className="font-semibold">Change password</h2>
         <div className="space-y-1.5">
           <label htmlFor="current" className="block text-sm font-medium">Current password</label>
-          <input id="current" type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputClass} />
+          <input id="current" type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputClass} minLength={8}/>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="next" className="block text-sm font-medium">New password</label>
-          <input id="next" type="password" required autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputClass} />
+          <input id="next" type="password" required autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputClass} minLength={8}/>
           <p className="text-xs text-muted">At least 8 characters. Avoid common passwords.</p>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="confirm" className="block text-sm font-medium">Confirm new password</label>
-          <input id="confirm" type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
+          <input id="confirm" type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} minLength={8}/>
         </div>
-        {passwordError && <p className="text-sm text-red-400">{passwordError}</p>}
+        {passwordError && <p className="text-sm text-red-400 whitespace-pre-line">{passwordError}</p>}
         <div className="flex items-center gap-3">
           <button type="submit" className={saveClass} disabled={fetchingPassword}>Update password</button>
           {passwordMsg && <span className="text-sm text-accent">{passwordMsg}</span>}

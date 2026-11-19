@@ -204,6 +204,8 @@ REST_FRAMEWORK = {
     ),
 }
 
+# Password Reset
+PASSWORD_RESET_TIMEOUT = 1800
 
 # SIMPLE JWT Token TTL Settings
 SIMPLE_JWT = {

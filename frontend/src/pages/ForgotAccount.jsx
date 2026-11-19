@@ -36,9 +36,8 @@ export default function ForgotAccount() {
     })
     setSending(false)
 
-    if (result.response?.status === 404) return setError("Password/username reset isn't available.")
     if (result.isError) return setError(errorMessage(result.result))
-    // Same message whether or not the email has an account, so no one can use this to check emails
+    
     setSent(true)
   }
 
