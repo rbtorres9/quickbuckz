@@ -318,7 +318,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
           <div className="px-5 pt-3 text-sm leading-relaxed">
             <p
               ref={postTextRef}
-              className={`whitespace-pre-line break-words ${!full && !expanded ? `overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:${OVERFLOWING_LINE_COUNT}]` : ''}`}
+              className={`whitespace-pre-line break-words ${!full && !expanded ? `line-clamp-10` : ''}`}
             >
               {text}
             </p>

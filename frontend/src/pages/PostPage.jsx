@@ -43,7 +43,7 @@ function ExpandableComment({ content, deleted = false }) {
     <div>
       <p
         ref={textRef}
-        className={`mt-0.5 break-words whitespace-pre-line ${deleted ? 'line-through text-white/50' : ''} ${!expanded ? `overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:${OVERFLOWING_LINE_COUNT}]` : ''}`}
+        className={`mt-0.5 break-words whitespace-pre-line ${deleted ? 'line-through text-white/50' : ''} ${!expanded ? `line-clamp-10` : ''}`}
       >
         {content}
       </p>
