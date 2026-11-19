@@ -235,7 +235,7 @@ export default function AccountSettings() {
                 value={option.value}
                 checked={(userCache?.visibility ?? 'public') === option.value}
                 onChange={() => setVisibility(option.value)}
-                className="mt-1 accent-[#e6ff6b]"
+                className="mt-1 accent-accent"
               />
               <span>
                 <span className="block text-sm font-medium">{option.label}</span>

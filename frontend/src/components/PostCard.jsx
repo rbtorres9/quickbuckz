@@ -30,15 +30,19 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const isMod = useIsMod() // mods can delete anyone's post
   const [loadedAuthor, setLoadedAuthor] = useState(null)
   const [deleted, setDeleted] = useState(false) // hides the card after you delete it
-  const [ isLiked, setIsLiked ] = useState(post.is_liked)
+  const [ isLiked, setIsLiked] = useState(post.is_liked)
   const [ likesCount, setLikesCount ] = useState(post.likes_count)
   const likeBusy = useRef(false) // ignore extra clicks while a like is saving
   const [content, setContent] = useState(post.content) // changes after you edit the post
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [editError, setEditError] = useState('')
+  const [expanded, setExpanded] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const postTextRef = useRef(null)
 
   const handle = post.author
+  const OVERFLOWING_LINE_COUNT = 10 // How many lines it takes to add a 'Show more' button
 
   // Load the author's name and photo when the page didn't pass them in
   useEffect(() => {
@@ -53,6 +57,36 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   const authorName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || handle
   const avatar = user?.profile_picture
   const text = content
+  const shouldOfferToggle = !full && isOverflowing
+
+  useEffect(() => {
+    if (full || !text || !postTextRef.current) {
+      setIsOverflowing(false)
+      return
+    }
+
+    const element = postTextRef.current
+
+    const checkOverflow = () => {
+      const previousClamp = element.style.webkitLineClamp
+      element.style.webkitLineClamp = 'unset'
+      const lineHeight = parseFloat(getComputedStyle(element).lineHeight) || 20
+      const hasOverflow = element.scrollHeight > lineHeight * OVERFLOWING_LINE_COUNT
+      element.style.webkitLineClamp = previousClamp
+      setIsOverflowing(hasOverflow)
+    }
+
+    checkOverflow()
+    const observer = new ResizeObserver(checkOverflow)
+    observer.observe(element)
+    window.addEventListener('resize', checkOverflow)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', checkOverflow)
+    }
+  }, [text, full])
+
   const photoUrl = post.image
   const comments = post.comments_count
 
@@ -202,7 +236,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   )
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-line bg-card">
+    <article className="relative rounded-2xl border border-line bg-card">
       <div className="flex items-center gap-3 px-5 pt-4">
         <Link to={profileLink} className="shrink-0" tabIndex={-1} aria-hidden="true">
           <Avatar name={authorName} src={avatar} />
@@ -280,7 +314,26 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
           </div>
         </div>
       ) : (
-        text && <p className="whitespace-pre-line break-words px-5 pt-3 text-sm leading-relaxed">{text}</p>
+        text && (
+          <div className="px-5 pt-3 text-sm leading-relaxed">
+            <p
+              ref={postTextRef}
+              className={`whitespace-pre-line break-words ${!full && !expanded ? `overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:${OVERFLOWING_LINE_COUNT}]` : ''}`}
+            >
+              {text}
+            </p>
+            {shouldOfferToggle && isOverflowing && (
+              <button
+                type="button"
+                onClick={() => setExpanded((current) => !current)}
+                className="w-full h-8 border-1 border-accent rounded-md mt-1 text-sm font-semibold text-accent hover:text-accent-hover"
+                aria-expanded={expanded}
+              >
+                {expanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        )
       )}
       {photoUrl && (
         <button

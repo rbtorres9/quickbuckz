@@ -13,6 +13,54 @@ import { askRemovalMessage } from '../utils/removalMessage.js'
 import WakingUpNote from '../components/WakingUpNote.jsx'
 import { usePageTitle } from '../utils/usePageTitle.js'
 
+function ExpandableComment({ content, deleted = false }) {
+  const [expanded, setExpanded] = useState(false)
+  const [overflowing, setOverflowing] = useState(false)
+  const textRef = useRef(null)
+  const OVERFLOWING_LINE_COUNT = 10 // How many lines it takes to add a 'Show more' button
+
+  useEffect(() => {
+    const element = textRef.current
+    if (!element || expanded) return
+
+    const checkOverflow = () => {
+      const lineHeight = parseFloat(getComputedStyle(element).lineHeight) || 20
+      setOverflowing(element.scrollHeight > lineHeight * OVERFLOWING_LINE_COUNT + 1)
+    }
+
+    checkOverflow()
+    const observer = new ResizeObserver(checkOverflow)
+    observer.observe(element)
+    window.addEventListener('resize', checkOverflow)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', checkOverflow)
+    }
+  }, [content, expanded])
+
+  return (
+    <div>
+      <p
+        ref={textRef}
+        className={`mt-0.5 break-words whitespace-pre-line ${deleted ? 'line-through text-white/50' : ''} ${!expanded ? `overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:${OVERFLOWING_LINE_COUNT}]` : ''}`}
+      >
+        {content}
+      </p>
+      {overflowing && (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="w-full h-8 border-1 border-accent rounded-md mt-1 text-sm font-semibold text-accent hover:text-accent-hover"
+          aria-expanded={expanded}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function PostPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -50,7 +98,6 @@ export default function PostPage() {
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [openMenu])
-
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -176,6 +223,9 @@ export default function PostPage() {
     setCommentCount((count) => count - 1)
   }
 
+  const MAX_CHARS = 500
+  const remaining = MAX_CHARS - text.length
+
   async function handleSubmit(e) {
     e.preventDefault()
     const trimmed = text.trim()
@@ -185,7 +235,7 @@ export default function PostPage() {
     const result = await fetchWithToken(`/api/posts/${post.id}/comment/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: trimmed.slice(0, 500) }),
+      body: JSON.stringify({ content: trimmed.slice(0, MAX_CHARS) }),
     })
     setSubmitting(false)
 
@@ -226,21 +276,26 @@ export default function PostPage() {
                 Comments <span className="text-muted">({commentCount})</span>
               </h2>
 
-              <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
-                <input
+              <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap gap-2">
+                <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  maxLength={500}
                   placeholder="Add a comment…"
                   aria-label="Add a comment"
-                  className="min-w-0 flex-1 rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+                  className="min-w-0 min-h-10 w-full rounded-lg border border-line bg-field px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+                  maxLength={MAX_CHARS}
+                  rows={3}
+                  autoFocus
                 />
-                <button type="submit"
-                  disabled={submitting}
-                  className="rounded-lg bg-accent px-4 text-sm font-semibold text-page hover:bg-accent-hover disabled:opacity-50"
-                >
-                  Post
-                </button>
+                <div className='flex items-center gap-2'>
+                  <button type="submit"
+                    disabled={submitting}
+                    className="h-8 w-20 rounded-lg bg-accent px-4 text-sm font-semibold text-page hover:bg-accent-hover disabled:opacity-50"
+                  >
+                    Post
+                  </button>
+                  <span className={`text-xs ${remaining < 50 ? 'text-red-400' : 'text-muted'}`}>{remaining}</span>
+                </div>
               </form>
 
               <ul className="mt-4 divide-y divide-line">
@@ -255,7 +310,10 @@ export default function PostPage() {
                           <b>{getName(comment.author)}</b> <span className="text-muted">@{comment.author.username} · {getTimeAgoString(comment.created_at)}</span>
                           </div>
                           {/* React escapes this text automatically, so comments can't inject HTML */}
-                          <p className={`mt-0.5 break-words ${getState(comment) === STATE_DELETED ? 'line-through text-white/50' : ''}`}>{comment.content}</p>
+                          <ExpandableComment
+                            content={comment.content}
+                            deleted={getState(comment) === STATE_DELETED}
+                          />
                       </div>
 
                       <div className="flex shrink-0 items-start gap-2">
