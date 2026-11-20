@@ -9,7 +9,7 @@ import WakingUpNote from '../components/WakingUpNote.jsx'
 import { usePageTitle } from '../utils/usePageTitle.js'
 
 // People you've blocked, with an Unblock button. Opened from Settings > Privacy.
-// TODO (backend): GET /api/profile/me/blocked/ (list of profiles) and DELETE /api/profile/<username>/block/
+// Uses GET /api/profile/me/blocks/ (list) and DELETE /api/profile/<username>/block/ (unblock)
 export default function BlockedUsers() {
   usePageTitle('Blocked users')
   const { fetchWithToken } = useAuthContext()
@@ -19,7 +19,7 @@ export default function BlockedUsers() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchWithToken('/api/profile/me/blocked/').then((result) => {
+    fetchWithToken('/api/profile/me/blocks/').then((result) => {
       setLoading(false)
       if (result.isError) return setError(errorMessage(result.result))
       setPeople(result.result.results ?? result.result)
