@@ -13,7 +13,7 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import get_user_model
 User = get_user_model()
-from .models import Profile, Follow, FollowRequest
+from .models import Profile, Follow, FollowRequest, Block
 from .permissions import IsModerator
 
 from django.db import transaction
@@ -40,7 +40,8 @@ from .serializers import (
     ForgotPasswordVerifyTokenSerializer,
     ForgotPasswordConfirmSerializer,
     ChangeEmailSerializer,
-    ChangePasswordSerializer
+    ChangePasswordSerializer,
+    BlockSerializer
     )
 
 
@@ -50,9 +51,33 @@ from django.shortcuts import get_object_or_404
 def active_profiles():
     return Profile.objects.select_related("user").filter(user__is_active=True)
 
+# True if either user has blocked the other. Strict check: no mod exception.
+def blocks_between(a, b):
+    if not a.is_authenticated:
+        return False
+    return Block.objects.filter(Q(blocker=a, blocked=b) | Q(blocker=b, blocked=a)).exists()
+
+# Users hidden from the viewer by a block, as a subquery for `__in` filters
+def hidden_user_ids(viewer):
+    if not viewer.is_authenticated:
+        return User.objects.none().values("pk")
+    qs = User.objects.filter(
+        Q(blocks_made__blocked=viewer)          # they blocked the viewer
+        | Q(blocks_received__blocker=viewer)    # the viewer blocked them
+    )
+    if viewer.is_mod:
+        # mods can still see a user who has open reports against them
+        qs = qs.exclude(reports_against__status="open")
+    return qs.values("pk")
+
+# active profiles minus anyone hidden by a block
+def unblocked_profiles(viewer):
+    return active_profiles().exclude(user__in=hidden_user_ids(viewer))
+
+
 # PRIVATE PROFILES: followers can see 
 def visible_profiles(user):
-    profiles = active_profiles()
+    profiles = unblocked_profiles(user) # fron active_profiles -> unblocked_profiles
 
     if user.is_authenticated:
         followed_ids = Follow.objects.filter(follower=user).values("following")
@@ -95,7 +120,7 @@ class ProfileListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return active_profiles()
+        return unblocked_profiles(self.request.user) # from active_profiles -> unblocked_profiles
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
@@ -113,7 +138,7 @@ class ProfileByUsernameView(generics.RetrieveAPIView):
     def get_object(self):
         viewer = self.request.user
         username = self.kwargs["username"].strip().lower()
-        qs = with_follow_flags(active_profiles(), viewer)
+        qs = with_follow_flags(unblocked_profiles(viewer), viewer)  # blocked -> 404, not locked
         profile = get_object_or_404(qs, user__username=username)
         self.can_view = visible_profiles(viewer).filter(pk=profile.pk).exists()
         return profile
@@ -141,8 +166,12 @@ class FollowView(APIView):
     def post(self, request, username):
         profile = get_object_or_404(active_profiles(), user__username=username.strip().lower())
         target = profile.user
+        # cannot follow yourself
         if target == request.user:
             return Response({"detail": "You can't follow yourself."}, status=400)
+        # cannot follow user that you have blocked or blocked you (shows as 404)
+        if blocks_between(request.user, target):
+            return Response({"detail": "Not found."}, status=404)
         if Follow.objects.filter(follower=request.user, following=target).exists():
             return self._state(request.user, target)
         if profile.visibility == Profile.Visibility.PRIVATE:
@@ -182,7 +211,7 @@ class FollowListView(generics.ListAPIView):
         else:
             links, other_side = Follow.objects.filter(following=target), "follower"
 
-        qs = (active_profiles()
+        qs = (unblocked_profiles(viewer)
               .filter(user__in=links.values(other_side))
               .annotate(followed_at=Subquery(
                   links.filter(**{other_side: OuterRef("user")}).values("created_at")[:1]))
@@ -287,6 +316,7 @@ class UserRoleView(APIView):
     def get(self, request):
         return Response(status=204)
 
+# --- Forgot Credentials ---
 
 class ForgotUsernameView(generics.GenericAPIView):
     serializer_class = ForgotSerializer
@@ -456,3 +486,37 @@ class ChangePasswordView(generics.UpdateAPIView):
             raise ValidationError({"detail": "Cannot set new password to the same one"})
             
         serializer.save()
+
+
+# --- Blocking ---
+
+
+class BlockView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, username):
+        target = get_object_or_404(User, username=username.strip().lower(), is_active=True)
+        if target == request.user:
+            return Response({"detail": "You can't block yourself."}, status=400)
+        with transaction.atomic():
+            _, created = Block.objects.get_or_create(blocker=request.user, blocked=target)
+            Follow.objects.filter(
+                Q(follower=request.user, following=target) | Q(follower=target, following=request.user)
+            ).delete()
+            FollowRequest.objects.filter(
+                Q(requester=request.user, target=target) | Q(requester=target, target=request.user)
+            ).delete()
+        return Response({"is_blocked": True}, status=201 if created else 200)
+
+    def delete(self, request, username):
+        target = get_object_or_404(User, username=username.strip().lower())
+        Block.objects.filter(blocker=request.user, blocked=target).delete()
+        return Response({"is_blocked": False}, status=200)
+
+# People the current user blocked
+class BlockListView(generics.ListAPIView):
+    serializer_class = BlockSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Block.objects.filter(blocker=self.request.user).select_related("blocked__profile")

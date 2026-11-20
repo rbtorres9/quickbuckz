@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import AccountSecurity, Profile, User, Follow
+from .models import AccountSecurity, Profile, User, Follow, Block
 
 #the following classes are used for editing user accounts as an admin
 class ProfileInline(admin.StackedInline):
@@ -43,3 +43,7 @@ class FollowAdmin(admin.ModelAdmin):
     list_select_related = ["follower", "following"]
 
 
+@admin.register(Block)
+class BlockAdmin(admin.ModelAdmin):
+    list_display = ("blocker", "blocked", "created_at")
+    search_fields = ("blocker__username", "blocked__username")

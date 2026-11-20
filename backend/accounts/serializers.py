@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Profile, Follow, FollowRequest
+from .models import Profile, Follow, FollowRequest, Block
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -269,3 +269,14 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         new_password = validated_data.pop('new_password')
         instance.set_password(new_password)
         return super().update(instance, validated_data)
+
+# /api/profile/me/blocks/
+class BlockSerializer(serializers.ModelSerializer):
+    username = serializers.ReadOnlyField(source='blocked.username')
+    first_name = serializers.ReadOnlyField(source='blocked.first_name')
+    last_name = serializers.ReadOnlyField(source='blocked.last_name')
+    profile_picture = serializers.ImageField(source='blocked.profile.profile_picture', read_only=True)
+
+    class Meta:
+        model = Block
+        fields = ['id', 'username', 'first_name', 'last_name', 'profile_picture', 'created_at']

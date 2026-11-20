@@ -29,6 +29,8 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)*0ojj#i!sy^w
 DEBUG = env.bool('DEBUG', default=False)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Application definition
 
@@ -95,7 +97,7 @@ if not USE_SQLITE and env('DATABASE_HOST', default=None):
             'PASSWORD': env('DATABASE_PASS'),
             'HOST': env('DATABASE_HOST'),
             'PORT': env('DATABASE_PORT'),
-            'OPTIONS': {'sslmode': 'require', 'channel_binding': 'require'},
+            'OPTIONS': {'sslmode': env('DATABASE_SSLMODE', default='require')},
         }
     }
 

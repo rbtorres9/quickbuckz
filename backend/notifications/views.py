@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from accounts.models import Follow, FollowRequest
+from accounts.views import hidden_user_ids
 from .models import Notification
 from .serializers import NotificationSerializer
 
@@ -13,7 +14,7 @@ class NotificationListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return (Notification.objects.filter(recipient=user)
+        return (Notification.objects.filter(recipient=user).exclude(actor__in=hidden_user_ids(user))
                 .select_related("actor__profile", "post", "comment")
                 .annotate(is_following_actor=Exists(
                     Follow.objects.filter(follower=user, following=OuterRef("actor_id"))),
@@ -44,4 +45,6 @@ class UnreadCountView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({"unread": request.user.notifications.filter(read=False).count()})
+        unread = (request.user.notifications.filter(read=False)
+                  .exclude(actor__in=hidden_user_ids(request.user)))
+        return Response({"unread": unread.count()})

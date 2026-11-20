@@ -166,3 +166,18 @@ class FollowRequest(models.Model):
 
 
 
+# Hides both users from each other.
+class Block(models.Model):
+    blocker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="blocks_made")
+    blocked = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="blocks_received")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["blocker", "blocked"], name="unique_block"),
+            models.CheckConstraint(condition=~models.Q(blocker=models.F("blocked")), name="no_self_block"),
+        ]
+
+    def __str__(self):
+        return f"{self.blocker.username} blocked {self.blocked.username}"

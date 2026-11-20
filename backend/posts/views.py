@@ -13,7 +13,7 @@ from rest_framework.permissions import (
     IsAuthenticated,
 )
 from accounts.permissions import IsAuthorOrModerator
-from accounts.views import visible_profiles
+from accounts.views import visible_profiles, hidden_user_ids, blocks_between
 
 from moderation.services import delete_content, is_mod_action, with_author_status, can_moderate_user
 
@@ -83,8 +83,9 @@ class PostViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             qs = qs.prefetch_related(
                 Prefetch("comments", queryset=with_author_status(
-                    Comment.objects.select_related("author__profile")))
-            )
+                    Comment.objects.select_related("author__profile")
+                    .exclude(author__in=hidden_user_ids(viewer))))
+            ) # includes hidden_user_ids for their comments to not appear to the current user
         
         return with_like_flag(qs, viewer)
  
@@ -100,9 +101,13 @@ class PostViewSet(viewsets.ModelViewSet):
 
         status_code = 200
         if request.method == "POST":
+            if blocks_between(request.user, post.author):
+                return Response({"detail": "You can't interact with this account."}, status=403)
+
             _, created = Like.objects.get_or_create(user=request.user, post=post)
             if created:
                 status_code = 201
+
         else:
             Like.objects.filter(user=request.user, post=post).delete()
         return Response({
@@ -116,8 +121,8 @@ class PostViewSet(viewsets.ModelViewSet):
         context = self.get_serializer_context()  # lets avatars become full URLs
  
         if request.method == "GET":
-            comments = with_author_status(post.comments.select_related("author__profile"))  # DEACTIVATED CONTENT
-                        
+            comments = with_author_status(post.comments.select_related("author__profile")
+                                          .exclude(author__in=hidden_user_ids(request.user)))  # DEACTIVATED CONTENT
             serializer = CommentSerializer(comments, many=True, context=context)
             return Response(serializer.data)
 
@@ -142,6 +147,9 @@ class PostViewSet(viewsets.ModelViewSet):
             message = mod_removal_message(request, comment.author) # pass the mod's message
             delete_content(comment, request.user, message=message)  # MOD LOG
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if blocks_between(request.user, post.author):
+            return Response({"detail": "You can't interact with this account."}, status=403)
 
         serializer = CommentSerializer(data=request.data, context=context)
         serializer.is_valid(raise_exception=True)
