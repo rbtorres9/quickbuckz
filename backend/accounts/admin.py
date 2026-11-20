@@ -12,6 +12,8 @@ class ProfileInline(admin.StackedInline):
 class SecurityInline(admin.StackedInline):
     model = AccountSecurity
     can_delete = False
+    readonly_fields = ["self_deactivated_at", "self_reactivated_at", "self_deactivation_count"]
+
 
 #the following class is used to customize Django admin pages, has ui elements that allows for the search
 #of counts using methods such as username and email look up
@@ -22,9 +24,14 @@ class CustomUserAdmin(UserAdmin):
         (None, {"fields": ("email",)}),
     )
 
-    fieldsets = UserAdmin.fieldsets + (("Role", {"fields": ("role",)}),)
-    list_display = ("username", "email", "role", "is_staff", "is_active")
-    list_filter = UserAdmin.list_filter + ("role",)
+    fieldsets = UserAdmin.fieldsets + (
+        ("Role", {"fields": ("role",)}),
+        ("Deactivation", {"fields": ("deactivation_type", "deactivated_at")}),
+    )
+    readonly_fields = ("deactivation_type", "deactivated_at")
+    list_display = ("username", "email", "role", "is_staff", "is_active", "deactivation_type")
+    list_filter = UserAdmin.list_filter + ("role", "deactivation_type")
+
 
     search_fields = ("username", "email")
 

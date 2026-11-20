@@ -270,6 +270,11 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         instance.set_password(new_password)
         return super().update(instance, validated_data)
 
+
+class SelfDeactivateSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)
+
+
 # /api/profile/me/blocks/
 class BlockSerializer(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='blocked.username')

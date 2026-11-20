@@ -20,6 +20,7 @@ from .views import (
     ChangePasswordView,
     BlockView,
     BlockListView,
+    SelfDeactivateView,
 )
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -48,4 +49,6 @@ urlpatterns = [
     path('profile/me/change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('profile/me/blocks/', BlockListView.as_view(), name='block-list'),
     path('profile/<str:username>/block/', BlockView.as_view(), name='block'),
+    path('profile/me/deactivate/', SelfDeactivateView.as_view(), name='self-deactivate'),
+
 ]

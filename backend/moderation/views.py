@@ -184,6 +184,8 @@ class UserStatusView(APIView):
         return Response({
             "username": target.username,
             "is_deactivated": target.is_deactivated,
+            "deactivation_type": ("self" if target.is_self_deactivated
+                                  else "ban" if target.is_banned else None),
             "history": DeactivationLogSerializer(history, many=True).data,
         })
 
@@ -206,7 +208,7 @@ class UserBanView(APIView):
     def delete(self, request, username):
         target = get_moderatable_user(request, username)
         if not reactivate_user(target, request.user):
-            return Response({"detail": "This account isn't deactivated."},
+            return Response({"detail": "This account isn't banned."},
                             status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -219,6 +221,7 @@ class BanListView(APIView):
         deactivations = Q(moderation_received__action=ModerationLog.Action.DEACTIVATE)
         qs = (
             User.objects.filter(is_active=False)
+            .exclude(deactivation_type=User.DeactivationType.SELF)
             .annotate(
                 deactivation_count=Count("moderation_received", filter=deactivations),
                 last_deactivated=Max("moderation_received__created_at", filter=deactivations),

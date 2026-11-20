@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from posts.models import Post, Comment
+
 from .forms import ReportAdminForm, ReportReviewForm
 from .models import BanListUser, ModerationLog, Report
 from .services import (
@@ -27,6 +28,7 @@ class BanListAdmin(admin.ModelAdmin):
         return (
             self.model._default_manager.get_queryset()
             .filter(is_active=False)
+            .exclude(deactivation_type=BanListUser.DeactivationType.SELF)
             .annotate(
                 deactivation_count=Count("moderation_received", filter=deactivations),
                 last_deactivated=Max("moderation_received__created_at", filter=deactivations),
@@ -56,6 +58,7 @@ class BanListAdmin(admin.ModelAdmin):
     @admin.display(description="Deactivated at", ordering="last_deactivated")
     def last_deactivated(self, obj):
         return obj.last_deactivated or "-"
+
 
     @admin.display(description="")
     def manage(self, obj):
@@ -197,3 +200,4 @@ class ModerationLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+

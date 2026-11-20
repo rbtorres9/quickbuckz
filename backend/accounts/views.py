@@ -15,6 +15,8 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 from .models import Profile, Follow, FollowRequest, Block
 from .permissions import IsModerator
+from .services import self_deactivate
+
 
 from django.db import transaction
 from django.db.models import (
@@ -41,7 +43,8 @@ from .serializers import (
     ForgotPasswordConfirmSerializer,
     ChangeEmailSerializer,
     ChangePasswordSerializer,
-    BlockSerializer
+    BlockSerializer,
+    SelfDeactivateSerializer,
     )
 
 
@@ -486,6 +489,26 @@ class ChangePasswordView(generics.UpdateAPIView):
             raise ValidationError({"detail": "Cannot set new password to the same one"})
             
         serializer.save()
+
+
+# -- Self deactivation ---
+
+# POST /api/profile/me/deactivate/  body {"password": "..."}. Logging in again reactivates.
+class SelfDeactivateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SelfDeactivateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not request.user.check_password(serializer.validated_data["password"]):
+            raise ValidationError({"password": ["Incorrect password."]})
+        try:
+            self_deactivate(request.user)
+        except ValueError as e:
+            raise ValidationError({"detail": str(e)})
+        return Response({"detail": "Your account has been deactivated. Log in again to reactivate it."},
+                        status=status.HTTP_200_OK)
+
 
 
 # --- Blocking ---

@@ -2,6 +2,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.db.models import Q
 
+from .services import self_reactivate
+
+
 #the following code is used for backend authentication
 
 #looks up user via matching login value against the username field, if its correct login succeeds, else it loops back until a valid username and password is entered
@@ -21,7 +24,11 @@ class EmailOrUsernameBackend(ModelBackend):
             User().set_password(password)  # keeps timing similar for misses
             return None
 
-        if user.check_password(password) and self.user_can_authenticate(user):
+        if not user.check_password(password):
+            return None
+        # self-deactivated accounts come back by logging in; banned ones stay locked out
+        if user.is_self_deactivated:
+            self_reactivate(user)
+        if self.user_can_authenticate(user):
             return user
         return None
-

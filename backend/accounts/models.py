@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 from .validators import *
 
@@ -49,6 +50,16 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.USER, db_index=True)
 
+    deactivated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    class DeactivationType(models.TextChoices):
+        BAN = "ban", "Banned by moderator"
+        SELF = "self", "Deactivated by user"
+
+    deactivation_type = models.CharField(
+        max_length=10, choices=DeactivationType.choices, blank=True, default="", db_index=True,
+    )
+
+
     #checks if user is admin
     @property
     def is_admin(self):
@@ -63,6 +74,16 @@ class User(AbstractUser):
     @property
     def is_deactivated(self):
         return not self.is_active
+
+    @property
+    def is_self_deactivated(self):
+        return not self.is_active and self.deactivation_type == self.DeactivationType.SELF
+
+    # Anything inactive that isn't self-deactivated counts as a ban (incl. old rows with no type)
+    @property
+    def is_banned(self):
+        return not self.is_active and self.deactivation_type != self.DeactivationType.SELF
+
 
     #enforces case insensitive uniqueness to usernames and emails
     class Meta:
@@ -85,6 +106,26 @@ class User(AbstractUser):
             self.role = self.Role.ADMIN
         if self.email:
             self.email = self.email.strip().lower()
+        # Keep deactivated_at in step with is_active when it changes through save()
+        # (e.g. the admin "Active" checkbox). deactivate_user()/reactivate_user() use
+        # .update() and set the field themselves.
+        update_fields = kwargs.get("update_fields")
+        if self.pk and (update_fields is None or "is_active" in update_fields):
+            was_active = (User.objects.filter(pk=self.pk)
+                          .values_list("is_active", flat=True).first())
+            if was_active is not None and was_active != self.is_active:
+                # >>> SELF-DEACTIVATE >>>
+                if self.is_active:
+                    self.deactivated_at = None
+                    self.deactivation_type = ""
+                else:
+                    self.deactivated_at = timezone.now()
+                    # the admin "Active" checkbox is a mod action, so it counts as a ban
+                    self.deactivation_type = self.deactivation_type or self.DeactivationType.BAN
+                if update_fields is not None:
+                    kwargs["update_fields"] = {*update_fields, "deactivated_at", "deactivation_type"}
+                # <<< SELF-DEACTIVATE <<<
+        
         super().save(*args, **kwargs)
 
 
@@ -125,7 +166,9 @@ class Profile(models.Model):
 
 #stores user account data that is secure and only accessible to account owners and admins
 class AccountSecurity(models.Model):
-    """Private, owner/admin-only data. Intentionally empty for now."""
+    self_deactivated_at = models.DateTimeField(null=True, blank=True)
+    self_reactivated_at = models.DateTimeField(null=True, blank=True)
+    self_deactivation_count = models.PositiveIntegerField(default=0)
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="security"
@@ -181,3 +224,4 @@ class Block(models.Model):
 
     def __str__(self):
         return f"{self.blocker.username} blocked {self.blocked.username}"
+

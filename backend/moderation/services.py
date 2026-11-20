@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import transaction
 from django.db.models import BooleanField, ExpressionWrapper, Q
 
@@ -122,10 +123,16 @@ def dismiss_reports(report, user, source=ModerationLog.Source.APP):
 # Deactivate the account, close all open reports on it, and log it.
 def deactivate_user(target, moderator, *, reason, source=ModerationLog.Source.APP):
     with transaction.atomic():
-        updated = User.objects.filter(pk=target.pk, is_active=True).update(is_active=False)
+        now = timezone.now()
+        # only active accounts can be banned; self-deactivated ones must log back in first
+        updated = (User.objects.filter(pk=target.pk, is_active=True)
+                   .update(is_active=False, deactivated_at=now,
+                           deactivation_type=User.DeactivationType.BAN))
         if not updated:
             raise ValueError("This account is already deactivated.")
         target.is_active = False
+        target.deactivated_at = now
+        target.deactivation_type = User.DeactivationType.BAN
         return resolve_reports(
             Report.objects.filter(target_author=target),
             action=ModerationLog.Action.DEACTIVATE,
@@ -140,9 +147,14 @@ def deactivate_user(target, moderator, *, reason, source=ModerationLog.Source.AP
 # Reactivate the account and log it. Returns False if it was already active.
 def reactivate_user(target, moderator, *, source=ModerationLog.Source.APP):
     with transaction.atomic():
-        updated = User.objects.filter(pk=target.pk, is_active=False).update(is_active=True)
+        # mods only lift bans; self-deactivated users come back by logging in
+        updated = (User.objects.filter(pk=target.pk, is_active=False)
+                   .exclude(deactivation_type=User.DeactivationType.SELF)
+                   .update(is_active=True, deactivated_at=None, deactivation_type=""))
         if updated:
             target.is_active = True
+            target.deactivated_at = None
+            target.deactivation_type = ""
             ModerationLog.objects.create(
                 moderator=moderator,
                 action=ModerationLog.Action.REACTIVATE,
@@ -225,3 +237,4 @@ def remove_profile_content(target, moderator, *, items, message, source=Moderati
         for storage, file_name in old_files:
             transaction.on_commit(lambda s=storage, n=file_name: s.delete(n))
     return removed
+
