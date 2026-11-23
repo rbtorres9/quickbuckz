@@ -2,23 +2,13 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { useCache } from '../context/CacheContext.jsx'
 import { themeVars } from './themes.js'
 
-// Settings the backend doesn't store yet, kept in this browser for now.
-// TODO: move both to the backend once it has a theme field.
-// Everything else (posts, follows, notifications, profiles, reports) comes from the backend.
-
 const StoreContext = createContext(null)
 
 export function StoreProvider({ children }) {
-  // Your profile theme (picked in Create account / Edit profile). Remembered on this device.
-  const [profile, setProfile] = useState({ theme: localStorage.getItem('profileTheme') || 'classic' })
   const { userCache } = useCache()
 
-  const updateProfile = (changes) => {
-    if (changes.theme) localStorage.setItem('profileTheme', changes.theme)
-    setProfile((current) => ({ ...current, ...changes }))
-  }
-
-  // How the site looks to you (Settings). Recolors the whole site. Remembered on this device.
+  // Your theme colors the whole site for you, and your profile for everyone.
+  // A copy is kept in localStorage so the right color shows before the profile loads.
   const [siteTheme, setSiteTheme] = useState(() => localStorage.getItem('siteTheme') || 'classic')
   useEffect(() => {
     localStorage.setItem('siteTheme', siteTheme)
@@ -27,14 +17,13 @@ export function StoreProvider({ children }) {
     }
   }, [siteTheme])
 
+  // Follow the saved theme. Signed out (no userCache) goes back to the default.
   useEffect(() => {
-    if (userCache?.site_theme)
-      setSiteTheme(userCache.site_theme)
-
-  }, [userCache])
+    setSiteTheme(userCache?.theme ?? 'classic')
+  }, [userCache?.theme])
 
   return (
-    <StoreContext.Provider value={{ profile, updateProfile, siteTheme, setSiteTheme }}>
+    <StoreContext.Provider value={{ siteTheme, setSiteTheme }}>
       {children}
     </StoreContext.Provider>
   )

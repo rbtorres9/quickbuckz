@@ -4,7 +4,6 @@ import { useCache } from '../context/CacheContext.jsx'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import Avatar from './Avatar.jsx'
 import ThemePicker from './ThemePicker.jsx'
-import { useStore } from '../data/store.jsx'
 import { getTheme, themeVars } from '../data/themes.js'
 import { errorMessage } from '../utils/errorMessage.js'
 
@@ -16,7 +15,6 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 export default function EditProfileModal({ onClose }) {
   const { userCache, setUserCache } = useCache()
   const { fetchWithToken } = useAuthContext()
-  const { profile, updateProfile } = useStore()
   const [firstName, setFirstName] = useState(userCache?.first_name ?? '')
   const [lastName, setLastName] = useState(userCache?.last_name ?? '')
 
@@ -32,7 +30,7 @@ export default function EditProfileModal({ onClose }) {
   const [rightPictureUrl, setRightPictureUrl] = useState(userCache?.right_picture)
   const [selectedRightPicture, setSelectedRightPicture] = useState(null)
 
-  // Profile theme. Saved on this device for now: the backend has no theme field yet.
+  // Your theme: profile and site colors, saved with the rest of the profile  
   const [theme, setTheme] = useState(userCache?.theme ?? 'classic')
   const [flipLeft, setFlipLeft] = useState(userCache?.left_picture_flip ?? false)
   const [tileLeft, setTileLeft] = useState(userCache?.left_picture_tile ?? false)
@@ -141,7 +139,8 @@ export default function EditProfileModal({ onClose }) {
     if (!result.isError) {
       // Use what the server sent back, so photos point at their saved addresses
       setUserCache({ ...userCache, ...data })
-      updateProfile({ theme }) // TODO: send the theme too, once the backend has a theme field
+      // keep the stored copy current (same as AccountSettings) 
+      localStorage.setItem('user', JSON.stringify({ ...userCache, ...data }))
       freeUnused([])
       // The backend ignores names until first_name/last_name are writable there (see README).
       // If they didn't change, say so instead of closing like it worked.

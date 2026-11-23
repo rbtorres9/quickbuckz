@@ -3,12 +3,14 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { AuthContext } from '../context/AuthContext'
 
 const ProtectedRoute = ({ children }) => {
-    const { accessToken } = useContext(AuthContext)
+    const { accessToken, loggedOutByUser } = useContext(AuthContext)
     const location = useLocation()
 
     if (!accessToken) {
-        // Remember where they were going (like a shared post) so login can send them back
-        return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
+        // Pressed Log out: no "from", so login goes to /user-page.
+        // Otherwise remember where they were going (like a shared post) so login can send them back.
+        const state = loggedOutByUser.current ? undefined : { from: location.pathname + location.search }
+        return <Navigate to="/login" replace state={state} />
     }
 
     return children

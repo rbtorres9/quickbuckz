@@ -43,7 +43,6 @@ class PublicProfileSerializer(serializers.ModelSerializer):
                 'following_count',
                 'created_at',
                 'theme',
-                'site_theme',
                 'background_picture',
                 ]
         read_only_fields = fields
@@ -76,6 +75,14 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
     def validate_right_picture(self, value):
         return self._validate_image(value)
 
+    # only accept theme ids from frontend/src/data/themes.js
+    THEME_IDS = {'classic', 'aurora', 'sunset', 'glacier', 'midnight'}
+
+    def validate_theme(self, value):
+        if value not in self.THEME_IDS:
+            raise serializers.ValidationError("Unknown theme.")
+        return value
+
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
         if user_data:
@@ -102,7 +109,6 @@ class OwnerProfileSerializer(serializers.ModelSerializer):
             'following_count',
             'created_at',
             'theme',
-            'site_theme',
             'right_picture',
             'right_picture_flip',
             'right_picture_tile',

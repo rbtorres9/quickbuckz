@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef} from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, MoreHorizontal } from 'lucide-react'
 import { useCache } from '../context/CacheContext.jsx'
 import { useIsMod } from '../utils/useIsMod.js'
@@ -87,11 +87,11 @@ export default function PostPage() {
   const [ comments, setComments ] = useState([])
   const [ commentStates, setCommentStates ] = useState({})
   const [ commentCount, setCommentCount ] = useState(comments.length)
-  // which comment's ⋯ menu is open
+  // which comment's ... menu is open
   const [ openMenu, setOpenMenu ] = useState(null) // comment id, or null when closed
   const menuRef = useRef(null)
 
-  // Close the ⋯ menu when clicking anywhere else
+  // Close the ... menu when clicking anywhere else
   useEffect(() => {
     if (openMenu === null) return
     const close = (e) => { if (!menuRef.current?.contains(e.target)) setOpenMenu(null) }
@@ -251,6 +251,10 @@ export default function PostPage() {
 
   const ownsPost = post?.author === userCache?.username
 
+  // where a commenter's name/photo links to (same rule as PostCard)
+  const profileLinkFor = (username) =>
+    username === userCache?.username ? '/user-page' : `/user/${username}`
+
   return (
     <>
       <main className="mx-auto max-w-2xl px-4 pb-24">
@@ -304,11 +308,16 @@ export default function PostPage() {
                 )}
                 {comments.map((comment) => (
                   <li key={comment.id}  className="flex gap-3 py-3">
-                      <Avatar name={getName(comment.author)} size="sm" accent={false} src={comment.author.profile_picture} />
+                      {/* photo and name link to the commenter's profile */}
+                      <Link to={profileLinkFor(comment.author.username)} className="shrink-0" tabIndex={-1} aria-hidden="true">
+                        <Avatar name={getName(comment.author)} size="sm" accent={false} src={comment.author.profile_picture} />
+                      </Link>
                       <div className="min-w-0 flex-1 text-sm">{/* min-w-0 lets long words wrap on phones */}
                           <div>
-                          <b>{getName(comment.author)}</b> <span className="text-muted">@{comment.author.username} · {getTimeAgoString(comment.created_at)}</span>
+                            <Link to={profileLinkFor(comment.author.username)} className="font-bold hover:underline">{getName(comment.author)}</Link>{' '}
+                            <span className="text-muted">@{comment.author.username} · {getTimeAgoString(comment.created_at)}</span>
                           </div>
+
                           {/* React escapes this text automatically, so comments can't inject HTML */}
                           <ExpandableComment
                             content={comment.content}

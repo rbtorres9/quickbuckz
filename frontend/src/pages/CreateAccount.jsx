@@ -32,7 +32,7 @@ export default function CreateAccount() {
   const [theme, setTheme] = useState('classic')
   const navigate = useNavigate()
   const location = useLocation() // may carry a shared link to go back to
-  const { accessToken, login } = useContext(AuthContext)
+  const { accessToken, login, fetchWithToken } = useContext(AuthContext)
   const { refreshUserCache } = useCache()
   const { updateProfile } = useStore()
   const { fetchBaseUrl } = useApiContext()
@@ -109,8 +109,13 @@ export default function CreateAccount() {
 
       justSignedUp.current = true
       login(tokens.access, tokens.refresh)
+      // save the picked theme on the profile
+      await fetchWithToken('/api/profile/me/', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme }),
+      }, tokens.access)
       await refreshUserCache(tokens.access)
-      updateProfile({ theme }) // TODO: send the theme to the backend once the profile has a theme field
       navigate(afterLoginPath(location), { replace: true }) // back to a shared post, or your profile
     } catch (err) {
       setError(errorMessage(err));

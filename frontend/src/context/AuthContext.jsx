@@ -1,4 +1,4 @@
-import React, {useContext, createContext, useState} from 'react'
+import React, {useContext, createContext, useState, useRef} from 'react'
 
 // easy api url reference
 import { useApiContext } from './ApiContext.jsx'
@@ -10,6 +10,10 @@ export const AuthContext = createContext(null)
 export const AuthProvider = ({children}) => {
     const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access_token'))
     const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh_token')) // might be unused state
+
+    // True after the user presses Log out, so ProtectedRoute doesn't
+    // remember the page they left (login then goes to /user-page)
+    const loggedOutByUser = useRef(false)
 
     const { fetchBaseUrl } = useApiContext()
 
@@ -62,12 +66,16 @@ export const AuthProvider = ({children}) => {
         return null
     }
     const login = (access, refresh) => {
+        loggedOutByUser.current = false
         localStorage.setItem('access_token', access)
         localStorage.setItem('refresh_token', refresh)
         setAccessToken((_) => access)
         setRefreshToken((_) => refresh) // might be unused state
     }
-    const logout = () => {
+    // byUser: true for the Log out button. Left false when a session expires,
+    // so login can still send you back to where you were.
+    const logout = (byUser = false) => {
+        loggedOutByUser.current = byUser
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         setAccessToken((_) => null)
@@ -128,7 +136,7 @@ export const AuthProvider = ({children}) => {
     }
 
     return (
-    <AuthContext.Provider value={{ accessToken, login, logout, refresh, fetchWithToken, fetchPosts, fetchUserProfile, fetchUserPosts, fetchPostById }}>
+    <AuthContext.Provider value={{ accessToken, login, logout, loggedOutByUser, refresh, fetchWithToken, fetchPosts, fetchUserProfile, fetchUserPosts, fetchPostById }}>
         { children }
     </AuthContext.Provider>
     )

@@ -47,20 +47,20 @@ export default function AccountSettings() {
   async function updateSiteTheme(newTheme) {
     const old = userCache
     setSiteTheme(newTheme)
-    setUserCache({...userCache, site_theme: newTheme})
+    setUserCache({...userCache, theme: newTheme})
     setThemeMsg('Saving…')
 
     const result = await fetchWithToken('/api/profile/me/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({site_theme: newTheme})
+      body: JSON.stringify({ theme: newTheme })
     })
 
     const data = result.result
 
     if (result.isError) {
       setUserCache(old)
-      setSiteTheme(old.site_theme)
+      setSiteTheme(old?.theme ?? 'classic')
       return setThemeMsg(errorMessage(data))
     }
 
@@ -215,7 +215,7 @@ export default function AccountSettings() {
       <section className="space-y-3 rounded-2xl border border-line bg-card p-6">
         <h2 className="font-semibold">Appearance</h2>
         <ThemePicker label="How QuickBuckz looks to you" value={siteTheme} onChange={updateSiteTheme} />
-        <p className="text-xs text-muted">Only you see this. Profiles still show in their owner's theme.</p>
+        <p className="text-xs text-muted">Colors the site for you. Everyone who visits your profile sees it too.</p>
         {themeMsg && <p className={`text-sm ${themeMsg === 'Saved.' || themeMsg === 'Saving…' ? 'text-accent' : 'text-red-400'}`}>{themeMsg}</p>}
       </section>
 
@@ -266,7 +266,7 @@ export default function AccountSettings() {
           <p className="text-sm text-muted">Sign out of QuickBuckz on this device.</p>
         </div>
         <button
-          onClick={() => { logout(); navigate('/login') }}
+          onClick={() => { logout(true); navigate('/login') }} 
           className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300"
         >
           Log out
