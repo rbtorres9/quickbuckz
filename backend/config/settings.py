@@ -23,10 +23,10 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)*0ojj#i!sy^wxp##_x)ss(he$^-=#@+ojjt%tk')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-ib#h(slo)$y)...' if DEBUG else None)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -201,10 +201,19 @@ AUTHENTICATION_BACKENDS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-
-        'rest_framework.authentication.SessionAuthentication',  # for testing apis requiring auth
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
     ),
 }
+# session auth + browsable API only in DEBUG
+if DEBUG:
+    REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] += (
+        'rest_framework.authentication.SessionAuthentication',
+    )
+    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] += (
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    )
 
 # Password Reset
 PASSWORD_RESET_TIMEOUT = 1800
@@ -219,13 +228,10 @@ SIMPLE_JWT = {
 # CORS
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  
     "https://quickbuckz.onrender.com",
-
-
 ]
 
 if DEBUG:
+    CORS_ALLOWED_ORIGINS += ["http://localhost:5173"]
     CORS_ALLOW_ALL_ORIGINS = True
-
 

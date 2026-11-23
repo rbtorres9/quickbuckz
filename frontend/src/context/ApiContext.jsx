@@ -61,8 +61,7 @@ export const ApiProvider = ({children}) => {
                 err?.result ?? err ?? "Request failed",
                 err?.response
             )
-
-            console.error(`Error fetching ${url}:`, errorMessage(result.result))
+            if (import.meta.env.DEV) console.error(`Error fetching ${url}:`, errorMessage(result.result))
             return result
         }
         finally {

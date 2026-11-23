@@ -31,7 +31,6 @@ export const CacheProvider = ({children}) => {
         localStorage.setItem("user", JSON.stringify(data))
         setUserCache(data)
 
-        console.log("User cache refreshed")
     }
 
     // Image URLs in the profile are signed and expire after an hour,

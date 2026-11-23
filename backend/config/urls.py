@@ -1,23 +1,8 @@
-"""
-URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 from django.contrib import admin
 from django.urls import path, include
 from django.http import HttpResponse
+from django.conf import settings
+
 
 def home(request):
     return HttpResponse("""
@@ -25,9 +10,7 @@ def home(request):
         <p>Backend is running. </p> 
         <ul>
         <li><a href="/api/posts/">/api/posts/</a></li>
-        <li><a href="/admin/">/admin/</a></li>
         <li><a href="/api/profiles/">/api/profiles/</a></li>
-        <li><a href="/api-auth/login/">Test api with auth here.</a></li>
         </ul>
     """)
 
@@ -39,5 +22,8 @@ urlpatterns = [
     path('api/', include('posts.urls')),
     path('api/', include('notifications.urls')),
     path('api/', include('moderation.urls')),
-    path('api-auth/', include('rest_framework.urls')),
 ]
+
+# DRF login page only in DEBUG
+if settings.DEBUG:
+    urlpatterns += [path('api-auth/', include('rest_framework.urls'))]

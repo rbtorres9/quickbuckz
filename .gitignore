@@ -26,9 +26,11 @@ static/          # only if you're using STATIC_ROOT to collect into this folder
 .idea/
 .DS_Store
 Thumbs.db
+.vs/
 
 # Logs
 *.log
 
 backend/staticfiles/
 backend/config/addon/
+
