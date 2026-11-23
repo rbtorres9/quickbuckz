@@ -25,7 +25,7 @@ const FILTERS = [
 
 const SECTIONS = [
   { value: 'reports', label: 'Reports' },
-  { value: 'restrictions', label: 'Ban list' },
+  { value: 'restrictions', label: 'Deactivated' },
   { value: 'log', label: 'Mod log' },
 ]
 

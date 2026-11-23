@@ -47,3 +47,7 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Implement forgot password API. User sends email, the API returns a temporary token (5-10 minutes) to reset password.~~ - Done (emails the reset link, 11/14)
 - ~~Implement reset password API. User sends new password with the forgot password token, API updates the new password.~~ - Done (11/14)
 - ~~Implement reset password page for the frontend, the frontend takes in a token as a parameter and returns an error if the token is invalid or expired. This page is where the user gets to set their new password.~~ - Done
+## Requested changes 11/22 - MM
+- **Create account:** fields are now Email, Username, Password, Confirm password, then First and Last name.
+- **Mods can deactivate accounts:** the mod "Ban" is now called **Deactivate** everywhere on the site (profile ⋯ menu "Deactivate (mod)", status page "Deactivate account", history). Same backend: it's still `POST/DELETE /api/profile/<username>/ban/`, and only a mod can reactivate it.
+- **Mod tools > Deactivated** (was "Ban list"): every account a mod deactivated. Click one to see why and reactivate it. Self-deactivated accounts aren't listed. Mod log filter "Bans" is now "Deactivations".

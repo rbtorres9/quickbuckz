@@ -11,7 +11,7 @@ const ACTION_FILTERS = [
   { value: 'all', label: 'All', actions: '' },
   { value: 'removals', label: 'Removals', actions: 'remove_post,remove_comment,remove_in_profile' },
   { value: 'dismissals', label: 'Dismissals', actions: 'dismiss' },
-  { value: 'bans', label: 'Bans', actions: 'deactivate,reactivate' },
+  { value: 'bans', label: 'Deactivations', actions: 'deactivate,reactivate' },
   { value: 'deleted', label: 'Deleted by user', actions: 'content_deleted' },
 ]
 

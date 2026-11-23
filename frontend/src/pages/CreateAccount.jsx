@@ -12,11 +12,11 @@ import { usePageTitle } from '../utils/usePageTitle.js'
 
 const fields = [
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
-  { name: 'first_name', label: 'First name', autoComplete: 'given-name' },
-  { name: 'last_name', label: 'Last name', autoComplete: 'family-name' },
   { name: 'username', label: 'Username', autoComplete: 'username' },
   { name: 'password', label: 'Password', type: 'password', autoComplete: 'new-password' },
   { name: 'confirmPassword', label: 'Confirm password', type: 'password', autoComplete: 'new-password' },
+  { name: 'first_name', label: 'First name', autoComplete: 'given-name' },
+  { name: 'last_name', label: 'Last name', autoComplete: 'family-name' },
 ]
 
 export default function CreateAccount() {
@@ -28,7 +28,7 @@ export default function CreateAccount() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [slow, setSlow] = useState(false) // taking a while? (the server may be waking up)
-  // Profile theme, saved on this device for now (see the TODO below)
+  // Theme picked here is saved to the new profile right after signup (see below)
   const [theme, setTheme] = useState('classic')
   const navigate = useNavigate()
   const location = useLocation() // may carry a shared link to go back to

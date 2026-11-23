@@ -3,7 +3,8 @@ import { useAuthContext } from '../context/AuthContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
 import { getTimeAgoString } from '../utils/DateTimeUtils.js'
 
-// Mod tools > Ban list: accounts that are deactivated right now (GET /api/profiles/banlist/)
+// Mod tools > Deactivated: accounts a mod has deactivated ("banned" in the backend), GET /api/profiles/banlist/
+// Click one to open its status page, where a mod can reactivate it.
 export default function ModRestrictions({ onOpen }) {
   const { fetchWithToken } = useAuthContext()
   const [users, setUsers] = useState(null) // null = still loading
@@ -27,11 +28,12 @@ export default function ModRestrictions({ onOpen }) {
   return (
     <section>
       <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Ban list</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Deactivated accounts</h1>
         {users && (
           <span className="text-sm text-muted">{users.length} {users.length === 1 ? 'user' : 'users'}</span>
         )}
       </div>
+      <p className="mt-1 text-sm text-muted">Accounts a moderator deactivated. Open one to see why or to reactivate it. People who deactivated their own account aren't listed.</p>
 
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
@@ -41,7 +43,7 @@ export default function ModRestrictions({ onOpen }) {
         !error && (
           <div className="mt-6 rounded-2xl border border-line bg-card px-6 py-12 text-center">
             <p className="font-medium">No one here</p>
-            <p className="mt-1 text-sm text-muted">No accounts are banned right now.</p>
+            <p className="mt-1 text-sm text-muted">No accounts are deactivated right now.</p>
           </div>
         )
       ) : (
@@ -57,11 +59,11 @@ export default function ModRestrictions({ onOpen }) {
                   <p className="font-semibold group-hover:underline underline-offset-4">@{u.username}</p>
                   <p className="mt-1 text-xs text-muted">
                     {u.last_deactivated
-                      ? `Banned ${u.deactivation_count} ${u.deactivation_count === 1 ? 'time' : 'times'} · last ${getTimeAgoString(u.last_deactivated)} ago`
-                      : 'Banned in the admin site'}
+                      ? `Deactivated ${u.deactivation_count} ${u.deactivation_count === 1 ? 'time' : 'times'} · last ${getTimeAgoString(u.last_deactivated)} ago`
+                      : 'Deactivated in the admin site'}
                   </p>
                 </div>
-                <span className="rounded bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-300">Banned</span>
+                <span className="rounded bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-300">Deactivated</span>
               </button>
             </li>
           ))}

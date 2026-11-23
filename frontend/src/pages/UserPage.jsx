@@ -297,12 +297,13 @@ export default function UserPage() {
     alert(result.result?.detail ?? 'Thanks, this profile was reported.')
   }
 
+  // "Deactivate (mod)" is a ban in the backend: only a mod can reactivate it (from Mod tools > Deactivated)
   const handleBan = async () => {
     setMenuOpen(false)
 
-    const reason = prompt(`Why are you banning @${person.username}?`)
+    const reason = prompt(`Why are you deactivating @${person.username}?`)
     if (!reason?.trim()) return
-    if (!confirm(`Ban @${person.username}? Their profile and posts will be hidden until a moderator reactivates them.`)) return
+    if (!confirm(`Deactivate @${person.username}? Their profile and posts will be hidden until a moderator reactivates them.`)) return
 
     const result = await fetchWithToken(`/api/profile/${person.username}/ban/`, {
       method: 'POST',
@@ -311,7 +312,7 @@ export default function UserPage() {
     })
     if (result.isError) return alert(errorMessage(result.result))
 
-    alert(`@${person.username} was banned.`)
+    alert(`@${person.username} was deactivated.`)
     navigate(`/mod/${person.username}/status`)
   }
 
@@ -401,7 +402,7 @@ export default function UserPage() {
                       {isMod && (
                         <>
                           <button onClick={handleBan} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
-                            Ban (mod)
+                            Deactivate (mod)
                           </button>
                           <button onClick={removeProfilePicture} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
                             Remove profile picture (mod)
