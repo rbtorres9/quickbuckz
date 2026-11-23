@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthContext } from '../context/AuthContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
@@ -37,6 +37,57 @@ function whoDidIt(entry) {
 
 // lowercase + drop a leading @, same as the backend does
 const cleanUsername = (value) => value.trim().replace(/^@/, '').toLowerCase()
+
+
+// saved content with Show more / Show less (same rule as posts)
+const OVERFLOWING_LINE_COUNT = 10 // How many lines it takes to add a 'Show more' button
+
+function ExpandableContent({ content }) {
+  const [expanded, setExpanded] = useState(false)
+  const [overflowing, setOverflowing] = useState(false)
+  const textRef = useRef(null)
+
+  useEffect(() => {
+    const element = textRef.current
+    if (!element || expanded) return
+
+    const checkOverflow = () => {
+      const lineHeight = parseFloat(getComputedStyle(element).lineHeight) || 20
+      setOverflowing(element.scrollHeight > lineHeight * OVERFLOWING_LINE_COUNT + 1)
+    }
+
+    checkOverflow()
+    const observer = new ResizeObserver(checkOverflow)
+    observer.observe(element)
+    window.addEventListener('resize', checkOverflow)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', checkOverflow)
+    }
+  }, [content, expanded])
+
+  return (
+    <div className="mt-3">
+      <div className="rounded-lg border border-line bg-field px-4 py-3 text-sm leading-relaxed">
+        <p ref={textRef} className={`whitespace-pre-line break-words ${!expanded ? 'line-clamp-10' : ''}`}>
+          {content}
+        </p>
+      </div>
+      {overflowing && (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="w-full h-8 border-1 border-accent rounded-md mt-1 text-sm font-semibold text-accent hover:text-accent-hover"
+          aria-expanded={expanded}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 
 
 export default function ModLog({ onOpen }) {
@@ -231,11 +282,8 @@ export default function ModLog({ onOpen }) {
                 </p>
 
                 {/* saved copy of the content / reason */}
-                {entry.target_content && (
-                  <div className="mt-3 whitespace-pre-line break-words rounded-lg border border-line bg-field px-4 py-3 text-sm leading-relaxed">
-                    {entry.target_content}
-                  </div>
-                )}
+                {/* long content gets Show more / Show less  */}
+                {entry.target_content && <ExpandableContent content={entry.target_content} />}
 
                 {entry.post_ref && POST_STILL_EXISTS.includes(entry.action) && (
                   <div className="mt-3 flex">
