@@ -180,8 +180,8 @@ export default function ModTools() {
       ) : section === 'log' ? (
         <ModLog onOpen={openStatus} />
       ) : (<>
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Mod tools</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="whitespace-nowrap text-2xl font-semibold tracking-tight">Mod tools</h1>
         <div className="flex items-baseline gap-3">
           <button
             onClick={() => showStatus('open')}

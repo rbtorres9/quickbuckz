@@ -116,7 +116,7 @@ export default function RestrictionHistory({ username, onBack, backLabel }) {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 maxLength={200}
-                placeholder="Reason for deactivating"
+                aria-label="Reason for deactivating" placeholder="Reason for deactivating"
                 className="min-w-0 flex-1 rounded-lg border border-line bg-card px-3 py-1.5 text-sm"
               />
               <button

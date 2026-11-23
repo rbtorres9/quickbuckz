@@ -140,6 +140,32 @@ export default function AccountSettings() {
     setPasswordMsg('Password updated.')
   }
 
+  // Deactivate: hides your profile, posts and comments. Logging in again brings everything back.
+  const [deactivatePassword, setDeactivatePassword] = useState('')
+  const [deactivateError, setDeactivateError] = useState('')
+  const [deactivating, setDeactivating] = useState(false)
+
+  async function deactivate(e) {
+    e.preventDefault()
+    setDeactivateError('')
+    // window.confirm because `confirm` above is the confirm-password box
+    if (!window.confirm('Deactivate your account? Your profile, posts and comments will be hidden until you log in again.')) return
+
+    setDeactivating(true)
+    const result = await fetchWithToken('/api/profile/me/deactivate/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: deactivatePassword }),
+    })
+    setDeactivating(false)
+
+    if (result.isError) return setDeactivateError(errorMessage(result.result))
+    // The old login stops working right away, so log out on this device too
+    alert(result.result?.detail ?? 'Your account has been deactivated. Log in again to reactivate it.')
+    logout()
+    navigate('/login')
+  }
+
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-6">
       <h1 className="text-2xl font-semibold tracking-tight">Account settings</h1>
@@ -260,18 +286,40 @@ export default function AccountSettings() {
       )}
 
       {/* Log out */}
-      <section className="flex items-center justify-between rounded-2xl border border-line bg-card p-6">
+      <section className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-card p-6">
         <div>
           <h2 className="font-semibold">Log out</h2>
           <p className="text-sm text-muted">Sign out of QuickBuckz on this device.</p>
         </div>
         <button
           onClick={() => { logout(true); navigate('/login') }} 
-          className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300"
+          className="shrink-0 rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-red-400/60 hover:text-red-300"
         >
           Log out
         </button>
       </section>
+
+      {/* Deactivate account */}
+      <form onSubmit={deactivate} className="space-y-4 rounded-2xl border border-red-400/30 bg-card p-6">
+        <div>
+          <h2 className="font-semibold">Deactivate account</h2>
+          <p className="text-sm text-muted">
+            Hides your profile, posts and comments from everyone. Nothing is deleted: log in again anytime to bring it all back.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="deactivate-password" className="block text-sm font-medium">Password</label>
+          <input id="deactivate-password" type="password" required autoComplete="current-password" value={deactivatePassword} onChange={(e) => setDeactivatePassword(e.target.value)} className={inputClass} />
+        </div>
+        {deactivateError && <p className="text-sm text-red-400 whitespace-pre-line">{deactivateError}</p>}
+        <button
+          type="submit"
+          disabled={deactivating}
+          className="rounded-lg border border-red-400/60 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-40"
+        >
+          {deactivating ? 'Deactivating…' : 'Deactivate account'}
+        </button>
+      </form>
     </main>
   )
 }

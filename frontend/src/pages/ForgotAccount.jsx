@@ -5,7 +5,7 @@ import { useApiContext } from '../context/ApiContext.jsx'
 import { errorMessage } from '../utils/errorMessage.js'
 import { usePageTitle } from '../utils/usePageTitle.js'
 
-// TODO: confirm this address with the backend once the forgot-password API is built.
+// Backend addresses (they match backend/accounts/urls.py).
 // The backend should EMAIL the reset link (with the token) and never send the token back here.
 const FORGOT_PASSWORD_URL = '/api/forgot/password/'
 const FORGOT_USERNAME_URL = '/api/forgot/username/'
