@@ -50,7 +50,7 @@ export default function RestrictionHistory({ username, onBack, backLabel }) {
     setBusy(false)
     if (result.isError) return setMessage({ text: errorMessage(result.result), ok: false })
     setReason('')
-    setMessage({ text: `@${username} was banned.`, ok: true })
+    setMessage({ text: `@${username} was deactivated.`, ok: true })
     loadStatus()
   }
 
@@ -87,7 +87,7 @@ export default function RestrictionHistory({ username, onBack, backLabel }) {
         <p className="mt-1 text-sm text-muted">
           Account status:{' '}
           <span className={status.is_deactivated ? 'font-semibold text-red-300' : 'font-semibold'}>
-            {status.is_deactivated ? 'Banned' : 'Active'}
+            {status.is_deactivated ? 'Deactivated' : 'Active'}
           </span>
         </p>
       )}
@@ -116,7 +116,7 @@ export default function RestrictionHistory({ username, onBack, backLabel }) {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 maxLength={200}
-                placeholder="Reason for the ban"
+                aria-label="Reason for deactivating" placeholder="Reason for deactivating"
                 className="min-w-0 flex-1 rounded-lg border border-line bg-card px-3 py-1.5 text-sm"
               />
               <button
@@ -124,17 +124,17 @@ export default function RestrictionHistory({ username, onBack, backLabel }) {
                 disabled={busy || !reason.trim()}
                 className="rounded-full bg-red-500/80 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
               >
-                Ban account
+                Deactivate account
               </button>
             </form>
           )}
 
-          <h2 className="mt-8 text-sm font-semibold text-muted">Ban history</h2>
+          <h2 className="mt-8 text-sm font-semibold text-muted">Deactivation history</h2>
           {status.history.length === 0 ? (
             <p className="mt-2 text-sm text-muted">
               {status.is_deactivated
-                ? 'Banned in the admin site, so there is no reason on record.'
-                : 'This account has never been banned.'}
+                ? 'Deactivated in the admin site, so there is no reason on record.'
+                : 'A moderator has never deactivated this account.'}
             </p>
           ) : (
             <ul className="mt-3 space-y-3">
@@ -143,7 +143,7 @@ export default function RestrictionHistory({ username, onBack, backLabel }) {
                 return (
                   <li key={entry.id} className="rounded-2xl border border-line bg-card px-5 py-4">
                     <span className={`rounded px-2 py-0.5 text-xs font-semibold ${banned ? 'bg-red-500/15 text-red-300' : 'bg-white/10 text-muted'}`}>
-                      {banned ? 'Banned' : 'Reactivated'}
+                      {banned ? 'Deactivated' : 'Reactivated'}
                     </span>
                     {banned && <p className="mt-2 text-sm">{entry.details}</p>}
                     <p className="mt-2 text-xs text-muted">

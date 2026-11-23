@@ -16,7 +16,7 @@ This is a list of items that we should implement into our project that anyone ca
 
 - Work on preserving login session by using cookies (adding more on token refresh mechanism) - in progress RT
 - ~~Add more functionalities to Follow model: Current user viewing another profile can show “Follows you” (check login session/auth while viewing /api/profile/<username>/, then add field for 'follows_you' flag), shows if current user is following the profile being viewed, with follow/unfollow toggle (same logic, /api/profile/<username>/ would have field like 'is_followed'), mutual follows “followed by <users on your follow list>” (something like "/api/profile/<username>/mutuals")~~ - done backend
-- Implement share post functionality: most likely will be a Share model to follow the current backend design
+- ~~Implement share post functionality~~ - Done on the frontend MM (11/15): Share button copies the post's link. A Share model is only needed if we want share counts.
 - ~~Implement fields or models for any additional personalized features from frontend (currently has ThemePicker)~~ - Done (theme + site_theme fields, 11/07)
 - Touch on AccountSecurity backend design when a frontend design for account settings is drafted.
 - ~~I think /api/posts should return more details about the author~~
@@ -34,6 +34,9 @@ This is a list of items that we should implement into our project that anyone ca
 - ~~Add ability to ban users~~ - Done (ban list, ban/unban, status page, 11/09-11/13)
 - ~~Clean up the setting menu - Mostly done MM (11/15): fake email/password forms replaced with "coming soon" notes until the backend endpoints exist~~ Changing emails and passwords is available in settings - Done JDN (11/18)
 - ~~Store color theme in backend~~ - Done (11/07)
+- ~~Block users~~ - Done (frontend MM 11/15, backend RT 11/19)
+- ~~Deactivate your own account~~ - Done (backend RT 11/19, Settings button MM 11/21)
+- ~~"Followed by ..." on profiles (mutuals endpoint)~~ - Done MM (11/21)
 
 - Security fixes (added MM 11/15):
     - Remove the hardcoded fallback `SECRET_KEY` in settings.py (it should only come from the environment on Render)

@@ -163,7 +163,7 @@ export default function PostCard({ post, user, full = false, onDeleted }) {
   }
 
   // Block the author. Every post of theirs on this page hides (see the listener below).
-  // TODO (backend): POST /api/profile/<username>/block/ (same as the profile page)
+  // POST /api/profile/<username>/block/ (same as the profile page)
   async function handleBlock() {
     setMenuOpen(false)
     if (!confirm(`Block @${handle}? They won't be able to see your profile or posts, and you'll stop following each other.`)) return

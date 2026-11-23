@@ -40,6 +40,7 @@ export default function UserPage() {
   const [ person, setPerson ] = useState(null)
   const [ posts, setPosts ] = useState([])
   const [ shown, setShown ] = useState([])
+  const [ mutuals, setMutuals ] = useState([]) // people you follow who follow them ("Followed by ...")
 
   const isSelf = !handle || handle === userCache?.username
 
@@ -73,10 +74,16 @@ export default function UserPage() {
       }
 
       setPerson(userData)
-      setViewingUserCache(userData.is_blocked ? null : userData) // no side pictures from people you blocked
+      setViewingUserCache(userData)
 
-      // Blocked or private: don't load their posts
-      if (userData.is_blocked || (userData.visibility === 'private' && !userData.is_followed && !userData.is_self)) {
+      // "Followed by ..." (loads on its own, doesn't hold up the page)
+      setMutuals([])
+      fetchWithToken(`/api/profile/${handle}/mutuals/`).then((result) => {
+        if (!stale && !result.isError) setMutuals(result.result.results ?? result.result)
+      })
+
+      // Private and you don't follow them: don't load their posts
+      if (userData.visibility === 'private' && !userData.is_followed && !userData.is_self) {
         setPosts([])
         setLoadingPosts(false)
         return
@@ -164,7 +171,6 @@ export default function UserPage() {
     return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-muted">Loading your profile…<WakingUpNote /></main>
   }
 
-  // TODO: load other users' profiles and posts from the backend database
   if (loadingUser) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
@@ -185,6 +191,10 @@ export default function UserPage() {
       <main className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">User not found</h1>
         <p className="mt-2 text-sm text-muted">There's no one here with the username @{handle}.</p>
+        {/* The backend hides blocked accounts (both ways) as if they don't exist */}
+        <p className="mt-1 text-sm text-muted">
+          If you blocked them, you can unblock them in <Link to="/blocked" className="text-accent hover:underline">Blocked users</Link>.
+        </p>
         <Link to="/subscriptions" className="mt-5 inline-block text-sm font-semibold text-accent hover:underline">
           Back to Following
         </Link>
@@ -196,7 +206,7 @@ export default function UserPage() {
   const followed = person.is_followed
   const requested = person.is_requested
   const isLocked = !isSelf && person.visibility === 'private' && !followed
-  // TODO (backend): profile needs an is_blocked field, and POST/DELETE /api/profile/<username>/block/
+  // is_blocked is only set here, right after you block them (the backend 404s blocked profiles after that)
   const blocked = !isSelf && person.is_blocked
   async function toggleFollow() {
     setFollowBusy(true)
@@ -297,12 +307,13 @@ export default function UserPage() {
     alert(result.result?.detail ?? 'Thanks, this profile was reported.')
   }
 
+  // "Deactivate (mod)" is a ban in the backend: only a mod can reactivate it (from Mod tools > Deactivated)
   const handleBan = async () => {
     setMenuOpen(false)
 
-    const reason = prompt(`Why are you banning @${person.username}?`)
+    const reason = prompt(`Why are you deactivating @${person.username}?`)
     if (!reason?.trim()) return
-    if (!confirm(`Ban @${person.username}? Their profile and posts will be hidden until a moderator reactivates them.`)) return
+    if (!confirm(`Deactivate @${person.username}? Their profile and posts will be hidden until a moderator reactivates them.`)) return
 
     const result = await fetchWithToken(`/api/profile/${person.username}/ban/`, {
       method: 'POST',
@@ -311,7 +322,7 @@ export default function UserPage() {
     })
     if (result.isError) return alert(errorMessage(result.result))
 
-    alert(`@${person.username} was banned.`)
+    alert(`@${person.username} was deactivated.`)
     navigate(`/mod/${person.username}/status`)
   }
 
@@ -401,7 +412,7 @@ export default function UserPage() {
                       {isMod && (
                         <>
                           <button onClick={handleBan} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
-                            Ban (mod)
+                            Deactivate (mod)
                           </button>
                           <button onClick={removeProfilePicture} className="block w-full px-3 py-2 text-left text-red-400 hover:bg-white/5">
                             Remove profile picture (mod)
@@ -446,9 +457,19 @@ export default function UserPage() {
               </>
             )}
           </div>
+          {!isSelf && !blocked && mutuals.length > 0 && (
+            <p className="mt-2 text-sm text-muted">
+              Followed by{' '}
+              {mutuals.slice(0, 2).map((m, i) => (
+                <span key={m.username}>
+                  {i > 0 && (mutuals.length === 2 ? ' and ' : ', ')}
+                  <Link to={`/user/${m.username}`} className="font-semibold text-white hover:underline">{getName(m) || m.username}</Link>
+                </span>
+              ))}
+              {mutuals.length > 2 && ` and ${mutuals.length - 2} other${mutuals.length === 3 ? '' : 's'} you follow`}
+            </p>
+          )}
           {followError && <p className="mt-2 text-sm text-red-400">{followError}</p>}
-
-          
 
         </div>
 

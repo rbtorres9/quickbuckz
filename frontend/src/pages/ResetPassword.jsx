@@ -6,7 +6,7 @@ import { errorMessage } from '../utils/errorMessage.js'
 import { usePageTitle } from '../utils/usePageTitle.js'
 
 // The page the reset email links to: /reset-password?token=...
-// TODO: confirm this address with the backend once the reset-password API is built.
+// Backend addresses (they match backend/accounts/urls.py).
 const RESET_PASSWORD_URL = '/api/forgot/password/confirm/'
 const RESET_PASSWORD_VERIFY_URL = '/api/forgot/password/verify/'
 
