@@ -170,6 +170,13 @@ class FollowListSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ["username", "first_name", "last_name", "bio",
                   "profile_picture", "followed_at", "is_following", "is_requested"]
+
+
+class FollowSuggestionSerializer(FollowListSerializer):
+    class Meta(FollowListSerializer.Meta):
+        fields = ["username", "first_name", "last_name", "bio",
+                  "profile_picture", "visibility", "is_following", "is_requested"]
+
         
 #this includes serialization regarding follow info as well
 class ProfileDetailSerializer(PublicProfileSerializer):

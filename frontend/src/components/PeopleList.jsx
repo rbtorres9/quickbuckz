@@ -12,7 +12,8 @@ import { usePageTitle } from '../utils/usePageTitle.js'
 // direction: "following" or "followers"
 // username: whose list to show ("me" = yours)
 // children: anything to show under the title (the Following page puts the search bar here)
-export default function PeopleList({ title, direction, username = 'me', emptyText, titleAction, children }) {
+// footer: anything to show below the list (Following page puts suggestions here)
+export default function PeopleList({ title, direction, username = 'me', emptyText, titleAction, children, footer }) {
   usePageTitle(title)
   const { fetchWithToken } = useAuthContext()
   const { userCache, refreshUserCache } = useCache()
@@ -122,6 +123,7 @@ export default function PeopleList({ title, direction, username = 'me', emptyTex
           })}
         </ul>
       )}
+    {!loading && footer}
     </main>
   )
 }

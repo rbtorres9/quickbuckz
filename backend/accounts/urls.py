@@ -21,6 +21,8 @@ from .views import (
     BlockView,
     BlockListView,
     SelfDeactivateView,
+    FollowSuggestionsView,
+
 )
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -36,6 +38,7 @@ urlpatterns = [
     path('profile/<str:username>/following/', FollowListView.as_view(direction="following"), name='profile-following'),
     path('profile/<str:username>/followers/', FollowListView.as_view(direction="followers"), name='profile-followers'),
     path('profile/<str:username>/mutuals/', MutualFollowersView.as_view(), name='profile-mutuals'),
+    path('profile/me/suggestions/', FollowSuggestionsView.as_view(), name='follow-suggestions'),
     path('profile/me/followers/requests/', FollowRequestListView.as_view(), name='follow-requests'),
     path('profile/me/followers/requests/<str:username>/', FollowRequestDecisionView.as_view(), name='follow-request-decision'),
     path('profile/me/following/requests/', SentFollowRequestListView.as_view(), name='sent-follow-requests'),
@@ -50,5 +53,6 @@ urlpatterns = [
     path('profile/me/blocks/', BlockListView.as_view(), name='block-list'),
     path('profile/<str:username>/block/', BlockView.as_view(), name='block'),
     path('profile/me/deactivate/', SelfDeactivateView.as_view(), name='self-deactivate'),
+
 
 ]

@@ -45,6 +45,7 @@ from .serializers import (
     ChangePasswordSerializer,
     BlockSerializer,
     SelfDeactivateSerializer,
+    FollowSuggestionSerializer,
     )
 
 
@@ -255,6 +256,31 @@ class MutualFollowersView(FollowListView):
 
                 )
                 .order_by("-followed_at"))
+
+
+class FollowSuggestionsView(generics.ListAPIView):
+    """Newest accounts the viewer doesn't follow, hasn't requested, and isn't blocked with."""
+    serializer_class = FollowSuggestionSerializer
+    permission_classes = [IsAuthenticated]
+    LIMIT = 5
+
+    def get_queryset(self):
+        viewer = self.request.user
+        followed = Follow.objects.filter(follower=viewer).values("following")
+        requested = FollowRequest.objects.filter(requester=viewer).values("target")
+        blocks = Block.objects.filter(Q(blocker=viewer) | Q(blocked=viewer))
+
+        return (active_profiles()
+                .exclude(user=viewer)
+                .exclude(user__in=followed)
+                .exclude(user__in=requested)
+                .exclude(user__in=blocks.values("blocker"))
+                .exclude(user__in=blocks.values("blocked"))
+                .annotate(
+                    is_following=Value(False, output_field=BooleanField()),
+                    is_requested=Value(False, output_field=BooleanField()),
+                )
+                .order_by("-created_at")[:self.LIMIT])
 
 
 # --- Follow Requests Block ---
